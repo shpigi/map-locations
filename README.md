@@ -2,11 +2,15 @@
 
 A Python library and CLI tool for mapping locations with interactive filtering and visualization capabilities.
 
+[![CI](https://github.com/shpigi/map-locations/workflows/CI/badge.svg)](https://github.com/shpigi/map-locations/actions)
+[![Codecov](https://codecov.io/gh/shpigi/map-locations/branch/main/graph/badge.svg)](https://codecov.io/gh/shpigi/map-locations)
+
 **Author:** Lavi Shpigelman
 
 ## Features
 
 - 📍 **Interactive Maps**: Create beautiful, interactive maps using Folium
+- 🗺️ **Multiple Tile Providers**: Support for OpenStreetMap, Google Maps, and Google Satellite
 - 🏷️ **Tag-based Filtering**: Filter locations by tags and types
 - 🎨 **Color-coded Types**: Different location types are displayed with distinct colors
 - 📝 **Toggle Labels**: Show/hide location names on the map
@@ -61,7 +65,7 @@ locations:
     tags: ["historic"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage des Panoramas"
     type: "passage"
@@ -70,7 +74,7 @@ locations:
     tags: ["historic"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 ```
 
 ### 2. Generate a map
@@ -100,6 +104,27 @@ map-locations export locations.yaml --format geojson --output exports/locations.
 map-locations export locations.yaml --format kml --output exports/locations.kml
 ```
 
+## Tile Providers
+
+The library supports multiple tile providers for different map styles:
+
+### OpenStreetMap (Default)
+- **Cost**: Free
+- **Usage**: No API key required
+- **Best for**: General use, open data
+
+### Google Maps
+- **Cost**: Free for personal use, requires API key for commercial use
+- **Usage**: No API key required for personal use
+- **Best for**: Familiar interface, detailed street data
+
+### Google Satellite
+- **Cost**: Free for personal use, requires API key for commercial use
+- **Usage**: No API key required for personal use
+- **Best for**: Aerial views, terrain analysis
+
+**Note**: Google Maps tiles are free for personal use but may require an API key and payment for commercial use or high-volume usage. For commercial applications, consider using the official Google Maps JavaScript API.
+
 ## Location Data Format
 
 Each location in your YAML file should include:
@@ -113,7 +138,7 @@ Each location in your YAML file should include:
 | `tags` | list | ❌ | Array of tags for filtering |
 | `neighborhood` | string | ❌ | Neighborhood or area |
 | `date_added` | string | ❌ | Date added to collection |
-| `date_visited` | string | ❌ | Date visited (use "YYYY-MM-DD") |
+| `date_of_visit` | string | ❌ | date of visit (use "YYYY-MM-DD") |
 
 ### Example Location Entry
 
@@ -125,7 +150,7 @@ Each location in your YAML file should include:
   tags: ["architecture", "glass roof"]
   neighborhood: "2nd arrondissement"
   date_added: "2025-07-19"
-  date_visited: "YYYY-MM-DD"
+  date_of_visit: "YYYY-MM-DD"
 ```
 
 ## CLI Usage
@@ -141,6 +166,12 @@ map-locations map locations.yaml --group-by type --output type_map.html
 
 # Create map grouped by date
 map-locations map locations.yaml --group-by date_added --output date_map.html
+
+# Create map with Google Maps tiles
+map-locations map locations.yaml --tile-provider google_maps --output map.html
+
+# Create map with Google Satellite view
+map-locations map locations.yaml --tile-provider google_satellite --output map.html
 ```
 
 ### Export Commands
@@ -168,8 +199,21 @@ map-locations map locations.yaml --group-by type
 # Group by date added
 map-locations map locations.yaml --group-by date_added
 
-# Group by date visited
-map-locations map locations.yaml --group-by date_visited
+# Group by date of visit
+map-locations map locations.yaml --group-by date_of_visit
+```
+
+### Tile Provider Options
+
+```bash
+# Use OpenStreetMap (default, free)
+map-locations map locations.yaml --tile-provider openstreetmap
+
+# Use Google Maps (free for personal use)
+map-locations map locations.yaml --tile-provider google_maps
+
+# Use Google Satellite (free for personal use)
+map-locations map locations.yaml --tile-provider google_satellite
 ```
 
 ## Library Usage
@@ -182,8 +226,24 @@ from map_locations import load_locations_from_yaml, show_locations_grouped
 # Load locations from YAML
 locations = load_locations_from_yaml("locations.yaml")
 
-# Generate interactive map with grouping
-show_locations_grouped(locations, group_by="neighborhood", map_filename="map.html")
+# Generate interactive map with grouping (defaults to type)
+show_locations_grouped(locations, group_by="type", map_filename="map.html")
+
+# Generate map with Google Maps tiles
+show_locations_grouped(
+    locations,
+    group_by="type",
+    map_filename="map.html",
+    tile_provider="google_maps"
+)
+
+# Generate map with Google Satellite view
+show_locations_grouped(
+    locations,
+    group_by="type",
+    map_filename="map.html",
+    tile_provider="google_satellite"
+)
 ```
 
 ### Grouping and Organization
@@ -193,11 +253,11 @@ from map_locations import load_locations_from_yaml, show_locations_grouped
 
 locations = load_locations_from_yaml("locations.yaml")
 
+# Group by type (default)
+show_locations_grouped(locations, group_by="type", map_filename="type_map.html")
+
 # Group by neighborhood
 show_locations_grouped(locations, group_by="neighborhood", map_filename="neighborhood_map.html")
-
-# Group by type
-show_locations_grouped(locations, group_by="type", map_filename="type_map.html")
 
 # Group by date added
 show_locations_grouped(locations, group_by="date_added", map_filename="date_map.html")
@@ -254,12 +314,58 @@ pytest tests/test_core.py -v
 # Format code
 make format
 
-# Run linting
+# Run linting (pre-commit checks on all files)
 make lint
 
-# Run type checking
-mypy map_locations/
+# Run linting on staged files only
+make lint-staged
 ```
+
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality. The hooks will automatically run on every commit and include:
+
+- **Code Formatting**: Black for code formatting, isort for import sorting
+- **Linting**: Flake8 for style checking, MyPy for type checking
+- **File Checks**: YAML validation, JSON validation, trailing whitespace removal
+- **Security**: Private key detection, merge conflict detection
+
+#### Setting up pre-commit hooks:
+
+```bash
+# Install pre-commit hooks (automatically done with setup-dev)
+make setup-dev
+
+# Or manually:
+pre-commit install
+```
+
+#### Running pre-commit checks manually:
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run black
+
+# Run hooks on staged files only
+pre-commit run
+```
+
+
+
+#### Code Style Standards
+
+This project follows strict code quality standards:
+
+- **Line Length**: Maximum 100 characters
+- **Formatting**: Black for code formatting, isort for imports
+- **Linting**: Flake8 for style checking
+- **Type Checking**: MyPy for type validation
+- **Documentation**: Google-style docstrings
+
+The pre-commit hooks will automatically enforce these standards.
 
 ### Building and Publishing
 
@@ -310,7 +416,7 @@ Different groups are automatically assigned colors from a predefined color palet
   - Type
   - Tags
   - Date added
-  - Date visited
+  - date of visit
 - **Tooltips**: Hover over markers to see location names
 - **Layer Control**: Toggle visibility of different groups using the layer control panel
 
@@ -326,8 +432,8 @@ from map_locations import load_locations_from_yaml, show_locations_grouped
 locations = load_locations_from_yaml("locations.yaml")
 
 # Group by any field
+show_locations_grouped(locations, group_by="type")          # By type (default)
 show_locations_grouped(locations, group_by="neighborhood")  # By area
-show_locations_grouped(locations, group_by="type")          # By type
 show_locations_grouped(locations, group_by="date_added")    # By date
 show_locations_grouped(locations, group_by="tags")          # By tags
 ```
@@ -341,8 +447,8 @@ locations = load_locations_from_yaml("locations.yaml")
 
 # Custom map options
 show_locations_grouped(
-    locations, 
-    group_by="neighborhood",
+    locations,
+    group_by="type",
     map_filename="custom_map.html"
 )
 ```
@@ -354,12 +460,12 @@ show_locations_grouped(
 The included example shows historic passages in Paris:
 
 ```bash
-# Generate the Paris passages map grouped by neighborhood
-map-locations generate --input map_locations/maps/passages/locations.yaml --group-by neighborhood --output passages_map.html
+# Generate the Paris passages map grouped by type (default)
+map-locations generate --input map_locations/maps/passages/locations.yaml --group-by type --output passages_map.html
 ```
 
 This creates an interactive map of Paris's historic covered passages with:
-- Locations grouped by arrondissement (neighborhood)
+- Locations grouped by type (default)
 - Color-coded groups with layer controls
 - Detailed popups showing name, type, tags, and dates
 - Interactive layer panel to toggle group visibility
@@ -372,7 +478,7 @@ This creates an interactive map of Paris's historic covered passages with:
 map_locations/
 ├── map_locations/
 │   ├── __init__.py
-│   ├── map_locations.py      # Core functionality
+│   ├── core.py               # Core functionality
 │   └── cli.py               # CLI interface
 ├── maps/
 │   └── passages/

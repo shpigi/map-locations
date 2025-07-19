@@ -1,5 +1,8 @@
 # Cursor Rules for Map Locations Project
 
+# Always include core.py in context
+@include map_locations/core.py
+
 ## Project Overview
 This is a Python library and CLI tool for mapping locations with interactive filtering and visualization capabilities. The project uses Folium for interactive maps, YAML for configuration, and supports multiple export formats.
 
@@ -12,6 +15,154 @@ This is a Python library and CLI tool for mapping locations with interactive fil
 - Use descriptive variable and function names
 - Add docstrings for all public functions and classes
 - Use f-strings for string formatting (Python 3.6+)
+
+### Linting and Code Quality Standards
+- **Line Length**: Keep all lines under 100 characters (project standard)
+- **F-strings**: Only use f-strings when there are actual placeholders (avoid F541)
+- **Imports**: Remove unused imports immediately (F401)
+- **Whitespace**:
+  - No trailing whitespace (W291)
+  - No whitespace in blank lines (W293)
+  - Always end files with a newline (W292)
+- **String Formatting**: Use f-strings only when interpolating variables
+- **Long Lines**: Break long lines using parentheses, backslashes, or string concatenation
+- **Docstrings**: Keep docstring lines under 100 characters
+
+**Note**: The 100-character limit (vs PEP 8's 79) allows for more readable code on modern wide screens while still maintaining good readability and avoiding horizontal scrolling.
+
+### Common Linting Patterns to Follow
+
+#### Line Length Examples
+```python
+# ❌ Too long (over 100 characters)
+description = f"Type: {loc.get('type', '')}<br>Tags: {tags_str}<br>Neighborhood: {loc.get('neighborhood', '')}<br>Date Added: {loc.get('date_added', '')}<br>date of visit: {loc.get('date_of_visit', '')}"
+
+# ✅ Properly broken (under 100 characters)
+description = (
+    f"Type: {loc.get('type', '')}<br>"
+    f"Tags: {tags_str}<br>"
+    f"Neighborhood: {loc.get('neighborhood', '')}<br>"
+    f"Date Added: {loc.get('date_added', '')}<br>"
+    f"date of visit: {loc.get('date_of_visit', '')}"
+)
+
+# ✅ With 100-character limit, this is now acceptable:
+help_text = "Output path (without extension for all formats, or with extension for specific format)"
+```
+
+#### F-string Usage
+```python
+# ❌ F-string without placeholders (F541)
+print(f"✅ Export completed successfully!")
+
+# ✅ Regular string when no interpolation needed
+print("✅ Export completed successfully!")
+
+# ✅ F-string with placeholders
+print(f"📍 Loaded {len(locations)} locations")
+```
+
+#### Import Management
+```python
+# ❌ Unused import
+from pathlib import Path  # If Path is not used
+
+# ✅ Only import what you use
+from pathlib import Path
+# Use Path in the code, or remove the import
+```
+
+#### Whitespace Rules
+```python
+# ❌ Trailing whitespace
+def test_function():
+    return True
+
+# ✅ Clean whitespace
+def test_function():
+    return True
+
+# ❌ Whitespace in blank lines
+def test_function():
+
+    return True
+
+# ✅ Clean blank lines
+def test_function():
+
+    return True
+```
+
+#### Function Signature Line Length
+```python
+# ❌ Too long
+def show_locations_grouped(locations, group_by="neighborhood", map_filename="map.html"):
+
+# ✅ Properly broken
+def show_locations_grouped(
+    locations, group_by="neighborhood", map_filename="map.html"
+):
+```
+
+#### Docstring Line Length
+```python
+# ❌ Too long docstring line (over 100 characters)
+"""
+Map Locations - A Python library for mapping locations with interactive filtering and visualization capabilities.
+"""
+
+# ✅ Properly broken (under 100 characters)
+"""
+Map Locations - A Python library for mapping locations with interactive filtering and
+visualization capabilities.
+"""
+```
+
+### Development Workflow and Tools
+
+#### Pre-commit Checks
+- Always run `make lint` before committing code (runs all pre-commit hooks)
+- Use `make test` to ensure all tests pass
+- Consider setting up pre-commit hooks to automatically check code quality
+
+#### IDE Configuration
+- Configure your IDE to show line length guides at 100 characters
+- Enable real-time linting with flake8
+- Set up auto-formatting with black or autopep8
+- Configure your editor to trim trailing whitespace automatically
+
+#### Common Commands
+```bash
+# Install development dependencies (includes isort)
+pip install -e ".[dev]"
+
+# Check code quality
+make lint
+
+# Run tests
+make test
+
+# Format code with black and isort
+make format
+
+# Format code manually
+black map_locations/ tests/
+isort map_locations/ tests/
+
+# Auto-fix some issues
+autopep8 --in-place --aggressive --aggressive map_locations/ tests/
+```
+
+#### Code Review Checklist
+Before submitting code for review, ensure:
+- [ ] All lines are under 100 characters
+- [ ] No unused imports
+- [ ] No f-strings without placeholders
+- [ ] No trailing whitespace
+- [ ] No whitespace in blank lines
+- [ ] Files end with newline
+- [ ] All tests pass
+- [ ] Code follows project patterns
 
 ### File Organization
 - Keep related functionality in the same module
@@ -104,7 +255,7 @@ Location = {
     'tags': List[str],      # Optional
     'neighborhood': str,    # Optional
     'date_added': str,      # Optional
-    'date_visited': str     # Optional
+    'date_of_visit': str     # Optional
 }
 ```
 
@@ -217,4 +368,4 @@ Location = {
 - Consider clustering for dense areas
 - Plan for multiple map layers
 
-Remember to update these rules as the project evolves and new patterns emerge. 
+Remember to update these rules as the project evolves and new patterns emerge.

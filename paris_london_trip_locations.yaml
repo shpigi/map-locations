@@ -1,0 +1,324 @@
+locations:
+  - name: "145 Rue du Temple Apartment"
+    type: "accommodation"
+    latitude: 48.867312
+    longitude: 2.363406
+    tags: ["Airbnb", "Marais"]
+    neighborhood: "3rd arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-04"
+
+  - name: "Saint-Paul Metro Station"
+    type: "transport"
+    latitude: 48.855214
+    longitude: 2.360858
+    tags: ["metro", "Line 1"]
+    neighborhood: "4th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-04"
+
+  - name: "Musée Picasso Paris"
+    type: "museum"
+    latitude: 48.859661
+    longitude: 2.362486
+    tags: ["art", "Picasso"]
+    neighborhood: "3rd arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-05"
+
+  - name: "Blanche Metro Station"
+    type: "transport"
+    latitude: 48.883458
+    longitude: 2.333703
+    tags: ["metro", "Line 2"]
+    neighborhood: "9th/18th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-05"
+
+  - name: "Musée d'Orsay"
+    type: "museum"
+    latitude: 48.860000
+    longitude: 2.326600
+    tags: ["Impressionism"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-06"
+
+  - name: "Eiffel Tower"
+    type: "landmark"
+    latitude: 48.858300
+    longitude: 2.294500
+    tags: ["iconic", "views"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-06"
+
+  - name: "Disneyland Paris"
+    type: "theme_park"
+    latitude: 48.867900
+    longitude: 2.775700
+    tags: ["family", "entertainment"]
+    neighborhood: "Marne-la-Vallée"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-07"
+
+  - name: "Fondation Louis Vuitton"
+    type: "museum"
+    latitude: 48.876656
+    longitude: 2.263377
+    tags: ["art", "David Hockney"]
+    neighborhood: "16th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-09"
+
+  - name: "Père Lachaise Cemetery"
+    type: "landmark"
+    latitude: 48.860764
+    longitude: 2.393646
+    tags: ["cemetery", "historic"]
+    neighborhood: "20th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Jardin des Tuileries"
+    type: "park"
+    latitude: 48.863491
+    longitude: 2.327369
+    tags: ["scenic", "central"]
+    neighborhood: "1st arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Palace of Versailles"
+    type: "landmark"
+    latitude: 48.804400
+    longitude: 2.123200
+    tags: ["palace", "UNESCO"]
+    neighborhood: "Versailles"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Catacombs of Paris"
+    type: "landmark"
+    latitude: 48.83376
+    longitude: 2.3323339
+    tags: ["ossuary"]
+    neighborhood: "14th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Jardin du Luxembourg"
+    type: "park"
+    latitude: 48.846943
+    longitude: 2.337222
+    tags: ["fountain", "family"]
+    neighborhood: "6th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Jardin des Plantes"
+    type: "garden"
+    latitude: 48.843311
+    longitude: 2.360703
+    tags: ["botanical"]
+    neighborhood: "5th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Atelier des Lumières"
+    type: "museum"
+    latitude: 48.861633
+    longitude: 2.380711
+    tags: ["digital art", "immersive"]
+    neighborhood: "11th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Parc des Buttes-Chaumont"
+    type: "park"
+    latitude: 48.880280
+    longitude: 2.382778
+    tags: ["landscape"]
+    neighborhood: "19th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Centre Pompidou"
+    type: "museum"
+    latitude: 48.860657
+    longitude: 2.352095
+    tags: ["modern art"]
+    neighborhood: "4th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Musée de l'Orangerie"
+    type: "museum"
+    latitude: 48.863777
+    longitude: 2.322533
+    tags: ["Monet", "Water Lilies"]
+    neighborhood: "1st arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Tour Montparnasse Observation Deck"
+    type: "landmark"
+    latitude: 48.842100
+    longitude: 2.322000
+    tags: ["views", "skyscraper"]
+    neighborhood: "15th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Paradox Museum Paris"
+    type: "museum"
+    latitude: 48.871220
+    longitude: 2.334430
+    tags: ["optical illusion"]
+    neighborhood: "9th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Musée Rodin"
+    type: "museum"
+    latitude: 48.855133
+    longitude: 2.315818
+    tags: ["sculpture"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Musée du Quai Branly – Jacques Chirac"
+    type: "museum"
+    latitude: 48.856500
+    longitude: 2.291800
+    tags: ["ethnography"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Residence Inn London Kensington"
+    type: "accommodation"
+    latitude: 51.493611
+    longitude: -0.201667
+    tags: ["hotel", "serviced apartments"]
+    neighborhood: "Kensington"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-12"
+
+  - name: "St Pancras International"
+    type: "transport"
+    latitude: 51.530000
+    longitude: -0.125280
+    tags: ["Eurostar", "railway"]
+    neighborhood: "Camden"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-12"
+
+  - name: "Vaudeville Theatre"
+    type: "theatre"
+    latitude: 51.510269
+    longitude: -0.122525
+    tags: ["show", "West End"]
+    neighborhood: "City of Westminster"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-14"
+
+  - name: "Warner Bros. Studio Tour London"
+    type: "experience"
+    latitude: 51.690144
+    longitude: -0.418115
+    tags: ["Harry Potter"]
+    neighborhood: "Leavesden"
+    date_added: "2025-07-19"
+    date_of_visit: "2025-08-15"
+
+  - name: "Old Spitalfields Market"
+    type: "market"
+    latitude: 51.5195762
+    longitude: -0.0756922
+    tags: ["historic", "covered"]
+    neighborhood: "Spitalfields"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Borough Market"
+    type: "market"
+    latitude: 51.505444
+    longitude: -0.091249
+    tags: ["food"]
+    neighborhood: "Southwark"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Leadenhall Market"
+    type: "market"
+    latitude: 51.512779
+    longitude: -0.083662
+    tags: ["Victorian", "covered"]
+    neighborhood: "City of London"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Camden Lock"
+    type: "market"
+    latitude: 51.541100
+    longitude: -0.145700
+    tags: ["canal", "crafts"]
+    neighborhood: "Camden"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Little Venice"
+    type: "neighborhood"
+    latitude: 51.521600
+    longitude: -0.182100
+    tags: ["canal", "scenic"]
+    neighborhood: "Westminster"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Hampstead Heath"
+    type: "park"
+    latitude: 51.560863
+    longitude: -0.163572
+    tags: ["nature", "viewpoints"]
+    neighborhood: "Hampstead"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Parliament Hill"
+    type: "landmark"
+    latitude: 51.560300
+    longitude: -0.160700
+    tags: ["viewpoint"]
+    neighborhood: "Hampstead"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Saatchi Gallery"
+    type: "museum"
+    latitude: 51.490710
+    longitude: -0.158620
+    tags: ["contemporary art"]
+    neighborhood: "Chelsea"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "Hay's Galleria"
+    type: "market"
+    latitude: 51.505800
+    longitude: -0.083700
+    tags: ["riverfront", "shops"]
+    neighborhood: "Southwark"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"
+
+  - name: "HMS Belfast"
+    type: "museum"
+    latitude: 51.506577
+    longitude: -0.081502
+    tags: ["naval", "ship"]
+    neighborhood: "Southwark"
+    date_added: "2025-07-19"
+    date_of_visit: "YYYY-MM-DD"

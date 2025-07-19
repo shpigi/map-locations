@@ -35,4 +35,4 @@ global-exclude .tox
 global-exclude .venv
 global-exclude venv
 global-exclude env
-global-exclude .env 
+global-exclude .env

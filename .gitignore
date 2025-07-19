@@ -167,6 +167,7 @@ cython_debug/
 
 # Cursor
 .cursor/
+!.cursor/settings.json
 
 # Map generation outputs
 maps/*/map.html
@@ -240,4 +241,4 @@ yarn-error.log*
 # Local development files
 local_*
 dev_*
-test_* 
+test_*

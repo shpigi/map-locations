@@ -6,7 +6,7 @@ locations:
     tags: ["historic"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage des Panoramas"
     type: "passage"
@@ -15,7 +15,7 @@ locations:
     tags: ["historic"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage Jouffroy"
     type: "passage"
@@ -24,7 +24,7 @@ locations:
     tags: ["19th-century"]
     neighborhood: "9th arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage du Caire"
     type: "passage"
@@ -33,7 +33,7 @@ locations:
     tags: ["wholesale", "longest"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage Brady"
     type: "passage"
@@ -42,7 +42,7 @@ locations:
     tags: ["little india", "cultural"]
     neighborhood: "10th arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage Choiseul"
     type: "passage"
@@ -51,7 +51,7 @@ locations:
     tags: ["longest", "shopping"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage du Grand Cerf"
     type: "passage"
@@ -60,5 +60,4 @@ locations:
     tags: ["architecture", "glass roof"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
-
+    date_of_visit: "YYYY-MM-DD"

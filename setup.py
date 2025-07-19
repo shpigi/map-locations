@@ -3,11 +3,14 @@
 Setup script for map_locations package.
 """
 
-from setuptools import setup, find_packages
 import os
+from typing import List
+
+from setuptools import find_packages, setup
+
 
 # Read the README file for long description
-def read_readme():
+def read_readme() -> str:
     """Read README.md file for long description."""
     readme_path = os.path.join(os.path.dirname(__file__), "README.md")
     if os.path.exists(readme_path):
@@ -15,8 +18,9 @@ def read_readme():
             return f.read()
     return ""
 
+
 # Read requirements from requirements.txt if it exists
-def read_requirements():
+def read_requirements() -> List[str]:
     """Read requirements from requirements.txt file."""
     requirements_path = os.path.join(os.path.dirname(__file__), "requirements.txt")
     if os.path.exists(requirements_path):
@@ -24,12 +28,16 @@ def read_requirements():
             return [line.strip() for line in f if line.strip() and not line.startswith("#")]
     return []
 
+
 setup(
     name="map-locations",
     version="0.1.0",
     author="Lavi Shpigelman",
     author_email="shpigi+map_locations@gmail.com",
-    description="A Python library and CLI tool for mapping locations with interactive filtering and visualization capabilities",
+    description=(
+        "A Python library and CLI tool for mapping locations with interactive "
+        "filtering and visualization capabilities"
+    ),
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/shpigi/map-locations",
@@ -80,4 +88,4 @@ setup(
     zip_safe=False,
     keywords="maps, locations, gis, folium, yaml, geojson, kml",
     license="MIT",
-) 
+)
