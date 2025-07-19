@@ -2,6 +2,9 @@
 
 A Python library and CLI tool for mapping locations with interactive filtering and visualization capabilities.
 
+[![CI](https://github.com/shpigi/map-locations/workflows/CI/badge.svg)](https://github.com/shpigi/map-locations/actions)
+[![Codecov](https://codecov.io/gh/shpigi/map-locations/branch/main/graph/badge.svg)](https://codecov.io/gh/shpigi/map-locations)
+
 **Author:** Lavi Shpigelman
 
 ## Features
