@@ -1,0 +1,45 @@
+locations:
+- date_added: '2024-01-01'
+  date_of_visit: '2024-01-15'
+  latitude: 40.7829
+  longitude: -73.9654
+  name: Central Park
+  neighborhood: Upper East Side
+  tags:
+  - outdoor
+  - recreation
+  - nature
+  type: park
+- date_added: '2024-01-02'
+  date_of_visit: '2024-01-20'
+  latitude: 40.758
+  longitude: -73.9855
+  name: Times Square
+  neighborhood: Midtown
+  tags:
+  - tourist
+  - entertainment
+  - shopping
+  type: landmark
+- date_added: '2024-01-03'
+  date_of_visit: '2024-01-25'
+  latitude: 40.7061
+  longitude: -73.9969
+  name: Brooklyn Bridge
+  neighborhood: Brooklyn
+  tags:
+  - landmark
+  - architecture
+  - views
+  type: bridge
+- date_added: '2024-01-04'
+  date_of_visit: '2024-01-30'
+  latitude: 40.6892
+  longitude: -74.0445
+  name: Statue of Liberty
+  neighborhood: Lower Manhattan
+  tags:
+  - landmark
+  - history
+  - tourist
+  type: monument

@@ -33,4 +33,4 @@ coverage.xml
 # *.kml
 # maps/*.html
 
-# Keep core.py always in context by not excluding it 
+# Keep core.py always in context by not excluding it

@@ -20,7 +20,7 @@ This is a Python library and CLI tool for mapping locations with interactive fil
 - **Line Length**: Keep all lines under 100 characters (project standard)
 - **F-strings**: Only use f-strings when there are actual placeholders (avoid F541)
 - **Imports**: Remove unused imports immediately (F401)
-- **Whitespace**: 
+- **Whitespace**:
   - No trailing whitespace (W291)
   - No whitespace in blank lines (W293)
   - Always end files with a newline (W292)
@@ -75,7 +75,7 @@ from pathlib import Path
 #### Whitespace Rules
 ```python
 # ❌ Trailing whitespace
-def test_function():    
+def test_function():
     return True
 
 # ✅ Clean whitespace
@@ -121,7 +121,7 @@ visualization capabilities.
 ### Development Workflow and Tools
 
 #### Pre-commit Checks
-- Always run `make lint` before committing code
+- Always run `make lint` before committing code (runs all pre-commit hooks)
 - Use `make test` to ensure all tests pass
 - Consider setting up pre-commit hooks to automatically check code quality
 
@@ -368,4 +368,4 @@ Location = {
 - Consider clustering for dense areas
 - Plan for multiple map layers
 
-Remember to update these rules as the project evolves and new patterns emerge. 
+Remember to update these rules as the project evolves and new patterns emerge.

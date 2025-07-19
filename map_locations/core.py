@@ -3,7 +3,7 @@ import json
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Union, cast
+from typing import Any, Dict, List, Sequence, Set, Union, cast
 
 import folium
 import yaml
@@ -48,7 +48,7 @@ def export_to_csv(locations: List[Dict[str, Any]], output_path: str) -> None:
         return
 
     # Get all possible fields from all locations
-    all_fields: set[str] = set()
+    all_fields: Set[str] = set()
     for loc in locations:
         all_fields.update(loc.keys())
 
@@ -115,12 +115,13 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    kml_content = """<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>Locations</name>
-    <description>Exported locations</description>
-"""
+    kml_content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
+        "  <Document>\n"
+        "    <name>Locations</name>\n"
+        "    <description>Exported locations</description>\n"
+    )
 
     for loc in locations:
         tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else ""
@@ -131,18 +132,18 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
             f"Date Added: {loc.get('date_added', '')}<br>"
             f"date of visit: {loc.get('date_of_visit', '')}"
         )
+        placemark = (
+            f"<Placemark>\n"
+            f"<name>{loc['name']}</name>\n"
+            f"<description><![CDATA[{description}]]></description>\n"
+            f"<Point>\n"
+            f"<coordinates>{loc['longitude']}, {loc['latitude']}, 0</coordinates>\n"
+            f"</Point>\n"
+            f"</Placemark>\n"
+        )
+        kml_content += placemark
 
-        kml_content += f"""    <Placemark>
-      <name>{loc['name']}</name>
-      <description><![CDATA[{description}]]></description>
-      <Point>
-        <coordinates>{loc['longitude']},{loc['latitude']},0</coordinates>
-      </Point>
-    </Placemark>
-"""
-
-    kml_content += """  </Document>
-</kml>"""
+    kml_content += "  </Document>\n</kml>\n"
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(kml_content)
@@ -171,10 +172,10 @@ def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> No
 
 
 def show_locations_grouped(
-    locations: List[Dict[str, Any]], 
-    group_by: str = "type", 
+    locations: List[Dict[str, Any]],
+    group_by: str = "type",
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap"
+    tile_provider: str = "openstreetmap",
 ) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
@@ -197,19 +198,16 @@ def show_locations_grouped(
         folium.TileLayer(
             tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
             attr="Google Maps",
-            name="Google Maps"
+            name="Google Maps",
         ).add_to(m)
     elif tile_provider == "google_satellite":
         folium.TileLayer(
             tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
             attr="Google Satellite",
-            name="Google Satellite"
+            name="Google Satellite",
         ).add_to(m)
     else:  # Default to OpenStreetMap
-        folium.TileLayer(
-            tiles="OpenStreetMap",
-            name="OpenStreetMap"
-        ).add_to(m)
+        folium.TileLayer(tiles="OpenStreetMap", name="OpenStreetMap").add_to(m)
 
     # Group locations
     groups = defaultdict(list)
@@ -236,44 +234,39 @@ def show_locations_grouped(
     for group_name, group_locs in groups.items():
         fg = folium.FeatureGroup(name=f"{group_by.capitalize()}: {group_name}")
         color = next(color_cycle, "gray")
-
         for loc in group_locs:
-            popup_html = f"""
-            <b>{loc['name']}</b><br>
-            Type: {loc.get('type', '')}<br>
-            Tags: {', '.join(loc.get('tags', []))}<br>
-            Date added: {loc.get('date_added', '')}<br>
-            date of visit: {loc.get('date_of_visit', '')}
-            """
+            popup_lines = [
+                f"<b>{loc['name']}</b><br>",
+                f"Type: {loc.get('type', '')}<br>",
+                f"Tags: {', '.join(loc.get('tags', []))}<br>",
+                f"Date added: {loc.get('date_added', '')}<br>",
+                f"date of visit: {loc.get('date_of_visit', '')}",
+            ]
+            popup_html = "".join(popup_lines)
             folium.Marker(
                 location=[loc["latitude"], loc["longitude"]],
                 popup=popup_html,
                 tooltip=loc["name"],
                 icon=folium.Icon(color=color),
             ).add_to(fg)
-
         fg.add_to(m)
-
     folium.LayerControl(collapsed=False).add_to(m)
-
-    # Create directory if it doesn't exist
     dirname = os.path.dirname(map_filename)
-    if dirname:  # Only create directory if there is a directory path
+    if dirname:
         os.makedirs(dirname, exist_ok=True)
-
     m.save(map_filename)
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
 
 
 def show_locations_with_google_maps(
-    locations: List[Dict[str, Any]], 
-    group_by: str = "type", 
+    locations: List[Dict[str, Any]],
+    group_by: str = "type",
     map_filename: str = "map.html",
-    satellite: bool = False
+    satellite: bool = False,
 ) -> None:
     """
     Create a folium map with Google Maps tiles showing locations grouped by a specified field.
-    
+
     Note: This uses Google Maps tiles which are free for personal use but may require
     an API key for commercial use or high volume usage.
 

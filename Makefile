@@ -6,7 +6,8 @@ help:
 	@echo "  install      - Install the package in development mode"
 	@echo "  install-dev  - Install the package with development dependencies"
 	@echo "  test         - Run tests"
-	@echo "  lint         - Run linting checks"
+	@echo "  lint         - Run pre-commit checks on all files"
+	@echo "  lint-staged  - Run pre-commit checks on staged files only"
 	@echo "  format       - Format code with black and isort"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  build        - Build the package"
@@ -26,8 +27,11 @@ test:
 
 # Run linting
 lint:
-	flake8 map_locations/ tests/
-	mypy map_locations/
+	pre-commit run --all-files
+
+# Run linting on staged files only
+lint-staged:
+	pre-commit run
 
 # Format code
 format:
@@ -58,4 +62,4 @@ setup-dev: install-dev
 test-cli:
 	python -m map_locations.cli --help
 	python -m map_locations.cli map --help
-	python -m map_locations.cli export --help 
+	python -m map_locations.cli export --help

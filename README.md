@@ -119,7 +119,7 @@ The library supports multiple tile providers for different map styles:
 - **Best for**: Familiar interface, detailed street data
 
 ### Google Satellite
-- **Cost**: Free for personal use, requires API key for commercial use  
+- **Cost**: Free for personal use, requires API key for commercial use
 - **Usage**: No API key required for personal use
 - **Best for**: Aerial views, terrain analysis
 
@@ -231,16 +231,16 @@ show_locations_grouped(locations, group_by="type", map_filename="map.html")
 
 # Generate map with Google Maps tiles
 show_locations_grouped(
-    locations, 
-    group_by="type", 
+    locations,
+    group_by="type",
     map_filename="map.html",
     tile_provider="google_maps"
 )
 
 # Generate map with Google Satellite view
 show_locations_grouped(
-    locations, 
-    group_by="type", 
+    locations,
+    group_by="type",
     map_filename="map.html",
     tile_provider="google_satellite"
 )
@@ -314,12 +314,58 @@ pytest tests/test_core.py -v
 # Format code
 make format
 
-# Run linting
+# Run linting (pre-commit checks on all files)
 make lint
 
-# Run type checking
-mypy map_locations/
+# Run linting on staged files only
+make lint-staged
 ```
+
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality. The hooks will automatically run on every commit and include:
+
+- **Code Formatting**: Black for code formatting, isort for import sorting
+- **Linting**: Flake8 for style checking, MyPy for type checking
+- **File Checks**: YAML validation, JSON validation, trailing whitespace removal
+- **Security**: Private key detection, merge conflict detection
+
+#### Setting up pre-commit hooks:
+
+```bash
+# Install pre-commit hooks (automatically done with setup-dev)
+make setup-dev
+
+# Or manually:
+pre-commit install
+```
+
+#### Running pre-commit checks manually:
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run black
+
+# Run hooks on staged files only
+pre-commit run
+```
+
+
+
+#### Code Style Standards
+
+This project follows strict code quality standards:
+
+- **Line Length**: Maximum 100 characters
+- **Formatting**: Black for code formatting, isort for imports
+- **Linting**: Flake8 for style checking
+- **Type Checking**: MyPy for type validation
+- **Documentation**: Google-style docstrings
+
+The pre-commit hooks will automatically enforce these standards.
 
 ### Building and Publishing
 
@@ -401,7 +447,7 @@ locations = load_locations_from_yaml("locations.yaml")
 
 # Custom map options
 show_locations_grouped(
-    locations, 
+    locations,
     group_by="type",
     map_filename="custom_map.html"
 )
