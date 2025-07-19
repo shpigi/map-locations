@@ -171,7 +171,10 @@ def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> No
 
 
 def show_locations_grouped(
-    locations: List[Dict[str, Any]], group_by: str = "type", map_filename: str = "map.html"
+    locations: List[Dict[str, Any]], 
+    group_by: str = "type", 
+    map_filename: str = "map.html",
+    tile_provider: str = "openstreetmap"
 ) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
@@ -180,6 +183,7 @@ def show_locations_grouped(
         locations (list): List of dicts loaded from YAML.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
         map_filename (str): Path to save the HTML map.
+        tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
     """
     if not locations:
         raise ValueError("No locations provided.")
@@ -187,6 +191,25 @@ def show_locations_grouped(
     # Center the map
     first = locations[0]
     m = folium.Map(location=[first["latitude"], first["longitude"]], zoom_start=14)
+
+    # Add tile layer based on provider
+    if tile_provider == "google_maps":
+        folium.TileLayer(
+            tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+            attr="Google Maps",
+            name="Google Maps"
+        ).add_to(m)
+    elif tile_provider == "google_satellite":
+        folium.TileLayer(
+            tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+            attr="Google Satellite",
+            name="Google Satellite"
+        ).add_to(m)
+    else:  # Default to OpenStreetMap
+        folium.TileLayer(
+            tiles="OpenStreetMap",
+            name="OpenStreetMap"
+        ).add_to(m)
 
     # Group locations
     groups = defaultdict(list)
@@ -234,10 +257,34 @@ def show_locations_grouped(
     folium.LayerControl(collapsed=False).add_to(m)
 
     # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(map_filename), exist_ok=True)
+    dirname = os.path.dirname(map_filename)
+    if dirname:  # Only create directory if there is a directory path
+        os.makedirs(dirname, exist_ok=True)
 
     m.save(map_filename)
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
+
+
+def show_locations_with_google_maps(
+    locations: List[Dict[str, Any]], 
+    group_by: str = "type", 
+    map_filename: str = "map.html",
+    satellite: bool = False
+) -> None:
+    """
+    Create a folium map with Google Maps tiles showing locations grouped by a specified field.
+    
+    Note: This uses Google Maps tiles which are free for personal use but may require
+    an API key for commercial use or high volume usage.
+
+    Args:
+        locations (list): List of dicts loaded from YAML.
+        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
+        map_filename (str): Path to save the HTML map.
+        satellite (bool): Use satellite view instead of street view
+    """
+    tile_provider = "google_satellite" if satellite else "google_maps"
+    show_locations_grouped(locations, group_by, map_filename, tile_provider)
 
 
 # ✅ Run this to test

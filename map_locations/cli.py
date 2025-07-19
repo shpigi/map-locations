@@ -16,6 +16,7 @@ from .core import (
     export_to_kml,
     load_locations_from_yaml,
     show_locations_grouped,
+    show_locations_with_google_maps,
 )
 
 
@@ -28,6 +29,12 @@ def create_parser() -> argparse.ArgumentParser:
 Examples:
   # Create an interactive map (grouped by type by default)
   map-locations map passages.yaml --output maps/passages/map.html
+
+  # Create map with Google Maps tiles
+  map-locations map passages.yaml --tile-provider google_maps --output maps/passages/map.html
+
+  # Create map with Google Satellite view
+  map-locations map passages.yaml --tile-provider google_satellite --output maps/passages/map.html
 
   # Export to all formats
   map-locations export passages.yaml --output maps/passages/passages
@@ -63,6 +70,14 @@ Examples:
         default="type",
         choices=["neighborhood", "type", "date_added", "date_of_visit"],
         help="Field to group markers by (default: type)",
+    )
+    map_parser.add_argument(
+        "--tile-provider",
+        "-t",
+        type=str,
+        default="openstreetmap",
+        choices=["openstreetmap", "google_maps", "google_satellite"],
+        help="Map tile provider (default: openstreetmap)",
     )
 
     # Export command
@@ -123,6 +138,7 @@ def handle_map_command(args: argparse.Namespace) -> None:
             locations,
             group_by=args.group_by,
             map_filename=args.output,
+            tile_provider=args.tile_provider,
         )
 
         print("✅ Map created successfully!")

@@ -7,6 +7,7 @@ A Python library and CLI tool for mapping locations with interactive filtering a
 ## Features
 
 - 📍 **Interactive Maps**: Create beautiful, interactive maps using Folium
+- 🗺️ **Multiple Tile Providers**: Support for OpenStreetMap, Google Maps, and Google Satellite
 - 🏷️ **Tag-based Filtering**: Filter locations by tags and types
 - 🎨 **Color-coded Types**: Different location types are displayed with distinct colors
 - 📝 **Toggle Labels**: Show/hide location names on the map
@@ -100,6 +101,27 @@ map-locations export locations.yaml --format geojson --output exports/locations.
 map-locations export locations.yaml --format kml --output exports/locations.kml
 ```
 
+## Tile Providers
+
+The library supports multiple tile providers for different map styles:
+
+### OpenStreetMap (Default)
+- **Cost**: Free
+- **Usage**: No API key required
+- **Best for**: General use, open data
+
+### Google Maps
+- **Cost**: Free for personal use, requires API key for commercial use
+- **Usage**: No API key required for personal use
+- **Best for**: Familiar interface, detailed street data
+
+### Google Satellite
+- **Cost**: Free for personal use, requires API key for commercial use  
+- **Usage**: No API key required for personal use
+- **Best for**: Aerial views, terrain analysis
+
+**Note**: Google Maps tiles are free for personal use but may require an API key and payment for commercial use or high-volume usage. For commercial applications, consider using the official Google Maps JavaScript API.
+
 ## Location Data Format
 
 Each location in your YAML file should include:
@@ -141,6 +163,12 @@ map-locations map locations.yaml --group-by type --output type_map.html
 
 # Create map grouped by date
 map-locations map locations.yaml --group-by date_added --output date_map.html
+
+# Create map with Google Maps tiles
+map-locations map locations.yaml --tile-provider google_maps --output map.html
+
+# Create map with Google Satellite view
+map-locations map locations.yaml --tile-provider google_satellite --output map.html
 ```
 
 ### Export Commands
@@ -172,6 +200,19 @@ map-locations map locations.yaml --group-by date_added
 map-locations map locations.yaml --group-by date_of_visit
 ```
 
+### Tile Provider Options
+
+```bash
+# Use OpenStreetMap (default, free)
+map-locations map locations.yaml --tile-provider openstreetmap
+
+# Use Google Maps (free for personal use)
+map-locations map locations.yaml --tile-provider google_maps
+
+# Use Google Satellite (free for personal use)
+map-locations map locations.yaml --tile-provider google_satellite
+```
+
 ## Library Usage
 
 ### Basic Map Generation
@@ -184,6 +225,22 @@ locations = load_locations_from_yaml("locations.yaml")
 
 # Generate interactive map with grouping (defaults to type)
 show_locations_grouped(locations, group_by="type", map_filename="map.html")
+
+# Generate map with Google Maps tiles
+show_locations_grouped(
+    locations, 
+    group_by="type", 
+    map_filename="map.html",
+    tile_provider="google_maps"
+)
+
+# Generate map with Google Satellite view
+show_locations_grouped(
+    locations, 
+    group_by="type", 
+    map_filename="map.html",
+    tile_provider="google_satellite"
+)
 ```
 
 ### Grouping and Organization
@@ -372,7 +429,7 @@ This creates an interactive map of Paris's historic covered passages with:
 map_locations/
 ├── map_locations/
 │   ├── __init__.py
-│   ├── map_locations.py      # Core functionality
+│   ├── core.py               # Core functionality
 │   └── cli.py               # CLI interface
 ├── maps/
 │   └── passages/
