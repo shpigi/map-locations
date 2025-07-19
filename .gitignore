@@ -167,6 +167,7 @@ cython_debug/
 
 # Cursor
 .cursor/
+!.cursor/settings.json
 
 # Map generation outputs
 maps/*/map.html
