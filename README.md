@@ -104,6 +104,10 @@ map-locations export locations.yaml --format geojson --output exports/locations.
 map-locations export locations.yaml --format kml --output exports/locations.kml
 ```
 
+### 4. Import into Google My Maps
+
+You can easily import your exported KML files into [Google My Maps](https://www.google.com/maps/d/u/0/) for additional features. See the [Google My Maps Integration](#google-my-maps-integration) section below for detailed instructions.
+
 ## Tile Providers
 
 The library supports multiple tile providers for different map styles:
@@ -174,6 +178,8 @@ map-locations map locations.yaml --tile-provider google_maps --output map.html
 map-locations map locations.yaml --tile-provider google_satellite --output map.html
 ```
 
+**See also**: [Grouping Options](#grouping-options) and [Tile Provider Options](#tile-provider-options) for more examples.
+
 ### Export Commands
 
 ```bash
@@ -186,6 +192,33 @@ map-locations export locations.yaml --format csv --output exports/locations.csv
 map-locations export locations.yaml --format geojson --output exports/locations.geojson
 map-locations export locations.yaml --format kml --output exports/locations.kml
 ```
+
+**Note**: For importing into Google My Maps, use the KML format. See [Google My Maps Integration](#google-my-maps-integration) for details.
+
+### Google My Maps Integration
+
+Export your locations to KML format and import them into [Google My Maps](https://www.google.com/maps/d/u/0/) for enhanced features:
+
+```bash
+# Export to KML for Google My Maps
+map-locations export locations.yaml --format kml --output my_locations.kml
+```
+
+**Steps to import into Google My Maps**:
+1. Go to [Google My Maps](https://www.google.com/maps/d/u/0/)
+2. Click "Create a new map"
+3. Click "Import" in the left panel
+4. Upload your KML file
+5. Your locations will appear with all details preserved
+
+**Google My Maps Features**:
+- 📱 **Mobile Access**: View maps on smartphones and tablets
+- 👥 **Sharing**: Share maps via link or email
+- 🎨 **Custom Styling**: Change colors, icons, and labels
+- 📝 **Collaboration**: Allow others to edit your maps
+- 🗺️ **Offline Access**: Download maps for offline use
+- 📍 **Custom Markers**: Add custom icons and descriptions
+- 🗂️ **Layers**: Organize locations into different layers
 
 ### Grouping Options
 
@@ -263,6 +296,8 @@ show_locations_grouped(locations, group_by="neighborhood", map_filename="neighbo
 show_locations_grouped(locations, group_by="date_added", map_filename="date_map.html")
 ```
 
+**See also**: [Grouping Options](#grouping-options) for CLI examples of all available grouping fields.
+
 ### Data Loading
 
 ```python
@@ -294,6 +329,8 @@ make install-dev
 # Set up pre-commit hooks
 make setup-dev
 ```
+
+**Note**: This setup is also covered in the [Installation](#installation) section above.
 
 ### Running Tests
 
@@ -453,6 +490,8 @@ show_locations_grouped(
 )
 ```
 
+**See also**: [Tile Providers](#tile-providers) for available tile provider options and [Tile Provider Options](#tile-provider-options) for CLI examples.
+
 ## Examples
 
 ### Paris Passages Map
@@ -469,43 +508,6 @@ This creates an interactive map of Paris's historic covered passages with:
 - Color-coded groups with layer controls
 - Detailed popups showing name, type, tags, and dates
 - Interactive layer panel to toggle group visibility
-
-## Development
-
-### Project Structure
-
-```
-map_locations/
-├── map_locations/
-│   ├── __init__.py
-│   ├── core.py               # Core functionality
-│   └── cli.py               # CLI interface
-├── maps/
-│   └── passages/
-│       ├── locations.yaml    # Example data
-│       ├── locations.kml     # Generated KML
-│       ├── locations.geojson # Generated GeoJSON
-│       └── map.html         # Generated HTML map
-├── tests/                   # Test suite
-├── README.md               # This file
-└── setup.py               # Package configuration
-```
-
-### Running Tests
-
-```bash
-python -m pytest tests/
-```
-
-### Building Documentation
-
-```bash
-# Generate API documentation
-sphinx-apidoc -o docs/ map_locations/
-
-# Build HTML docs
-cd docs && make html
-```
 
 ## Contributing
 
