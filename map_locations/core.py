@@ -125,12 +125,15 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
 
     for loc in locations:
         tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else ""
+        neighborhood = loc.get("neighborhood", "") or "Not specified"
+        date_added = loc.get("date_added", "") or "Not specified"
+        date_of_visit = loc.get("date_of_visit", "") or "Not specified"
         description = (
-            f"Type: {loc.get('type', '')}<br>"
+            f"Type: {loc.get('type', 'Not specified')}<br>"
             f"Tags: {tags_str}<br>"
-            f"Neighborhood: {loc.get('neighborhood', '')}<br>"
-            f"Date Added: {loc.get('date_added', '')}<br>"
-            f"date of visit: {loc.get('date_of_visit', '')}"
+            f"Neighborhood: {neighborhood}<br>"
+            f"Date Added: {date_added}<br>"
+            f"Date of Visit: {date_of_visit}"
         )
         placemark = (
             f"<Placemark>\n"
@@ -235,17 +238,25 @@ def show_locations_grouped(
         fg = folium.FeatureGroup(name=f"{group_by.capitalize()}: {group_name}")
         color = next(color_cycle, "gray")
         for loc in group_locs:
-            popup_lines = [
-                f"<b>{loc['name']}</b><br>",
-                f"Type: {loc.get('type', '')}<br>",
-                f"Tags: {', '.join(loc.get('tags', []))}<br>",
-                f"Date added: {loc.get('date_added', '')}<br>",
-                f"date of visit: {loc.get('date_of_visit', '')}",
-            ]
-            popup_html = "".join(popup_lines)
+            # Create popup content with better styling
+            tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else "None"
+            neighborhood = loc.get("neighborhood", "") or "Not specified"
+            date_added = loc.get("date_added", "") or "Not specified"
+            date_of_visit = loc.get("date_of_visit", "") or "Not specified"
+
+            # Create popup with better structure and width
+            popup_html = (
+                f"<div><h4>{loc['name']}</h4>"
+                f"<p><strong>Type: </strong>{loc.get('type', 'Not specified')}</p>"
+                f"<p><strong>Tags: </strong>{tags_str}</p>"
+                f"<p><strong>Neighborhood: </strong>{neighborhood}</p>"
+                f"<p><strong>Date Added: </strong>{date_added}</p>"
+                f"<p><strong>Date of Visit: </strong>{date_of_visit}</p></div>"
+            )
+
             folium.Marker(
                 location=[loc["latitude"], loc["longitude"]],
-                popup=popup_html,
+                popup=folium.Popup(popup_html, max_width=450),
                 tooltip=loc["name"],
                 icon=folium.Icon(color=color),
             ).add_to(fg)
