@@ -1,0 +1,11 @@
+# Core dependencies for map_locations package
+folium>=0.12.0
+pyyaml>=6.0
+
+# Optional dependencies for development
+# pytest>=6.0
+# pytest-cov>=2.0
+# black>=21.0
+# flake8>=3.8
+# mypy>=0.800
+# pre-commit>=2.0 

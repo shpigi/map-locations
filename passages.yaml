@@ -1,0 +1,64 @@
+locations:
+  - name: "Galerie Vivienne"
+    type: "passage"
+    latitude: 48.8667
+    longitude: 2.3397
+    tags: ["historic"]
+    neighborhood: "2nd arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
+  - name: "Passage des Panoramas"
+    type: "passage"
+    latitude: 48.87111
+    longitude: 2.34167
+    tags: ["historic"]
+    neighborhood: "2nd arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
+  - name: "Passage Jouffroy"
+    type: "passage"
+    latitude: 48.87255
+    longitude: 2.34214
+    tags: ["19th-century"]
+    neighborhood: "9th arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
+  - name: "Passage du Caire"
+    type: "passage"
+    latitude: 48.86782
+    longitude: 2.35061
+    tags: ["wholesale", "longest"]
+    neighborhood: "2nd arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
+  - name: "Passage Brady"
+    type: "passage"
+    latitude: 48.86934
+    longitude: 2.35289
+    tags: ["little india", "cultural"]
+    neighborhood: "10th arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
+  - name: "Passage Choiseul"
+    type: "passage"
+    latitude: 48.86889
+    longitude: 2.33583
+    tags: ["longest", "shopping"]
+    neighborhood: "2nd arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
+  - name: "Passage du Grand Cerf"
+    type: "passage"
+    latitude: 48.86483
+    longitude: 2.34933
+    tags: ["architecture", "glass roof"]
+    neighborhood: "2nd arrondissement"
+    date_added: "2025-07-19"
+    date_visited: "YYYY-MM-DD"
+
