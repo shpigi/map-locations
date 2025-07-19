@@ -121,14 +121,17 @@ git checkout -b feature/amazing-feature
 # Make your changes
 # ... edit files ...
 
-# Stage your changes
-git add .
+# Stage your changes (with confirmation for new files)
+./scripts/git-safe.sh add .
 
 # Run pre-commit checks on staged files
 pre-commit run
 
 # If checks pass, commit your changes
 git commit -m "Add amazing feature"
+
+# Push changes (with confirmation)
+./scripts/git-safe.sh push
 ```
 
 ### 2. Running Checks Manually
