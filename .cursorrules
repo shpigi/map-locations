@@ -35,7 +35,7 @@ This is a Python library and CLI tool for mapping locations with interactive fil
 #### Line Length Examples
 ```python
 # ❌ Too long (over 100 characters)
-description = f"Type: {loc.get('type', '')}<br>Tags: {tags_str}<br>Neighborhood: {loc.get('neighborhood', '')}<br>Date Added: {loc.get('date_added', '')}<br>Date Visited: {loc.get('date_visited', '')}"
+description = f"Type: {loc.get('type', '')}<br>Tags: {tags_str}<br>Neighborhood: {loc.get('neighborhood', '')}<br>Date Added: {loc.get('date_added', '')}<br>date of visit: {loc.get('date_of_visit', '')}"
 
 # ✅ Properly broken (under 100 characters)
 description = (
@@ -43,7 +43,7 @@ description = (
     f"Tags: {tags_str}<br>"
     f"Neighborhood: {loc.get('neighborhood', '')}<br>"
     f"Date Added: {loc.get('date_added', '')}<br>"
-    f"Date Visited: {loc.get('date_visited', '')}"
+    f"date of visit: {loc.get('date_of_visit', '')}"
 )
 
 # ✅ With 100-character limit, this is now acceptable:
@@ -255,7 +255,7 @@ Location = {
     'tags': List[str],      # Optional
     'neighborhood': str,    # Optional
     'date_added': str,      # Optional
-    'date_visited': str     # Optional
+    'date_of_visit': str     # Optional
 }
 ```
 

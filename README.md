@@ -61,7 +61,7 @@ locations:
     tags: ["historic"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 
   - name: "Passage des Panoramas"
     type: "passage"
@@ -70,7 +70,7 @@ locations:
     tags: ["historic"]
     neighborhood: "2nd arrondissement"
     date_added: "2025-07-19"
-    date_visited: "YYYY-MM-DD"
+    date_of_visit: "YYYY-MM-DD"
 ```
 
 ### 2. Generate a map
@@ -113,7 +113,7 @@ Each location in your YAML file should include:
 | `tags` | list | ❌ | Array of tags for filtering |
 | `neighborhood` | string | ❌ | Neighborhood or area |
 | `date_added` | string | ❌ | Date added to collection |
-| `date_visited` | string | ❌ | Date visited (use "YYYY-MM-DD") |
+| `date_of_visit` | string | ❌ | date of visit (use "YYYY-MM-DD") |
 
 ### Example Location Entry
 
@@ -125,7 +125,7 @@ Each location in your YAML file should include:
   tags: ["architecture", "glass roof"]
   neighborhood: "2nd arrondissement"
   date_added: "2025-07-19"
-  date_visited: "YYYY-MM-DD"
+  date_of_visit: "YYYY-MM-DD"
 ```
 
 ## CLI Usage
@@ -168,8 +168,8 @@ map-locations map locations.yaml --group-by type
 # Group by date added
 map-locations map locations.yaml --group-by date_added
 
-# Group by date visited
-map-locations map locations.yaml --group-by date_visited
+# Group by date of visit
+map-locations map locations.yaml --group-by date_of_visit
 ```
 
 ## Library Usage
@@ -182,8 +182,8 @@ from map_locations import load_locations_from_yaml, show_locations_grouped
 # Load locations from YAML
 locations = load_locations_from_yaml("locations.yaml")
 
-# Generate interactive map with grouping
-show_locations_grouped(locations, group_by="neighborhood", map_filename="map.html")
+# Generate interactive map with grouping (defaults to type)
+show_locations_grouped(locations, group_by="type", map_filename="map.html")
 ```
 
 ### Grouping and Organization
@@ -193,11 +193,11 @@ from map_locations import load_locations_from_yaml, show_locations_grouped
 
 locations = load_locations_from_yaml("locations.yaml")
 
+# Group by type (default)
+show_locations_grouped(locations, group_by="type", map_filename="type_map.html")
+
 # Group by neighborhood
 show_locations_grouped(locations, group_by="neighborhood", map_filename="neighborhood_map.html")
-
-# Group by type
-show_locations_grouped(locations, group_by="type", map_filename="type_map.html")
 
 # Group by date added
 show_locations_grouped(locations, group_by="date_added", map_filename="date_map.html")
@@ -310,7 +310,7 @@ Different groups are automatically assigned colors from a predefined color palet
   - Type
   - Tags
   - Date added
-  - Date visited
+  - date of visit
 - **Tooltips**: Hover over markers to see location names
 - **Layer Control**: Toggle visibility of different groups using the layer control panel
 
@@ -326,8 +326,8 @@ from map_locations import load_locations_from_yaml, show_locations_grouped
 locations = load_locations_from_yaml("locations.yaml")
 
 # Group by any field
+show_locations_grouped(locations, group_by="type")          # By type (default)
 show_locations_grouped(locations, group_by="neighborhood")  # By area
-show_locations_grouped(locations, group_by="type")          # By type
 show_locations_grouped(locations, group_by="date_added")    # By date
 show_locations_grouped(locations, group_by="tags")          # By tags
 ```
@@ -342,7 +342,7 @@ locations = load_locations_from_yaml("locations.yaml")
 # Custom map options
 show_locations_grouped(
     locations, 
-    group_by="neighborhood",
+    group_by="type",
     map_filename="custom_map.html"
 )
 ```
@@ -354,12 +354,12 @@ show_locations_grouped(
 The included example shows historic passages in Paris:
 
 ```bash
-# Generate the Paris passages map grouped by neighborhood
-map-locations generate --input map_locations/maps/passages/locations.yaml --group-by neighborhood --output passages_map.html
+# Generate the Paris passages map grouped by type (default)
+map-locations generate --input map_locations/maps/passages/locations.yaml --group-by type --output passages_map.html
 ```
 
 This creates an interactive map of Paris's historic covered passages with:
-- Locations grouped by arrondissement (neighborhood)
+- Locations grouped by type (default)
 - Color-coded groups with layer controls
 - Detailed popups showing name, type, tags, and dates
 - Interactive layer panel to toggle group visibility

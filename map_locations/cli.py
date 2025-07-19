@@ -26,7 +26,7 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Create an interactive map
+  # Create an interactive map (grouped by type by default)
   map-locations map passages.yaml --output maps/passages/map.html
 
   # Export to all formats
@@ -35,8 +35,8 @@ Examples:
   # Export to specific format
   map-locations export passages.yaml --format json --output maps/passages/passages.json
 
-  # Create map grouped by type
-  map-locations map passages.yaml --group-by type --output maps/passages/map.html
+  # Create map grouped by neighborhood
+  map-locations map passages.yaml --group-by neighborhood --output maps/passages/map.html
         """,
     )
 
@@ -60,9 +60,9 @@ Examples:
         "--group-by",
         "-g",
         type=str,
-        default="neighborhood",
-        choices=["neighborhood", "type", "date_added", "date_visited"],
-        help="Field to group markers by (default: neighborhood)",
+        default="type",
+        choices=["neighborhood", "type", "date_added", "date_of_visit"],
+        help="Field to group markers by (default: type)",
     )
 
     # Export command

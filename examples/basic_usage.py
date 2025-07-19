@@ -32,7 +32,7 @@ def create_sample_data():
                 "tags": ["outdoor", "recreation", "nature"],
                 "neighborhood": "Upper East Side",
                 "date_added": "2024-01-01",
-                "date_visited": "2024-01-15",
+                "date_of_visit": "2024-01-15",
             },
             {
                 "name": "Times Square",
@@ -42,7 +42,7 @@ def create_sample_data():
                 "tags": ["tourist", "entertainment", "shopping"],
                 "neighborhood": "Midtown",
                 "date_added": "2024-01-02",
-                "date_visited": "2024-01-20",
+                "date_of_visit": "2024-01-20",
             },
             {
                 "name": "Brooklyn Bridge",
@@ -52,7 +52,7 @@ def create_sample_data():
                 "tags": ["landmark", "architecture", "views"],
                 "neighborhood": "Brooklyn",
                 "date_added": "2024-01-03",
-                "date_visited": "2024-01-25",
+                "date_of_visit": "2024-01-25",
             },
             {
                 "name": "Statue of Liberty",
@@ -62,7 +62,7 @@ def create_sample_data():
                 "tags": ["landmark", "history", "tourist"],
                 "neighborhood": "Lower Manhattan",
                 "date_added": "2024-01-04",
-                "date_visited": "2024-01-30",
+                "date_of_visit": "2024-01-30",
             },
         ]
     }
@@ -113,7 +113,7 @@ def main():
     map_file = output_dir / "sample_map.html"
     show_locations_grouped(
         locations,
-        group_by="neighborhood",
+        group_by="type",
         map_filename=str(map_file),
     )
     print(f"✅ Interactive map created: {map_file}")

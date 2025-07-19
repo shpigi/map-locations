@@ -94,7 +94,7 @@ def export_to_geojson(locations: List[Dict[str, Any]], output_path: str) -> None
                 "tags": loc.get("tags", []),
                 "neighborhood": loc.get("neighborhood", ""),
                 "date_added": loc.get("date_added", ""),
-                "date_visited": loc.get("date_visited", ""),
+                "date_of_visit": loc.get("date_of_visit", ""),
             },
         }
         geojson["features"].append(feature)
@@ -129,7 +129,7 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
             f"Tags: {tags_str}<br>"
             f"Neighborhood: {loc.get('neighborhood', '')}<br>"
             f"Date Added: {loc.get('date_added', '')}<br>"
-            f"Date Visited: {loc.get('date_visited', '')}"
+            f"date of visit: {loc.get('date_of_visit', '')}"
         )
 
         kml_content += f"""    <Placemark>
@@ -171,14 +171,14 @@ def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> No
 
 
 def show_locations_grouped(
-    locations: List[Dict[str, Any]], group_by: str = "neighborhood", map_filename: str = "map.html"
+    locations: List[Dict[str, Any]], group_by: str = "type", map_filename: str = "map.html"
 ) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
 
     Args:
         locations (list): List of dicts loaded from YAML.
-        group_by (str): Field to group markers by (e.g., neighborhood, date_added).
+        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
         map_filename (str): Path to save the HTML map.
     """
     if not locations:
@@ -220,7 +220,7 @@ def show_locations_grouped(
             Type: {loc.get('type', '')}<br>
             Tags: {', '.join(loc.get('tags', []))}<br>
             Date added: {loc.get('date_added', '')}<br>
-            Date visited: {loc.get('date_visited', '')}
+            date of visit: {loc.get('date_of_visit', '')}
             """
             folium.Marker(
                 location=[loc["latitude"], loc["longitude"]],
@@ -242,13 +242,13 @@ def show_locations_grouped(
 
 # ✅ Run this to test
 if __name__ == "__main__":
-    yaml_path = "passages.yaml"  # Replace with your actual YAML file path
+    yaml_path = "paris_london_trip_locations.yaml"  # Replace with your actual YAML file path
     locations = load_locations_from_yaml(yaml_path)
 
     # Create interactive map
     show_locations_grouped(
-        locations, group_by="neighborhood", map_filename="./maps/passages/map.html"
+        locations, group_by="type", map_filename="./maps/paris_london_trip/map.html"
     )
 
     # Export to all formats
-    export_to_all_formats(locations, "./maps/passages/passages")
+    export_to_all_formats(locations, "./maps/paris_london_trip/export")
