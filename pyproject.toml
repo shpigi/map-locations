@@ -45,6 +45,7 @@ dev = [
     "flake8>=3.8",
     "mypy>=0.800",
     "pre-commit>=2.0",
+    "isort>=5.0",
 ]
 docs = [
     "sphinx>=4.0",
@@ -64,7 +65,7 @@ Repository = "https://github.com/shpigi/map-locations"
 write_to = "map_locations/_version.py"
 
 [tool.black]
-line-length = 88
+line-length = 100
 target-version = ['py37']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -84,11 +85,11 @@ extend-exclude = '''
 [tool.isort]
 profile = "black"
 multi_line_output = 3
-line_length = 88
+line_length = 100
 known_first_party = ["map_locations"]
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

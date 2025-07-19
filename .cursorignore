@@ -1,0 +1,36 @@
+# Exclude build artifacts and temporary files from Cursor context
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+
+# Exclude large data files that aren't needed in context
+# *.csv
+# *.json
+# *.geojson
+# *.kml
+# maps/*.html
+
+# Keep core.py always in context by not excluding it 

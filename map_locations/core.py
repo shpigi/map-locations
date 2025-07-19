@@ -1,173 +1,181 @@
-import folium
-import yaml
-import json
 import csv
+import json
+import os
 from collections import defaultdict
 from pathlib import Path
-import os
+from typing import Any, Dict, List, Sequence, Union, cast
 
-def load_locations_from_yaml(yaml_path):
+import folium
+import yaml
+
+
+def load_locations_from_yaml(yaml_path: str) -> List[Dict[str, Any]]:
     """
     Load locations from a YAML file with the expected structure.
     """
-    with open(yaml_path, 'r') as f:
-        data = yaml.safe_load(f)
-    return data.get("locations", [])
+    with open(yaml_path, "r") as f:
+        data = cast(Dict[str, Any], yaml.safe_load(f))
+    return cast(List[Dict[str, Any]], data.get("locations", []))
 
 
-def export_to_json(locations, output_path):
+def export_to_json(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
     Export locations to JSON format.
-    
+
     Args:
         locations (list): List of location dictionaries
         output_path (str): Path to save the JSON file
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
+
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump({"locations": locations}, f, indent=2, ensure_ascii=False)
-    
+
     print(f"📄 JSON exported to: {Path(output_path).resolve()}")
 
 
-def export_to_csv(locations, output_path):
+def export_to_csv(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
     Export locations to CSV format.
-    
+
     Args:
         locations (list): List of location dictionaries
         output_path (str): Path to save the CSV file
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
+
     if not locations:
         return
-    
+
     # Get all possible fields from all locations
-    all_fields = set()
+    all_fields: set[str] = set()
     for loc in locations:
         all_fields.update(loc.keys())
-    
+
     fieldnames = sorted(list(all_fields))
-    
-    with open(output_path, 'w', newline='', encoding='utf-8') as f:
+
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        
+
         for loc in locations:
             # Ensure all fields are present (fill missing with empty string)
-            row = {field: loc.get(field, '') for field in fieldnames}
+            row = {field: loc.get(field, "") for field in fieldnames}
             # Handle tags as comma-separated string
-            if 'tags' in row and isinstance(row['tags'], list):
-                row['tags'] = ', '.join(row['tags'])
+            if "tags" in row and isinstance(row["tags"], list):
+                row["tags"] = ", ".join(row["tags"])
             writer.writerow(row)
-    
+
     print(f"📊 CSV exported to: {Path(output_path).resolve()}")
 
 
-def export_to_geojson(locations, output_path):
+def export_to_geojson(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
     Export locations to GeoJSON format.
-    
+
     Args:
         locations (list): List of location dictionaries
         output_path (str): Path to save the GeoJSON file
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    geojson = {
-        "type": "FeatureCollection",
-        "features": []
-    }
-    
+
+    geojson: Dict[str, Any] = {"type": "FeatureCollection", "features": []}
+
     for loc in locations:
         feature = {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [loc['longitude'], loc['latitude']]
+                "coordinates": [loc["longitude"], loc["latitude"]],
             },
             "properties": {
-                "name": loc['name'],
-                "type": loc.get('type', ''),
-                "tags": loc.get('tags', []),
-                "neighborhood": loc.get('neighborhood', ''),
-                "date_added": loc.get('date_added', ''),
-                "date_visited": loc.get('date_visited', '')
-            }
+                "name": loc["name"],
+                "type": loc.get("type", ""),
+                "tags": loc.get("tags", []),
+                "neighborhood": loc.get("neighborhood", ""),
+                "date_added": loc.get("date_added", ""),
+                "date_visited": loc.get("date_visited", ""),
+            },
         }
         geojson["features"].append(feature)
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
+
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(geojson, f, indent=2, ensure_ascii=False)
-    
+
     print(f"🗺️ GeoJSON exported to: {Path(output_path).resolve()}")
 
 
-def export_to_kml(locations, output_path):
+def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
     Export locations to KML format.
-    
+
     Args:
         locations (list): List of location dictionaries
         output_path (str): Path to save the KML file
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    kml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+
+    kml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>Locations</name>
     <description>Exported locations</description>
-'''
-    
+"""
+
     for loc in locations:
-        tags_str = ', '.join(loc.get('tags', [])) if loc.get('tags') else ''
-        description = f"Type: {loc.get('type', '')}<br>Tags: {tags_str}<br>Neighborhood: {loc.get('neighborhood', '')}<br>Date Added: {loc.get('date_added', '')}<br>Date Visited: {loc.get('date_visited', '')}"
-        
-        kml_content += f'''    <Placemark>
+        tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else ""
+        description = (
+            f"Type: {loc.get('type', '')}<br>"
+            f"Tags: {tags_str}<br>"
+            f"Neighborhood: {loc.get('neighborhood', '')}<br>"
+            f"Date Added: {loc.get('date_added', '')}<br>"
+            f"Date Visited: {loc.get('date_visited', '')}"
+        )
+
+        kml_content += f"""    <Placemark>
       <name>{loc['name']}</name>
       <description><![CDATA[{description}]]></description>
       <Point>
         <coordinates>{loc['longitude']},{loc['latitude']},0</coordinates>
       </Point>
     </Placemark>
-'''
-    
-    kml_content += '''  </Document>
-</kml>'''
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
+"""
+
+    kml_content += """  </Document>
+</kml>"""
+
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(kml_content)
-    
+
     print(f"🗺️ KML exported to: {Path(output_path).resolve()}")
 
 
-def export_to_all_formats(locations, base_path):
+def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> None:
     """
     Export locations to all supported formats.
-    
+
     Args:
         locations (list): List of location dictionaries
         base_path (str): Base path for output files (without extension)
     """
     # Create directory if it doesn't exist
     os.makedirs(os.path.dirname(base_path), exist_ok=True)
-    
+
     # Export to different formats
     export_to_json(locations, f"{base_path}.json")
     export_to_csv(locations, f"{base_path}.csv")
     export_to_geojson(locations, f"{base_path}.geojson")
     export_to_kml(locations, f"{base_path}.kml")
-    
+
     print(f"✅ All formats exported to: {Path(base_path).parent}")
 
 
-def show_locations_grouped(locations, group_by="neighborhood", map_filename="map.html"):
+def show_locations_grouped(
+    locations: List[Dict[str, Any]], group_by: str = "neighborhood", map_filename: str = "map.html"
+) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
-    
+
     Args:
         locations (list): List of dicts loaded from YAML.
         group_by (str): Field to group markers by (e.g., neighborhood, date_added).
@@ -178,7 +186,7 @@ def show_locations_grouped(locations, group_by="neighborhood", map_filename="map
 
     # Center the map
     first = locations[0]
-    m = folium.Map(location=[first['latitude'], first['longitude']], zoom_start=14)
+    m = folium.Map(location=[first["latitude"], first["longitude"]], zoom_start=14)
 
     # Group locations
     groups = defaultdict(list)
@@ -188,8 +196,17 @@ def show_locations_grouped(locations, group_by="neighborhood", map_filename="map
 
     # Color cycle
     colors = [
-        "red", "blue", "green", "purple", "orange", "darkred",
-        "lightred", "beige", "darkblue", "darkgreen", "cadetblue"
+        "red",
+        "blue",
+        "green",
+        "purple",
+        "orange",
+        "darkred",
+        "lightred",
+        "beige",
+        "darkblue",
+        "darkgreen",
+        "cadetblue",
     ]
     color_cycle = iter(colors)
 
@@ -206,19 +223,19 @@ def show_locations_grouped(locations, group_by="neighborhood", map_filename="map
             Date visited: {loc.get('date_visited', '')}
             """
             folium.Marker(
-                location=[loc['latitude'], loc['longitude']],
+                location=[loc["latitude"], loc["longitude"]],
                 popup=popup_html,
-                tooltip=loc['name'],
-                icon=folium.Icon(color=color)
+                tooltip=loc["name"],
+                icon=folium.Icon(color=color),
             ).add_to(fg)
 
         fg.add_to(m)
 
     folium.LayerControl(collapsed=False).add_to(m)
-    
+
     # Create directory if it doesn't exist
     os.makedirs(os.path.dirname(map_filename), exist_ok=True)
-    
+
     m.save(map_filename)
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
 
@@ -227,9 +244,11 @@ def show_locations_grouped(locations, group_by="neighborhood", map_filename="map
 if __name__ == "__main__":
     yaml_path = "passages.yaml"  # Replace with your actual YAML file path
     locations = load_locations_from_yaml(yaml_path)
-    
+
     # Create interactive map
-    show_locations_grouped(locations, group_by="neighborhood", map_filename="./maps/passages/map.html")
-    
+    show_locations_grouped(
+        locations, group_by="neighborhood", map_filename="./maps/passages/map.html"
+    )
+
     # Export to all formats
     export_to_all_formats(locations, "./maps/passages/passages")
