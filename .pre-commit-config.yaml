@@ -34,7 +34,6 @@ repos:
     rev: 6.0.0
     hooks:
       - id: flake8
-        args: [--max-line-length=100]
         files: ^(map_locations/|tests/)
 
   - repo: https://github.com/pre-commit/mirrors-mypy

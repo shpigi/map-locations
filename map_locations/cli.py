@@ -16,7 +16,6 @@ from .core import (
     export_to_kml,
     load_locations_from_yaml,
     show_locations_grouped,
-    show_locations_with_google_maps,
 )
 
 
@@ -27,82 +26,76 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Create an interactive map (grouped by type by default)
-  map-locations map passages.yaml --output maps/passages/map.html
+  # Create an interactive HTML map (grouped by type by default)
+  map-locations passages.yaml --output maps/passages/map.html
 
-  # Create map with Google Maps tiles
-  map-locations map passages.yaml --tile-provider google_maps --output maps/passages/map.html
+  # Create map with Google Maps tiles (locations grouped by type)
+  map-locations passages.yaml --tile-provider google_maps --output maps/passages/map.html
 
-  # Create map with Google Satellite view
-  map-locations map passages.yaml --tile-provider google_satellite --output maps/passages/map.html
+  # Create map with Google Satellite view (locations grouped by type)
+  map-locations passages.yaml --tile-provider google_satellite --output maps/passages/map.html
 
-  # Export to all formats
-  map-locations export passages.yaml --output maps/passages/passages
+  # Export to JSON format
+  map-locations passages.yaml --format json --output maps/passages/locations.json
 
-  # Export to specific format
-  map-locations export passages.yaml --format json --output maps/passages/passages.json
+  # Export to CSV format
+  map-locations passages.yaml --format csv --output maps/passages/locations.csv
 
-  # Create map grouped by neighborhood
-  map-locations map passages.yaml --group-by neighborhood --output maps/passages/map.html
+  # Export to GeoJSON format
+  map-locations passages.yaml --format geojson --output maps/passages/locations.geojson
+
+  # Export to KML format (with grouped folders for Google Maps)
+  map-locations passages.yaml --format kml --output maps/passages/locations.kml
+
+  # Export to all formats (JSON, CSV, GeoJSON, KML, HTML)
+  map-locations passages.yaml --format all --output maps/passages/locations
+
+  # Create map grouped by neighborhood (instead of type)
+  map-locations passages.yaml --group-by neighborhood --output maps/passages/map.html
+
+Note: When creating HTML maps, locations are automatically grouped by type (or other field)
+and can be toggled on/off using the layer controls in the top-right corner of the map.
+
+KML exports create separate folders for each location type, allowing you to toggle
+groups on/off when imported into Google Maps.
         """,
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-
-    # Map command
-    map_parser = subparsers.add_parser("map", help="Create an interactive map from YAML file")
-    map_parser.add_argument(
+    parser.add_argument(
         "yaml_file",
         type=str,
         help="Path to YAML file containing location data",
     )
-    map_parser.add_argument(
+    parser.add_argument(
         "--output",
         "-o",
         type=str,
         default="map.html",
-        help="Output path for the HTML map (default: map.html)",
+        help="Output path (default: map.html for HTML, or specify extension for other formats)",
     )
-    map_parser.add_argument(
+    parser.add_argument(
+        "--format",
+        "-f",
+        type=str,
+        choices=["html", "json", "csv", "geojson", "kml", "all"],
+        default="html",
+        help="Export format (default: html)",
+    )
+    parser.add_argument(
         "--group-by",
         "-g",
         type=str,
         default="type",
         choices=["neighborhood", "type", "date_added", "date_of_visit"],
-        help="Field to group markers by (default: type)",
+        help="Field to group markers by (default: type). Groups can be toggled on/off in the map.",
     )
-    map_parser.add_argument(
+    parser.add_argument(
         "--tile-provider",
         "-t",
         type=str,
         default="openstreetmap",
         choices=["openstreetmap", "google_maps", "google_satellite"],
-        help="Map tile provider (default: openstreetmap)",
-    )
-
-    # Export command
-    export_parser = subparsers.add_parser("export", help="Export locations to various formats")
-    export_parser.add_argument(
-        "yaml_file",
-        type=str,
-        help="Path to YAML file containing location data",
-    )
-    export_parser.add_argument(
-        "--output",
-        "-o",
-        type=str,
-        required=True,
-        help=(
-            "Output path (without extension for all formats, or with extension for specific format)"
-        ),
-    )
-    export_parser.add_argument(
-        "--format",
-        "-f",
-        type=str,
-        choices=["json", "csv", "geojson", "kml", "all"],
-        default="all",
-        help="Export format (default: all)",
+        help="Map tile provider for HTML maps (default: openstreetmap)",
     )
 
     return parser
@@ -119,37 +112,8 @@ def validate_yaml_file(yaml_path: str) -> None:
         sys.exit(1)
 
 
-def handle_map_command(args: argparse.Namespace) -> None:
-    """Handle the map command."""
-    try:
-        # Load locations
-        print(f"📂 Loading locations from: {args.yaml_file}")
-        locations = load_locations_from_yaml(args.yaml_file)
-
-        if not locations:
-            print("❌ No locations found in the YAML file.")
-            sys.exit(1)
-
-        print(f"📍 Loaded {len(locations)} locations")
-
-        # Create map
-        print("🗺️ Creating interactive map...")
-        show_locations_grouped(
-            locations,
-            group_by=args.group_by,
-            map_filename=args.output,
-            tile_provider=args.tile_provider,
-        )
-
-        print("✅ Map created successfully!")
-
-    except Exception as e:
-        print(f"❌ Error creating map: {e}")
-        sys.exit(1)
-
-
-def handle_export_command(args: argparse.Namespace) -> None:
-    """Handle the export command."""
+def handle_command(args: argparse.Namespace) -> None:
+    """Handle the main command."""
     try:
         # Load locations
         print(f"📂 Loading locations from: {args.yaml_file}")
@@ -164,10 +128,33 @@ def handle_export_command(args: argparse.Namespace) -> None:
         # Determine output path
         output_path = Path(args.output)
 
-        if args.format == "all":
-            # Export to all formats
+        if args.format == "html":
+            # Create HTML map
+            print("🗺️ Creating interactive map...")
+            show_locations_grouped(
+                locations,
+                group_by=args.group_by,
+                map_filename=args.output,
+                tile_provider=args.tile_provider,
+            )
+            print("✅ Map created successfully!")
+
+        elif args.format == "all":
+            # Export to all formats including HTML
             print("📤 Exporting to all formats...")
             export_to_all_formats(locations, str(output_path))
+
+            # Also create HTML map
+            html_path = output_path.with_suffix(".html")
+            print("🗺️ Creating interactive HTML map...")
+            show_locations_grouped(
+                locations,
+                group_by=args.group_by,
+                map_filename=str(html_path),
+                tile_provider=args.tile_provider,
+            )
+            print("✅ All formats exported successfully!")
+
         else:
             # Export to specific format
             if not output_path.suffix:
@@ -183,11 +170,14 @@ def handle_export_command(args: argparse.Namespace) -> None:
                 export_to_geojson(locations, str(output_path))
             elif args.format == "kml":
                 export_to_kml(locations, str(output_path))
+            else:
+                print(f"❌ Unknown format: {args.format}")
+                sys.exit(1)
 
-        print("✅ Export completed successfully!")
+            print("✅ Export completed successfully!")
 
     except Exception as e:
-        print(f"❌ Error during export: {e}")
+        print(f"❌ Error: {e}")
         sys.exit(1)
 
 
@@ -196,21 +186,11 @@ def main(args: Optional[List[str]] = None) -> None:
     parser = create_parser()
     parsed_args = parser.parse_args(args)
 
-    if not parsed_args.command:
-        parser.print_help()
-        sys.exit(1)
-
     # Validate YAML file
     validate_yaml_file(parsed_args.yaml_file)
 
-    # Handle commands
-    if parsed_args.command == "map":
-        handle_map_command(parsed_args)
-    elif parsed_args.command == "export":
-        handle_export_command(parsed_args)
-    else:
-        print(f"❌ Unknown command: {parsed_args.command}")
-        sys.exit(1)
+    # Handle the command
+    handle_command(parsed_args)
 
 
 if __name__ == "__main__":

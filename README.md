@@ -81,7 +81,7 @@ locations:
 
 ```bash
 # Using the CLI tool
-map-locations map locations.yaml --output map.html
+map-locations locations.yaml --output map.html
 
 # Or using Python
 python -c "
@@ -94,15 +94,20 @@ show_locations_grouped(locations, map_filename='map.html')
 ### 3. Export to different formats
 
 ```bash
-# Export to all formats (JSON, CSV, GeoJSON, KML)
-map-locations export locations.yaml --output exports/locations
+# Export to all formats (JSON, CSV, GeoJSON, KML, HTML)
+map-locations locations.yaml --format all --output exports/locations
 
 # Export to specific format
-map-locations export locations.yaml --format json --output exports/locations.json
-map-locations export locations.yaml --format csv --output exports/locations.csv
-map-locations export locations.yaml --format geojson --output exports/locations.geojson
-map-locations export locations.yaml --format kml --output exports/locations.kml
+map-locations locations.yaml --format json --output exports/locations.json
+map-locations locations.yaml --format csv --output exports/locations.csv
+map-locations locations.yaml --format geojson --output exports/locations.geojson
+map-locations locations.yaml --format kml --output exports/locations.kml
+map-locations locations.yaml --format html --output exports/locations.html
 ```
+
+### 4. Import into Google My Maps
+
+You can easily import your exported KML files into [Google My Maps](https://www.google.com/maps/d/u/0/) for additional features. See the [Google My Maps Integration](#google-my-maps-integration) section below for detailed instructions.
 
 ## Tile Providers
 
@@ -155,65 +160,101 @@ Each location in your YAML file should include:
 
 ## CLI Usage
 
-### Map Commands
+The CLI supports multiple formats with a single command structure:
+
+### Available Formats
+
+- `html` - Interactive HTML map (default)
+- `json` - JSON format
+- `csv` - CSV format
+- `geojson` - GeoJSON format
+- `kml` - KML format with grouped folders for Google Maps
+- `all` - All formats including HTML
+
+### Basic Usage
 
 ```bash
-# Create an interactive map
-map-locations map locations.yaml --output map.html
-
-# Create map grouped by type
-map-locations map locations.yaml --group-by type --output type_map.html
-
-# Create map grouped by date
-map-locations map locations.yaml --group-by date_added --output date_map.html
-
-# Create map with Google Maps tiles
-map-locations map locations.yaml --tile-provider google_maps --output map.html
-
-# Create map with Google Satellite view
-map-locations map locations.yaml --tile-provider google_satellite --output map.html
-```
-
-### Export Commands
-
-```bash
-# Export to all formats
-map-locations export locations.yaml --output exports/locations
+# Create HTML map (default)
+map-locations locations.yaml --output map.html
 
 # Export to specific format
-map-locations export locations.yaml --format json --output exports/locations.json
-map-locations export locations.yaml --format csv --output exports/locations.csv
-map-locations export locations.yaml --format geojson --output exports/locations.geojson
-map-locations export locations.yaml --format kml --output exports/locations.kml
+map-locations locations.yaml --format json --output locations.json
+map-locations locations.yaml --format kml --output locations.kml
+
+# Export to all formats (including HTML)
+map-locations locations.yaml --format all --output locations
 ```
+
+### Advanced Options
+
+```bash
+# Create map with Google Maps tiles
+map-locations locations.yaml --tile-provider google_maps --output map.html
+
+# Create map with Google Satellite view
+map-locations locations.yaml --tile-provider google_satellite --output map.html
+
+# Group by different fields
+map-locations locations.yaml --group-by neighborhood --output map.html
+map-locations locations.yaml --group-by date_added --output map.html
+```
+
+**See also**: [Grouping Options](#grouping-options) and [Tile Provider Options](#tile-provider-options) for more examples.
+
+**Note**: For importing into Google My Maps, use the KML format. See [Google My Maps Integration](#google-my-maps-integration) for details.
+
+### Google My Maps Integration
+
+Export your locations to KML format and import them into [Google My Maps](https://www.google.com/maps/d/u/0/) for enhanced features:
+
+```bash
+# Export to KML for Google My Maps
+map-locations locations.yaml --format kml --output my_locations.kml
+```
+
+**Steps to import into Google My Maps**:
+1. Go to [Google My Maps](https://www.google.com/maps/d/u/0/)
+2. Click "Create a new map"
+3. Click "Import" in the left panel
+4. Upload your KML file
+5. Your locations will appear with all details preserved
+
+**Google My Maps Features**:
+- 📱 **Mobile Access**: View maps on smartphones and tablets
+- 👥 **Sharing**: Share maps via link or email
+- 🎨 **Custom Styling**: Change colors, icons, and labels
+- 📝 **Collaboration**: Allow others to edit your maps
+- 🗺️ **Offline Access**: Download maps for offline use
+- 📍 **Custom Markers**: Add custom icons and descriptions
+- 🗂️ **Layers**: Organize locations into different layers
 
 ### Grouping Options
 
 ```bash
 # Group by neighborhood (default)
-map-locations map locations.yaml --group-by neighborhood
+map-locations locations.yaml --group-by neighborhood
 
 # Group by location type
-map-locations map locations.yaml --group-by type
+map-locations locations.yaml --group-by type
 
 # Group by date added
-map-locations map locations.yaml --group-by date_added
+map-locations locations.yaml --group-by date_added
 
 # Group by date of visit
-map-locations map locations.yaml --group-by date_of_visit
+map-locations locations.yaml --group-by date_of_visit
 ```
 
 ### Tile Provider Options
 
 ```bash
 # Use OpenStreetMap (default, free)
-map-locations map locations.yaml --tile-provider openstreetmap
+map-locations locations.yaml --tile-provider openstreetmap
 
 # Use Google Maps (free for personal use)
-map-locations map locations.yaml --tile-provider google_maps
+map-locations locations.yaml --tile-provider google_maps
 
 # Use Google Satellite (free for personal use)
-map-locations map locations.yaml --tile-provider google_satellite
+map-locations locations.yaml --tile-provider google_satellite
 ```
 
 ## Library Usage
@@ -263,6 +304,8 @@ show_locations_grouped(locations, group_by="neighborhood", map_filename="neighbo
 show_locations_grouped(locations, group_by="date_added", map_filename="date_map.html")
 ```
 
+**See also**: [Grouping Options](#grouping-options) for CLI examples of all available grouping fields.
+
 ### Data Loading
 
 ```python
@@ -294,6 +337,8 @@ make install-dev
 # Set up pre-commit hooks
 make setup-dev
 ```
+
+**Note**: This setup is also covered in the [Installation](#installation) section above.
 
 ### Running Tests
 
@@ -453,6 +498,8 @@ show_locations_grouped(
 )
 ```
 
+**See also**: [Tile Providers](#tile-providers) for available tile provider options and [Tile Provider Options](#tile-provider-options) for CLI examples.
+
 ## Examples
 
 ### Paris Passages Map
@@ -469,43 +516,6 @@ This creates an interactive map of Paris's historic covered passages with:
 - Color-coded groups with layer controls
 - Detailed popups showing name, type, tags, and dates
 - Interactive layer panel to toggle group visibility
-
-## Development
-
-### Project Structure
-
-```
-map_locations/
-├── map_locations/
-│   ├── __init__.py
-│   ├── core.py               # Core functionality
-│   └── cli.py               # CLI interface
-├── maps/
-│   └── passages/
-│       ├── locations.yaml    # Example data
-│       ├── locations.kml     # Generated KML
-│       ├── locations.geojson # Generated GeoJSON
-│       └── map.html         # Generated HTML map
-├── tests/                   # Test suite
-├── README.md               # This file
-└── setup.py               # Package configuration
-```
-
-### Running Tests
-
-```bash
-python -m pytest tests/
-```
-
-### Building Documentation
-
-```bash
-# Generate API documentation
-sphinx-apidoc -o docs/ map_locations/
-
-# Build HTML docs
-cd docs && make html
-```
 
 ## Contributing
 
