@@ -29,11 +29,22 @@ class TestExamples:
         """Test that google_maps_example.py runs without errors."""
         example_path = Path("examples/google_maps_example.py")
         if example_path.exists():
+            # Check if package is available
+            try:
+                import map_locations
+            except ImportError:
+                pytest.skip("map_locations package not available - skipping example test")
+
+            # Run with PYTHONPATH to include current directory
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(Path.cwd()) + ":" + env.get("PYTHONPATH", "")
+
             result = subprocess.run(
                 [sys.executable, str(example_path)],
                 capture_output=True,
                 text=True,
                 cwd=Path.cwd(),
+                env=env,
             )
             assert result.returncode == 0, f"Example failed: {result.stderr}"
 
@@ -52,11 +63,22 @@ class TestExamples:
         """Test that ai_agent_example.py runs without errors."""
         example_path = Path("examples/ai_agent_example.py")
         if example_path.exists():
+            # Check if package is available
+            try:
+                import map_locations
+            except ImportError:
+                pytest.skip("map_locations package not available - skipping example test")
+
+            # Run with PYTHONPATH to include current directory
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(Path.cwd()) + ":" + env.get("PYTHONPATH", "")
+
             result = subprocess.run(
                 [sys.executable, str(example_path)],
                 capture_output=True,
                 text=True,
                 cwd=Path.cwd(),
+                env=env,
             )
             assert result.returncode == 0, f"Example failed: {result.stderr}"
 

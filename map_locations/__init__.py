@@ -12,6 +12,7 @@ __email__ = "shpigi+map_locations@gmail.com"
 
 # Import main functions for easy access
 from .core import (
+    Location,
     create_sample_locations,
     export_to_all_formats,
     export_to_csv,
@@ -33,6 +34,7 @@ from .core import (
 )
 
 __all__ = [
+    "Location",
     "load_locations_from_yaml",
     "show_locations_grouped",
     "show_locations_with_filtering",
