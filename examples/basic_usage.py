@@ -4,6 +4,23 @@ Basic usage example for map_locations package.
 
 This script demonstrates how to use the map_locations package
 to load location data, create maps, and export to various formats.
+
+CLI Examples:
+    # Create HTML map (default)
+    map-locations sample_locations.yaml --output sample_map.html
+
+    # Export to specific format
+    map-locations sample_locations.yaml --format json --output sample_locations.json
+    map-locations sample_locations.yaml --format kml --output sample_locations.kml
+
+    # Export to all formats (including HTML)
+    map-locations sample_locations.yaml --format all --output sample_locations
+
+    # Create map with Google Maps tiles
+    map-locations sample_locations.yaml --tile-provider google_maps --output sample_map.html
+
+    # Group by neighborhood
+    map-locations sample_locations.yaml --group-by neighborhood --output neighborhood_map.html
 """
 
 import os

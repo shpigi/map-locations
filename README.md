@@ -81,7 +81,7 @@ locations:
 
 ```bash
 # Using the CLI tool
-map-locations map locations.yaml --output map.html
+map-locations locations.yaml --output map.html
 
 # Or using Python
 python -c "
@@ -94,14 +94,15 @@ show_locations_grouped(locations, map_filename='map.html')
 ### 3. Export to different formats
 
 ```bash
-# Export to all formats (JSON, CSV, GeoJSON, KML)
-map-locations export locations.yaml --output exports/locations
+# Export to all formats (JSON, CSV, GeoJSON, KML, HTML)
+map-locations locations.yaml --format all --output exports/locations
 
 # Export to specific format
-map-locations export locations.yaml --format json --output exports/locations.json
-map-locations export locations.yaml --format csv --output exports/locations.csv
-map-locations export locations.yaml --format geojson --output exports/locations.geojson
-map-locations export locations.yaml --format kml --output exports/locations.kml
+map-locations locations.yaml --format json --output exports/locations.json
+map-locations locations.yaml --format csv --output exports/locations.csv
+map-locations locations.yaml --format geojson --output exports/locations.geojson
+map-locations locations.yaml --format kml --output exports/locations.kml
+map-locations locations.yaml --format html --output exports/locations.html
 ```
 
 ### 4. Import into Google My Maps
@@ -159,39 +160,46 @@ Each location in your YAML file should include:
 
 ## CLI Usage
 
-### Map Commands
+The CLI supports multiple formats with a single command structure:
+
+### Available Formats
+
+- `html` - Interactive HTML map (default)
+- `json` - JSON format
+- `csv` - CSV format
+- `geojson` - GeoJSON format
+- `kml` - KML format with grouped folders for Google Maps
+- `all` - All formats including HTML
+
+### Basic Usage
 
 ```bash
-# Create an interactive map
-map-locations map locations.yaml --output map.html
+# Create HTML map (default)
+map-locations locations.yaml --output map.html
 
-# Create map grouped by type
-map-locations map locations.yaml --group-by type --output type_map.html
+# Export to specific format
+map-locations locations.yaml --format json --output locations.json
+map-locations locations.yaml --format kml --output locations.kml
 
-# Create map grouped by date
-map-locations map locations.yaml --group-by date_added --output date_map.html
+# Export to all formats (including HTML)
+map-locations locations.yaml --format all --output locations
+```
 
+### Advanced Options
+
+```bash
 # Create map with Google Maps tiles
-map-locations map locations.yaml --tile-provider google_maps --output map.html
+map-locations locations.yaml --tile-provider google_maps --output map.html
 
 # Create map with Google Satellite view
-map-locations map locations.yaml --tile-provider google_satellite --output map.html
+map-locations locations.yaml --tile-provider google_satellite --output map.html
+
+# Group by different fields
+map-locations locations.yaml --group-by neighborhood --output map.html
+map-locations locations.yaml --group-by date_added --output map.html
 ```
 
 **See also**: [Grouping Options](#grouping-options) and [Tile Provider Options](#tile-provider-options) for more examples.
-
-### Export Commands
-
-```bash
-# Export to all formats
-map-locations export locations.yaml --output exports/locations
-
-# Export to specific format
-map-locations export locations.yaml --format json --output exports/locations.json
-map-locations export locations.yaml --format csv --output exports/locations.csv
-map-locations export locations.yaml --format geojson --output exports/locations.geojson
-map-locations export locations.yaml --format kml --output exports/locations.kml
-```
 
 **Note**: For importing into Google My Maps, use the KML format. See [Google My Maps Integration](#google-my-maps-integration) for details.
 
@@ -201,7 +209,7 @@ Export your locations to KML format and import them into [Google My Maps](https:
 
 ```bash
 # Export to KML for Google My Maps
-map-locations export locations.yaml --format kml --output my_locations.kml
+map-locations locations.yaml --format kml --output my_locations.kml
 ```
 
 **Steps to import into Google My Maps**:
@@ -224,29 +232,29 @@ map-locations export locations.yaml --format kml --output my_locations.kml
 
 ```bash
 # Group by neighborhood (default)
-map-locations map locations.yaml --group-by neighborhood
+map-locations locations.yaml --group-by neighborhood
 
 # Group by location type
-map-locations map locations.yaml --group-by type
+map-locations locations.yaml --group-by type
 
 # Group by date added
-map-locations map locations.yaml --group-by date_added
+map-locations locations.yaml --group-by date_added
 
 # Group by date of visit
-map-locations map locations.yaml --group-by date_of_visit
+map-locations locations.yaml --group-by date_of_visit
 ```
 
 ### Tile Provider Options
 
 ```bash
 # Use OpenStreetMap (default, free)
-map-locations map locations.yaml --tile-provider openstreetmap
+map-locations locations.yaml --tile-provider openstreetmap
 
 # Use Google Maps (free for personal use)
-map-locations map locations.yaml --tile-provider google_maps
+map-locations locations.yaml --tile-provider google_maps
 
 # Use Google Satellite (free for personal use)
-map-locations map locations.yaml --tile-provider google_satellite
+map-locations locations.yaml --tile-provider google_satellite
 ```
 
 ## Library Usage

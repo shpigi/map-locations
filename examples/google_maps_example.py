@@ -4,6 +4,16 @@ Example demonstrating Google Maps integration with map_locations.
 
 This example shows how to create maps using Google Maps tiles instead of OpenStreetMap.
 Google Maps tiles are free for personal use but may require an API key for commercial use.
+
+CLI Examples:
+    # Create map with Google Maps tiles
+    map-locations passages.yaml --tile-provider google_maps --output map_google.html
+
+    # Create map with Google Satellite view
+    map-locations passages.yaml --tile-provider google_satellite --output map_satellite.html
+
+    # Create map with OpenStreetMap (default)
+    map-locations passages.yaml --tile-provider openstreetmap --output map_osm.html
 """
 
 from map_locations.core import load_locations_from_yaml, show_locations_grouped

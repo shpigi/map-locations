@@ -3,7 +3,7 @@ import json
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Set, cast
+from typing import Any, Dict, List, Optional, Set, cast
 
 import folium
 import yaml
@@ -26,7 +26,10 @@ def export_to_json(locations: List[Dict[str, Any]], output_path: str) -> None:
         locations (list): List of location dictionaries
         output_path (str): Path to save the JSON file
     """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    # Create directory if needed
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump({"locations": locations}, f, indent=2, ensure_ascii=False)
@@ -42,7 +45,10 @@ def export_to_csv(locations: List[Dict[str, Any]], output_path: str) -> None:
         locations (list): List of location dictionaries
         output_path (str): Path to save the CSV file
     """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    # Create directory if needed
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     if not locations:
         return
@@ -77,7 +83,10 @@ def export_to_geojson(locations: List[Dict[str, Any]], output_path: str) -> None
         locations (list): List of location dictionaries
         output_path (str): Path to save the GeoJSON file
     """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    # Create directory if needed
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     geojson: Dict[str, Any] = {"type": "FeatureCollection", "features": []}
 
@@ -107,7 +116,7 @@ def export_to_geojson(locations: List[Dict[str, Any]], output_path: str) -> None
 
 def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
-    Export locations to KML format with styled icons for different location types.
+    Export locations to KML format with separate folders for each location type.
 
     Args:
         locations (list): List of location dictionaries
@@ -229,6 +238,11 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
             "color": "ff8b4513",
             "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
         },
+        # Bridges (Gray)
+        "bridge": {
+            "color": "ff808080",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
+        },
     }
 
     # Default style for unknown types
@@ -237,12 +251,20 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
         "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
     }
 
+    # Group locations by type
+    from collections import defaultdict
+
+    grouped_locations = defaultdict(list)
+    for loc in locations:
+        loc_type = loc.get("type", "").lower()
+        grouped_locations[loc_type].append(loc)
+
     kml_content = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
         "  <Document>\n"
-        "    <name>Locations</name>\n"
-        "    <description>Exported locations with styled icons</description>\n"
+        "    <name>Map Locations</name>\n"
+        "    <description>Exported locations grouped by type</description>\n"
     )
 
     # Add styles for each location type
@@ -281,44 +303,58 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
         f"    </Style>\n"
     )
 
-    # Add placemarks with styling
-    for loc in locations:
-        loc_type = loc.get("type", "").lower()
+    # Create folders for each location type
+    for loc_type, type_locations in grouped_locations.items():
+        # Get style for this type
+        style = type_styles.get(loc_type, default_style)
         style_id = f"#style_{loc_type}" if loc_type in type_styles else "#style_default"
 
-        tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags", []) else ""
-        neighborhood = loc.get("neighborhood", "") or "Not specified"
-        date_added = loc.get("date_added", "") or "Not specified"
-        date_of_visit = loc.get("date_of_visit", "") or "Not specified"
+        # Create folder name with count
+        folder_name = f"📍 {loc_type.title()} ({len(type_locations)} locations)"
 
-        description = (
-            f"<![CDATA["
-            f'<div style="font-family: Arial, sans-serif; max-width: 300px;">'
-            f"<h3 style=\"color: #333; margin: 0 0 10px 0;\">{loc['name']}</h3>"
-            f'<p style="margin: 5px 0;"><strong>Type:</strong> '
-            f"{loc.get('type', 'Not specified')}</p>"
-            f'<p style="margin: 5px 0;"><strong>Tags:</strong> {tags_str}</p>'
-            f'<p style="margin: 5px 0;"><strong>Neighborhood:</strong> '
-            f"{neighborhood}</p>"
-            f'<p style="margin: 5px 0;"><strong>Date Added:</strong> '
-            f"{date_added}</p>"
-            f'<p style="margin: 5px 0;"><strong>Date of Visit:</strong> '
-            f"{date_of_visit}</p>"
-            f"</div>"
-            f"]]>"
+        kml_content += (
+            f"    <Folder>\n"
+            f"      <name>{folder_name}</name>\n"
+            f"      <description>Locations of type: {loc_type}</description>\n"
         )
 
-        placemark = (
-            f"    <Placemark>\n"
-            f"      <name>{loc['name']}</name>\n"
-            f"      <description>{description}</description>\n"
-            f"      <styleUrl>{style_id}</styleUrl>\n"
-            f"      <Point>\n"
-            f"        <coordinates>{loc['longitude']}, {loc['latitude']}, 0</coordinates>\n"
-            f"      </Point>\n"
-            f"    </Placemark>\n"
-        )
-        kml_content += placemark
+        # Add placemarks for this type
+        for loc in type_locations:
+            tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags", []) else ""
+            neighborhood = loc.get("neighborhood", "") or "Not specified"
+            date_added = loc.get("date_added", "") or "Not specified"
+            date_of_visit = loc.get("date_of_visit", "") or "Not specified"
+
+            description = (
+                f"<![CDATA["
+                f'<div style="font-family: Arial, sans-serif; max-width: 300px;">'
+                f"<h3 style=\"color: #333; margin: 0 0 10px 0;\">{loc['name']}</h3>"
+                f'<p style="margin: 5px 0;"><strong>Type:</strong> '
+                f"{loc.get('type', 'Not specified')}</p>"
+                f'<p style="margin: 5px 0;"><strong>Tags:</strong> {tags_str}</p>'
+                f'<p style="margin: 5px 0;"><strong>Neighborhood:</strong> '
+                f"{neighborhood}</p>"
+                f'<p style="margin: 5px 0;"><strong>Date Added:</strong> '
+                f"{date_added}</p>"
+                f'<p style="margin: 5px 0;"><strong>Date of Visit:</strong> '
+                f"{date_of_visit}</p>"
+                f"</div>"
+                f"]]>"
+            )
+
+            placemark = (
+                f"      <Placemark>\n"
+                f"        <name>{loc['name']}</name>\n"
+                f"        <description>{description}</description>\n"
+                f"        <styleUrl>{style_id}</styleUrl>\n"
+                f"        <Point>\n"
+                f"          <coordinates>{loc['longitude']}, {loc['latitude']}, 0</coordinates>\n"
+                f"        </Point>\n"
+                f"      </Placemark>\n"
+            )
+            kml_content += placemark
+
+        kml_content += "    </Folder>\n"
 
     kml_content += "  </Document>\n</kml>\n"
 
@@ -326,6 +362,9 @@ def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
         f.write(kml_content)
 
     print(f"🗺️ KML exported to: {Path(output_path).resolve()}")
+    print(f"📋 Created {len(grouped_locations)} separate groups in KML:")
+    for loc_type, type_locations in grouped_locations.items():
+        print(f"   • {loc_type.title()} ({len(type_locations)} locations)")
 
 
 def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> None:
@@ -347,7 +386,11 @@ def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> No
     export_to_geojson(locations, f"{base_path}.geojson")
     export_to_kml(locations, f"{base_path}.kml")
 
-    print(f"✅ All formats exported to: {Path(base_path).parent}")
+    # Show output location
+    if output_dir:
+        print(f"✅ Data formats exported to: {Path(output_dir).resolve()}")
+    else:
+        print(f"✅ Data formats exported to: {Path.cwd()}")
 
 
 def get_type_color(loc_type: str) -> str:
@@ -406,6 +449,7 @@ def show_locations_grouped(
     group_by: str = "type",
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
+    filter_types: Optional[List[str]] = None,
 ) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
@@ -415,9 +459,20 @@ def show_locations_grouped(
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
         map_filename (str): Path to save the HTML map.
         tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        filter_types (list, optional): List of location types to include.
     """
     if not locations:
         raise ValueError("No locations provided.")
+
+    # Filter locations by type if filter_types is provided
+    if filter_types:
+        locations = [
+            loc
+            for loc in locations
+            if loc.get("type", "").lower() in [t.lower() for t in filter_types]
+        ]
+        if not locations:
+            raise ValueError(f"No locations found matching the specified types: {filter_types}")
 
     # Center the map
     first = locations[0]
@@ -445,8 +500,23 @@ def show_locations_grouped(
         key = loc.get(group_by, "Unknown")
         groups[key].append(loc)
 
+    # Create feature groups with better naming
+    feature_groups = {}
     for group_name, group_locs in groups.items():
-        fg = folium.FeatureGroup(name=f"{group_by.capitalize()}: {group_name}")
+        # Create a more descriptive group name
+        if group_by == "type":
+            group_display_name = f"📍 {group_name.title()} ({len(group_locs)} locations)"
+        elif group_by == "neighborhood":
+            group_display_name = f"🏘️ {group_name} ({len(group_locs)} locations)"
+        elif group_by == "date_added":
+            group_display_name = f"📅 Added: {group_name} ({len(group_locs)} locations)"
+        elif group_by == "date_of_visit":
+            group_display_name = f"🎯 Visited: {group_name} ({len(group_locs)} locations)"
+        else:
+            group_display_name = f"{group_by.title()}: {group_name} ({len(group_locs)} locations)"
+
+        fg = folium.FeatureGroup(name=group_display_name)
+        feature_groups[group_name] = fg
 
         for loc in group_locs:
             # Get color based on location type
@@ -474,13 +544,72 @@ def show_locations_grouped(
                 tooltip=loc["name"],
                 icon=folium.Icon(color=color),
             ).add_to(fg)
+
         fg.add_to(m)
-    folium.LayerControl(collapsed=False).add_to(m)
+
+    # Add layer control with better positioning and styling
+    folium.LayerControl(
+        position="topright",
+        collapsed=False,
+        autoZIndex=True,
+        overlay=True,
+        control=True,
+    ).add_to(m)
+
+    # Create output directory if needed
     dirname = os.path.dirname(map_filename)
     if dirname:
         os.makedirs(dirname, exist_ok=True)
+
     m.save(map_filename)
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
+    print(f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:")
+    for group_name, fg in feature_groups.items():
+        print(f"   • {group_name.title()} ({len(groups[group_name])} locations)")
+
+
+def show_locations_with_filtering(
+    locations: List[Dict[str, Any]],
+    map_filename: str = "map.html",
+    tile_provider: str = "openstreetmap",
+    filter_types: Optional[List[str]] = None,
+    group_by: str = "type",
+) -> None:
+    """
+    Create a folium map with filtering capabilities for location types.
+
+    Args:
+        locations (list): List of dicts loaded from YAML.
+        map_filename (str): Path to save the HTML map.
+        tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        filter_types (list, optional): List of location types to include.
+        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
+    """
+    show_locations_grouped(
+        locations=locations,
+        group_by=group_by,
+        map_filename=map_filename,
+        tile_provider=tile_provider,
+        filter_types=filter_types,
+    )
+
+
+def get_available_types(locations: List[Dict[str, Any]]) -> List[str]:
+    """
+    Get a list of all available location types from the locations data.
+
+    Args:
+        locations (list): List of location dictionaries
+
+    Returns:
+        list: List of unique location types
+    """
+    types = set()
+    for loc in locations:
+        loc_type = loc.get("type", "")
+        if loc_type:
+            types.add(loc_type.lower())
+    return sorted(list(types))
 
 
 def show_locations_with_google_maps(

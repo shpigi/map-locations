@@ -61,5 +61,3 @@ setup-dev: install-dev
 # Quick test of the CLI
 test-cli:
 	python -m map_locations.cli --help
-	python -m map_locations.cli map --help
-	python -m map_locations.cli export --help
