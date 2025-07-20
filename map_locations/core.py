@@ -3,7 +3,7 @@ import json
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Set, Union, cast
+from typing import Any, Dict, List, Set, cast
 
 import folium
 import yaml
@@ -107,42 +107,216 @@ def export_to_geojson(locations: List[Dict[str, Any]], output_path: str) -> None
 
 def export_to_kml(locations: List[Dict[str, Any]], output_path: str) -> None:
     """
-    Export locations to KML format.
+    Export locations to KML format with styled icons for different location types.
 
     Args:
         locations (list): List of location dictionaries
         output_path (str): Path to save the KML file
     """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    # Create directory if needed
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    # Define color and icon mapping for different location types
+    type_styles = {
+        # Food & Drink (Red)
+        "restaurant": {
+            "color": "ff0000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
+        },
+        "cafe": {
+            "color": "ff0000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
+        },
+        "bar": {
+            "color": "ff0000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
+        },
+        # Culture & Arts (Light Blue)
+        "museum": {
+            "color": "ff00ffff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
+        },
+        "gallery": {
+            "color": "ff00ffff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
+        },
+        "theater": {
+            "color": "ff00ffff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
+        },
+        "theatre": {
+            "color": "ff00ffff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
+        },
+        # Nature & Outdoors (Green)
+        "park": {
+            "color": "ff00ff00",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/grn-circle.png",
+        },
+        "garden": {
+            "color": "ff00ff00",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/grn-circle.png",
+        },
+        # Shopping & Commerce (Blue)
+        "shopping": {
+            "color": "ffff0000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
+        },
+        "store": {
+            "color": "ffff0000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
+        },
+        "market": {
+            "color": "ffff0000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
+        },
+        # Accommodation (Yellow)
+        "hotel": {
+            "color": "ffffff00",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png",
+        },
+        "accommodation": {
+            "color": "ffffff00",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png",
+        },
+        # Transport (Gray)
+        "transport": {
+            "color": "ff808080",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
+        },
+        "station": {
+            "color": "ff808080",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
+        },
+        # Landmarks & Monuments (Orange)
+        "landmark": {
+            "color": "ffff8000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
+        },
+        "monument": {
+            "color": "ffff8000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
+        },
+        "church": {
+            "color": "ffff8000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
+        },
+        "temple": {
+            "color": "ffff8000",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
+        },
+        # Entertainment & Experiences (Purple)
+        "cinema": {
+            "color": "ff8000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
+        },
+        "entertainment": {
+            "color": "ff8000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
+        },
+        "theme_park": {
+            "color": "ff8000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
+        },
+        "experience": {
+            "color": "ff8000ff",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
+        },
+        # Neighborhoods & Areas (Brown)
+        "neighborhood": {
+            "color": "ff8b4513",
+            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
+        },
+    }
+
+    # Default style for unknown types
+    default_style = {
+        "color": "ff808080",
+        "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
+    }
 
     kml_content = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
         "  <Document>\n"
         "    <name>Locations</name>\n"
-        "    <description>Exported locations</description>\n"
+        "    <description>Exported locations with styled icons</description>\n"
     )
 
+    # Add styles for each location type
+    for loc_type, style in type_styles.items():
+        style_id = f"style_{loc_type}"
+        kml_content += (
+            f'    <Style id="{style_id}">\n'
+            f"      <IconStyle>\n"
+            f"        <color>{style['color']}</color>\n"
+            f"        <scale>1.0</scale>\n"
+            f"        <Icon>\n"
+            f"          <href>{style['icon']}</href>\n"
+            f"        </Icon>\n"
+            f"      </IconStyle>\n"
+            f"      <LabelStyle>\n"
+            f"        <color>{style['color']}</color>\n"
+            f"        <scale>0.8</scale>\n"
+            f"      </LabelStyle>\n"
+            f"    </Style>\n"
+        )
+
+    # Add default style
+    kml_content += (
+        f'    <Style id="style_default">\n'
+        f"      <IconStyle>\n"
+        f"        <color>{default_style['color']}</color>\n"
+        f"        <scale>1.0</scale>\n"
+        f"        <Icon>\n"
+        f"          <href>{default_style['icon']}</href>\n"
+        f"        </Icon>\n"
+        f"      </IconStyle>\n"
+        f"      <LabelStyle>\n"
+        f"        <color>{default_style['color']}</color>\n"
+        f"        <scale>0.8</scale>\n"
+        f"      </LabelStyle>\n"
+        f"    </Style>\n"
+    )
+
+    # Add placemarks with styling
     for loc in locations:
-        tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else ""
+        loc_type = loc.get("type", "").lower()
+        style_id = f"#style_{loc_type}" if loc_type in type_styles else "#style_default"
+
+        tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags", []) else ""
         neighborhood = loc.get("neighborhood", "") or "Not specified"
         date_added = loc.get("date_added", "") or "Not specified"
         date_of_visit = loc.get("date_of_visit", "") or "Not specified"
+
         description = (
-            f"Type: {loc.get('type', 'Not specified')}<br>"
-            f"Tags: {tags_str}<br>"
-            f"Neighborhood: {neighborhood}<br>"
-            f"Date Added: {date_added}<br>"
-            f"Date of Visit: {date_of_visit}"
+            f"<![CDATA["
+            f'<div style="font-family: Arial, sans-serif; max-width: 300px;">'
+            f"<h3 style=\"color: #333; margin: 0 0 10px 0;\">{loc['name']}</h3>"
+            f'<p style="margin: 5px 0;"><strong>Type:</strong> '
+            f"{loc.get('type', 'Not specified')}</p>"
+            f'<p style="margin: 5px 0;"><strong>Tags:</strong> {tags_str}</p>'
+            f'<p style="margin: 5px 0;"><strong>Neighborhood:</strong> '
+            f"{neighborhood}</p>"
+            f'<p style="margin: 5px 0;"><strong>Date Added:</strong> '
+            f"{date_added}</p>"
+            f'<p style="margin: 5px 0;"><strong>Date of Visit:</strong> '
+            f"{date_of_visit}</p>"
+            f"</div>"
+            f"]]>"
         )
+
         placemark = (
-            f"<Placemark>\n"
-            f"<name>{loc['name']}</name>\n"
-            f"<description><![CDATA[{description}]]></description>\n"
-            f"<Point>\n"
-            f"<coordinates>{loc['longitude']}, {loc['latitude']}, 0</coordinates>\n"
-            f"</Point>\n"
-            f"</Placemark>\n"
+            f"    <Placemark>\n"
+            f"      <name>{loc['name']}</name>\n"
+            f"      <description>{description}</description>\n"
+            f"      <styleUrl>{style_id}</styleUrl>\n"
+            f"      <Point>\n"
+            f"        <coordinates>{loc['longitude']}, {loc['latitude']}, 0</coordinates>\n"
+            f"      </Point>\n"
+            f"    </Placemark>\n"
         )
         kml_content += placemark
 
@@ -162,8 +336,10 @@ def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> No
         locations (list): List of location dictionaries
         base_path (str): Base path for output files (without extension)
     """
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    # Create directory if needed
+    output_dir = os.path.dirname(base_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     # Export to different formats
     export_to_json(locations, f"{base_path}.json")
@@ -172,6 +348,57 @@ def export_to_all_formats(locations: List[Dict[str, Any]], base_path: str) -> No
     export_to_kml(locations, f"{base_path}.kml")
 
     print(f"✅ All formats exported to: {Path(base_path).parent}")
+
+
+def get_type_color(loc_type: str) -> str:
+    """
+    Get the appropriate color for a location type, matching the KML color scheme.
+
+    Args:
+        loc_type (str): The location type
+
+    Returns:
+        str: The color name for folium
+    """
+    # Type to color mapping matching KML export (using valid folium colors)
+    type_colors = {
+        # Food & Drink (Red)
+        "restaurant": "red",
+        "cafe": "red",
+        "bar": "red",
+        # Culture & Arts (Cadet Blue)
+        "museum": "cadetblue",
+        "gallery": "cadetblue",
+        "theater": "cadetblue",
+        "theatre": "cadetblue",
+        # Nature & Outdoors (Green)
+        "park": "green",
+        "garden": "green",
+        # Shopping & Commerce (Blue)
+        "shopping": "blue",
+        "store": "blue",
+        "market": "blue",
+        # Accommodation (Yellow)
+        "hotel": "yellow",
+        "accommodation": "yellow",
+        # Transport (Gray)
+        "transport": "gray",
+        "station": "gray",
+        # Landmarks & Monuments (Orange)
+        "landmark": "orange",
+        "monument": "orange",
+        "church": "orange",
+        "temple": "orange",
+        # Entertainment & Experiences (Purple)
+        "cinema": "purple",
+        "entertainment": "purple",
+        "theme_park": "purple",
+        "experience": "purple",
+        # Neighborhoods & Areas (Dark Red)
+        "neighborhood": "darkred",
+    }
+
+    return type_colors.get(loc_type.lower(), "gray")
 
 
 def show_locations_grouped(
@@ -218,26 +445,13 @@ def show_locations_grouped(
         key = loc.get(group_by, "Unknown")
         groups[key].append(loc)
 
-    # Color cycle
-    colors = [
-        "red",
-        "blue",
-        "green",
-        "purple",
-        "orange",
-        "darkred",
-        "lightred",
-        "beige",
-        "darkblue",
-        "darkgreen",
-        "cadetblue",
-    ]
-    color_cycle = iter(colors)
-
     for group_name, group_locs in groups.items():
         fg = folium.FeatureGroup(name=f"{group_by.capitalize()}: {group_name}")
-        color = next(color_cycle, "gray")
+
         for loc in group_locs:
+            # Get color based on location type
+            color = get_type_color(loc.get("type", ""))
+
             # Create popup content with better styling
             tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else "None"
             neighborhood = loc.get("neighborhood", "") or "Not specified"

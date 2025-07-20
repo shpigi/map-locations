@@ -16,7 +16,6 @@ from .core import (
     export_to_kml,
     load_locations_from_yaml,
     show_locations_grouped,
-    show_locations_with_google_maps,
 )
 
 
