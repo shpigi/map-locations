@@ -36,7 +36,8 @@ setup(
     author_email="shpigi+map_locations@gmail.com",
     description=(
         "A Python library and CLI tool for mapping locations with interactive "
-        "filtering and visualization capabilities"
+        "filtering and visualization capabilities. AI-agent friendly with comprehensive "
+        "type hints and utility functions."
     ),
     long_description=read_readme(),
     long_description_content_type="text/markdown",
@@ -60,6 +61,7 @@ setup(
         "Topic :: Scientific/Engineering :: GIS",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities",
+        "Typing :: Typed",
     ],
     python_requires=">=3.10",
     install_requires=read_requirements(),
@@ -86,6 +88,19 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    keywords="maps, locations, gis, folium, yaml, geojson, kml",
+    keywords=[
+        "maps",
+        "locations",
+        "gis",
+        "folium",
+        "yaml",
+        "geojson",
+        "kml",
+        "geospatial",
+        "data-visualization",
+        "ai-friendly",
+        "type-hints",
+        "data-analysis",
+    ],
     license="MIT",
 )

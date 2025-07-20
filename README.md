@@ -109,6 +109,168 @@ map-locations locations.yaml --format html --output exports/locations.html
 
 You can easily import your exported KML files into [Google My Maps](https://www.google.com/maps/d/u/0/) for additional features. See the [Google My Maps Integration](#google-my-maps-integration) section below for detailed instructions.
 
+## For AI Agents
+
+This package is designed to be AI-agent friendly with comprehensive type hints, clear function signatures, and utility functions for common operations.
+
+### Core Data Structure
+
+```python
+from map_locations import Location
+
+# Location is a TypedDict with the following structure:
+Location = {
+    "name": str,           # Required: Location name
+    "type": str,           # Required: Location type/category
+    "latitude": float,      # Required: Latitude coordinate
+    "longitude": float,     # Required: Longitude coordinate
+    "tags": List[str],      # Optional: List of tags for filtering
+    "neighborhood": str,    # Optional: Neighborhood or area name
+    "date_added": str,      # Optional: Date when added (YYYY-MM-DD)
+    "date_of_visit": str,   # Optional: Date of visit (YYYY-MM-DD)
+}
+```
+
+### Quick AI Agent Usage Examples
+
+```python
+from map_locations import (
+    load_locations_from_yaml,
+    create_sample_locations,
+    get_location_summary,
+    filter_locations_by_type,
+    validate_location_data,
+    show_locations_grouped,
+    export_to_all_formats,
+)
+
+# Load existing data or create sample data
+locations = load_locations_from_yaml("my_locations.yaml")
+# OR
+locations = create_sample_locations()
+
+# Get summary of available data
+summary = get_location_summary(locations)
+print(f"Total locations: {summary['total_count']}")
+print(f"Available types: {summary['types']}")
+print(f"Available tags: {summary['tags']}")
+
+# Validate data for issues
+issues = validate_location_data(locations)
+if issues['missing_required']:
+    print(f"Data issues found: {issues}")
+
+# Filter and visualize
+restaurants = filter_locations_by_type(locations, ["restaurant", "cafe"])
+show_locations_grouped(restaurants, "restaurants_map.html")
+
+# Export to multiple formats
+export_to_all_formats(locations, "exports/my_locations")
+```
+
+### Available Functions for AI Agents
+
+#### Data Loading and Validation
+- `load_locations_from_yaml(yaml_path: str) -> List[Location]`
+- `create_sample_locations() -> List[Location]`
+- `validate_location_data(locations: List[Location]) -> Dict[str, List[str]]`
+
+#### Data Analysis
+- `get_location_summary(locations: List[Location]) -> Dict[str, Any]`
+- `get_available_types(locations: List[Location]) -> List[str]`
+- `get_available_tags(locations: List[Location]) -> List[str]`
+- `get_available_neighborhoods(locations: List[Location]) -> List[str]`
+
+#### Filtering
+- `filter_locations_by_type(locations: List[Location], types: List[str]) -> List[Location]`
+- `filter_locations_by_tags(locations: List[Location], tags: List[str]) -> List[Location]`
+- `filter_locations_by_neighborhood(locations: List[Location], neighborhoods: List[str]) -> List[Location]`
+
+#### Visualization
+- `show_locations_grouped(locations: List[Location], group_by: str = "type", map_filename: str = "map.html")`
+- `show_locations_with_filtering(locations: List[Location], map_filename: str = "map.html")`
+- `show_locations_with_google_maps(locations: List[Location], map_filename: str = "map.html")`
+
+#### Export
+- `export_to_json(locations: List[Location], output_path: str)`
+- `export_to_csv(locations: List[Location], output_path: str)`
+- `export_to_geojson(locations: List[Location], output_path: str)`
+- `export_to_kml(locations: List[Location], output_path: str)`
+- `export_to_all_formats(locations: List[Location], base_path: str)`
+
+### Common AI Agent Workflows
+
+#### 1. Data Exploration
+```python
+from map_locations import load_locations_from_yaml, get_location_summary
+
+locations = load_locations_from_yaml("data.yaml")
+summary = get_location_summary(locations)
+print(f"Dataset contains {summary['total_count']} locations")
+print(f"Types: {summary['types']}")
+print(f"Top types: {dict(sorted(summary['type_counts'].items(), key=lambda x: x[1], reverse=True)[:5])}")
+```
+
+#### 2. Data Validation
+```python
+from map_locations import validate_location_data
+
+issues = validate_location_data(locations)
+if any(issues.values()):
+    print("Data validation issues found:")
+    for category, problems in issues.items():
+        if problems:
+            print(f"  {category}: {problems}")
+else:
+    print("✅ Data validation passed")
+```
+
+#### 3. Filtered Analysis
+```python
+from map_locations import filter_locations_by_type, filter_locations_by_tags
+
+# Get all food-related locations
+food_locations = filter_locations_by_type(locations, ["restaurant", "cafe", "bar"])
+
+# Get all historic sites
+historic_sites = filter_locations_by_tags(locations, ["historic"])
+
+# Create maps for each category
+show_locations_grouped(food_locations, "food_map.html")
+show_locations_grouped(historic_sites, "historic_map.html")
+```
+
+#### 4. Complete Workflow
+```python
+from map_locations import (
+    load_locations_from_yaml,
+    validate_location_data,
+    get_location_summary,
+    filter_locations_by_type,
+    show_locations_grouped,
+    export_to_all_formats,
+)
+
+# Load and validate
+locations = load_locations_from_yaml("locations.yaml")
+issues = validate_location_data(locations)
+if issues['missing_required']:
+    print("❌ Data has issues, please fix before proceeding")
+    exit(1)
+
+# Analyze
+summary = get_location_summary(locations)
+print(f"✅ Loaded {summary['total_count']} valid locations")
+
+# Filter and visualize
+museums = filter_locations_by_type(locations, ["museum", "gallery"])
+show_locations_grouped(museums, "museums_map.html")
+
+# Export
+export_to_all_formats(locations, "exports/complete_dataset")
+print("✅ All exports completed")
+```
+
 ## Tile Providers
 
 The library supports multiple tile providers for different map styles:

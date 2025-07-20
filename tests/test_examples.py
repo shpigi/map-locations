@@ -1,7 +1,8 @@
 """
-Minimal tests for example files to ensure they run without errors.
+Tests for example scripts.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,43 +11,71 @@ import pytest
 
 
 class TestExamples:
-    """Test that example files run without errors."""
+    """Test that example scripts run without errors."""
 
     def test_basic_usage_example_runs(self) -> None:
         """Test that basic_usage.py runs without errors."""
-        examples_dir = Path(__file__).parent.parent / "examples"
-        example_file = examples_dir / "basic_usage.py"
-
-        # Skip if example file doesn't exist
-        if not example_file.exists():
-            pytest.skip("basic_usage.py example file not found")
-
-        # Run the example
-        result = subprocess.run(
-            [sys.executable, str(example_file)], capture_output=True, text=True, cwd=examples_dir
-        )
-
-        # Check that it ran successfully
-        assert result.returncode == 0, f"Example failed with error: {result.stderr}"
+        example_path = Path("examples/basic_usage.py")
+        if example_path.exists():
+            result = subprocess.run(
+                [sys.executable, str(example_path)],
+                capture_output=True,
+                text=True,
+                cwd=Path.cwd(),
+            )
+            assert result.returncode == 0, f"Example failed: {result.stderr}"
 
     def test_google_maps_example_runs(self) -> None:
         """Test that google_maps_example.py runs without errors."""
-        examples_dir = Path(__file__).parent.parent / "examples"
-        example_file = examples_dir / "google_maps_example.py"
+        example_path = Path("examples/google_maps_example.py")
+        if example_path.exists():
+            result = subprocess.run(
+                [sys.executable, str(example_path)],
+                capture_output=True,
+                text=True,
+                cwd=Path.cwd(),
+            )
+            assert result.returncode == 0, f"Example failed: {result.stderr}"
 
-        # Skip if example file doesn't exist
-        if not example_file.exists():
-            pytest.skip("google_maps_example.py example file not found")
+            # Check that output files were created
+            output_dir = Path("maps/google_maps_example")
+            if output_dir.exists():
+                # Check for map files
+                expected_files = ["map_osm.html", "map_google.html", "map_satellite.html"]
+                for filename in expected_files:
+                    file_path = output_dir / filename
+                    assert file_path.exists(), f"Map file {filename} should be created"
+        else:
+            pytest.skip("google_maps_example.py not found")
 
-        # Skip if passages.yaml doesn't exist (required by the example)
-        passages_file = Path(__file__).parent.parent / "passages.yaml"
-        if not passages_file.exists():
-            pytest.skip("passages.yaml file not found (required for google_maps_example.py)")
+    def test_ai_agent_example_runs(self) -> None:
+        """Test that ai_agent_example.py runs without errors."""
+        example_path = Path("examples/ai_agent_example.py")
+        if example_path.exists():
+            result = subprocess.run(
+                [sys.executable, str(example_path)],
+                capture_output=True,
+                text=True,
+                cwd=Path.cwd(),
+            )
+            assert result.returncode == 0, f"Example failed: {result.stderr}"
 
-        # Run the example
-        result = subprocess.run(
-            [sys.executable, str(example_file)], capture_output=True, text=True, cwd=examples_dir
-        )
+            # Check that output files were created
+            output_dir = Path("ai_agent_examples")
+            if output_dir.exists():
+                # Check for basic map file
+                basic_map = output_dir / "basic_map.html"
+                assert basic_map.exists(), "Basic map file should be created"
 
-        # Check that it ran successfully
-        assert result.returncode == 0, f"Example failed with error: {result.stderr}"
+                # Check for exports directory
+                exports_dir = output_dir / "exports"
+                if exports_dir.exists():
+                    # Check for exported files
+                    exported_files = list(exports_dir.glob("complete_dataset.*"))
+                    assert len(exported_files) >= 4, "Should export at least 4 file formats"
+
+                    # Check for specific formats
+                    assert (exports_dir / "complete_dataset.json").exists()
+                    assert (exports_dir / "complete_dataset.csv").exists()
+                    assert (exports_dir / "complete_dataset.geojson").exists()
+                    assert (exports_dir / "complete_dataset.kml").exists()
