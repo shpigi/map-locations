@@ -405,40 +405,43 @@ def get_type_color(loc_type: str) -> str:
     """
     # Type to color mapping matching KML export (using valid folium colors)
     type_colors = {
-        # Food & Drink (Red)
+        # Food & Drink (Red) - matches Google Maps red icons
         "restaurant": "red",
         "cafe": "red",
         "bar": "red",
-        # Culture & Arts (Cadet Blue)
-        "museum": "cadetblue",
-        "gallery": "cadetblue",
-        "theater": "cadetblue",
-        "theatre": "cadetblue",
-        # Nature & Outdoors (Green)
+        # Culture & Arts (Light Blue) - matches Google Maps light blue icons
+        "museum": "lightblue",
+        "gallery": "lightblue",
+        "theater": "lightblue",
+        "theatre": "lightblue",
+        # Nature & Outdoors (Green) - matches Google Maps green icons
         "park": "green",
         "garden": "green",
-        # Shopping & Commerce (Blue)
+        # Shopping & Commerce (Blue) - matches Google Maps blue icons
         "shopping": "blue",
         "store": "blue",
         "market": "blue",
-        # Accommodation (Yellow)
-        "hotel": "yellow",
-        "accommodation": "yellow",
-        # Transport (Gray)
+        # Accommodation (Light Gray) - matches Google Maps yellow icons
+        # (using light gray as closest)
+        "hotel": "lightgray",
+        "accommodation": "lightgray",
+        # Transport (Gray) - matches Google Maps white icons
         "transport": "gray",
         "station": "gray",
-        # Landmarks & Monuments (Orange)
+        # Landmarks & Monuments (Orange) - matches Google Maps orange icons
         "landmark": "orange",
         "monument": "orange",
         "church": "orange",
         "temple": "orange",
-        # Entertainment & Experiences (Purple)
+        # Entertainment & Experiences (Purple) - matches Google Maps purple icons
         "cinema": "purple",
         "entertainment": "purple",
         "theme_park": "purple",
         "experience": "purple",
-        # Neighborhoods & Areas (Dark Red)
+        # Neighborhoods & Areas (Dark Red) - matches Google Maps red icons
         "neighborhood": "darkred",
+        # Passages (Light Blue) - matches Google Maps light blue icons
+        "passage": "lightblue",
     }
 
     return type_colors.get(loc_type.lower(), "gray")

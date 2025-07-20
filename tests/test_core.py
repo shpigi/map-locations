@@ -10,7 +10,6 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 import pytest
-from pytest import FixtureFunction
 
 from map_locations.core import (
     export_to_all_formats,
