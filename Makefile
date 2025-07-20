@@ -12,6 +12,10 @@ help:
 	@echo "  clean        - Clean build artifacts"
 	@echo "  build        - Build the package"
 	@echo "  publish      - Build and publish to PyPI (if configured)"
+	@echo "  publish-test - Publish to Test PyPI with full checks"
+	@echo "  publish-prod - Publish to Production PyPI with full checks"
+	@echo "  publish-test-quick - Publish to Test PyPI without checks"
+	@echo "  publish-prod-quick - Publish to Production PyPI without checks"
 
 # Install the package in development mode
 install:
@@ -53,6 +57,22 @@ build: clean
 # Publish to PyPI (requires proper configuration)
 publish: build
 	twine upload dist/*
+
+# Publish to Test PyPI with full checks (recommended)
+publish-test: test lint test-cli
+	./scripts/publish.sh test --skip-checks
+
+# Publish to Production PyPI with full checks
+publish-prod: test lint test-cli
+	./scripts/publish.sh prod --skip-checks
+
+# Publish to Test PyPI without checks (quick)
+publish-test-quick:
+	./scripts/publish.sh test --skip-checks
+
+# Publish to Production PyPI without checks (quick)
+publish-prod-quick:
+	./scripts/publish.sh prod --skip-checks
 
 # Development setup
 setup-dev: install-dev

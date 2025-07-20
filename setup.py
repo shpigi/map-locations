@@ -54,16 +54,14 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: GIS",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.10",
     install_requires=read_requirements(),
     extras_require={
         "dev": [
@@ -73,6 +71,8 @@ setup(
             "flake8>=3.8",
             "mypy>=0.800",
             "pre-commit>=2.0",
+            "twine>=4.0.0",
+            "build>=1.0.0",
         ],
         "docs": [
             "sphinx>=4.0",
