@@ -31,7 +31,7 @@ def read_requirements() -> List[str]:
 
 setup(
     name="map-locations",
-    version="0.1.0",
+    version="0.1.3",  # This will be overridden by pyproject.toml
     author="Lavi Shpigelman",
     author_email="shpigi+map_locations@gmail.com",
     description=(

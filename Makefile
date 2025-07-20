@@ -81,3 +81,35 @@ setup-dev: install-dev
 # Quick test of the CLI
 test-cli:
 	python -m map_locations.cli --help
+
+# Version management
+version:
+	@echo "Current version: $(shell python scripts/update_version.py 2>/dev/null | grep "Current version:" | cut -d: -f2 | xargs)"
+	@echo ""
+	@echo "To update version:"
+	@echo "  # Manual version update:"
+	@echo "  make version-update VERSION=0.1.4"
+	@echo "  make version-update VERSION=0.2.0"
+	@echo "  make version-update VERSION=1.0.0"
+	@echo ""
+	@echo "  # Automatic semantic versioning:"
+	@echo "  make version-patch    # Increment patch version (0.1.2 → 0.1.3)"
+	@echo "  make version-minor    # Increment minor version (0.1.2 → 0.2.0)"
+	@echo "  make version-major    # Increment major version (0.1.2 → 1.0.0)"
+
+version-update:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "❌ Error: VERSION is required"; \
+		echo "Usage: make version-update VERSION=0.1.4"; \
+		exit 1; \
+	fi
+	python scripts/update_version.py $(VERSION)
+
+version-patch:
+	python scripts/update_version.py --patch
+
+version-minor:
+	python scripts/update_version.py --minor
+
+version-major:
+	python scripts/update_version.py --major

@@ -1,18 +1,17 @@
 """
 Map Locations - A Python library for mapping locations with interactive filtering and
-visualization.
+visualization capabilities.
 
-This package provides tools for loading location data from YAML files,
-creating interactive maps with Folium, and exporting to various formats
-including JSON, CSV, GeoJSON, and KML.
+This library provides tools for creating interactive maps, filtering locations,
+and exporting data in various formats including KML, GeoJSON, and HTML.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 __author__ = "Lavi Shpigelman"
 __email__ = "shpigi+map_locations@gmail.com"
 
+# Import main functions for easy access
 from .core import (
-    Location,
     create_sample_locations,
     export_to_all_formats,
     export_to_csv,
@@ -34,16 +33,14 @@ from .core import (
 )
 
 __all__ = [
-    "Location",
     "load_locations_from_yaml",
+    "show_locations_grouped",
+    "show_locations_with_filtering",
     "export_to_json",
     "export_to_csv",
     "export_to_geojson",
     "export_to_kml",
     "export_to_all_formats",
-    "show_locations_grouped",
-    "show_locations_with_filtering",
-    "show_locations_with_google_maps",
     "get_available_types",
     "get_available_tags",
     "get_available_neighborhoods",
@@ -53,4 +50,10 @@ __all__ = [
     "get_location_summary",
     "validate_location_data",
     "create_sample_locations",
+    "show_locations_with_google_maps",
 ]
+
+
+def get_version() -> str:
+    """Get the current version of the package."""
+    return __version__

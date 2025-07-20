@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "map-locations"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A Python library for mapping locations with interactive filtering and visualization capabilities"
 readme = "README.md"
 license = {text = "MIT"}
@@ -75,6 +75,9 @@ Documentation = "https://github.com/shpigi/map-locations#readme"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["map_locations*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "map_locations.__version__"}
 
 [tool.black]
 line-length = 100
