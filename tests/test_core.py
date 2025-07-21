@@ -47,7 +47,10 @@ class TestLoadLocationsFromYaml:
             date_added: "2024-01-01"
         """
 
-        with patch("builtins.open", mock_open(read_data=yaml_content)):
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", mock_open(read_data=yaml_content)),
+        ):
             locations = load_locations_from_yaml("dummy.yaml")
 
         assert len(locations) == 1
@@ -63,7 +66,10 @@ class TestLoadLocationsFromYaml:
         """Test loading from YAML with no locations."""
         yaml_content = "locations: []"
 
-        with patch("builtins.open", mock_open(read_data=yaml_content)):
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", mock_open(read_data=yaml_content)),
+        ):
             locations = load_locations_from_yaml("dummy.yaml")
 
         assert locations == []
@@ -72,7 +78,10 @@ class TestLoadLocationsFromYaml:
         """Test loading from YAML without locations key."""
         yaml_content = "other_key: value"
 
-        with patch("builtins.open", mock_open(read_data=yaml_content)):
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", mock_open(read_data=yaml_content)),
+        ):
             locations = load_locations_from_yaml("dummy.yaml")
 
         assert locations == []
