@@ -7,7 +7,7 @@ name = "map-locations"
 dynamic = ["version"]
 description = "A Python library for mapping locations with interactive filtering and visualization capabilities"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Lavi Shpigelman", email = "shpigi+map.locations@gmail.com"}
 ]
@@ -32,7 +32,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

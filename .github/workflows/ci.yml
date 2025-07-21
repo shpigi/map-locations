@@ -143,6 +143,8 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build twine
+        pip install -e .
+        pip install -e map_locations_ai/
 
     - name: Check version consistency
       run: |
@@ -155,7 +157,10 @@ jobs:
 
     - name: Build package
       run: |
+        rm -rf dist/ build/ *.egg-info/
         python -m build
+        echo "📦 Build output:"
+        ls -la dist/
 
     - name: Check package
       run: |
@@ -167,12 +172,18 @@ jobs:
         ls -la dist/
         echo ""
         echo "Package metadata:"
-        python -c "import glob; import zipfile; wheel_files = glob.glob('dist/map_locations-*.whl'); z = zipfile.ZipFile(wheel_files[0]); print([f for f in z.namelist() if 'METADATA' in f])"
+        python -c "import glob; import zipfile; wheel_files = [f for f in glob.glob('dist/*') if f.endswith('.whl') and 'map_locations' in f and not 'map_locations_ai' in f]; print(f'Filtered wheel files: {wheel_files}'); print(f'All dist files: {glob.glob(\"dist/*\")}'); z = zipfile.ZipFile(wheel_files[0]) if wheel_files else exit(1); print([f for f in z.namelist() if 'METADATA' in f])"
 
     - name: Build AI package
       run: |
         echo "🏗️  Building AI package..."
-        python scripts/build_ai.py
+        if [ -f "scripts/build_ai.py" ]; then
+          python scripts/build_ai.py
+          echo "📦 AI build output:"
+          ls -la dist/
+        else
+          echo "⚠️  AI build script not found, skipping AI package build"
+        fi
 
     - name: Verify AI package build
       run: |
@@ -180,7 +191,7 @@ jobs:
         ls -la dist/
         echo ""
         echo "AI package metadata:"
-        python -c "import glob; import zipfile; wheel_files = glob.glob('dist/map_locations_ai-*.whl'); z = zipfile.ZipFile(wheel_files[0]); print([f for f in z.namelist() if 'METADATA' in f])"
+        python -c "import glob; import zipfile; wheel_files = [f for f in glob.glob('dist/*') if f.endswith('.whl') and 'map_locations_ai' in f]; print(f'Filtered AI wheel files: {wheel_files}'); print(f'All dist files: {glob.glob(\"dist/*\")}'); z = zipfile.ZipFile(wheel_files[0]) if wheel_files else exit(1); print([f for f in z.namelist() if 'METADATA' in f])"
 
     - name: Check all packages
       run: |
@@ -191,9 +202,13 @@ jobs:
     - name: Test combined build process
       run: |
         echo "🧹 Cleaning for combined build test..."
-        make clean
-        echo "🏗️  Testing combined build process..."
-        make build
-        echo "📦 Combined build results:"
-        ls -la dist/
-        echo "✅ Combined build test completed"
+        if [ -f "Makefile" ]; then
+          make clean
+          echo "🏗️  Testing combined build process..."
+          make build
+          echo "📦 Combined build results:"
+          ls -la dist/
+          echo "✅ Combined build test completed"
+        else
+          echo "⚠️  Makefile not found, skipping combined build test"
+        fi

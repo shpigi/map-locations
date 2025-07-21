@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "map-locations-ai"
 dynamic = ["version"]
 description = "AI agent for automatic location data curation and enrichment"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Lavi Shpigelman", email = "shpigi+map.locations@gmail.com"}
 ]
@@ -29,7 +29,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
