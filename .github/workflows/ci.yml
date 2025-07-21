@@ -165,4 +165,4 @@ jobs:
         ls -la dist/
         echo ""
         echo "Package metadata:"
-        python -c "import zipfile; z = zipfile.ZipFile('dist/map_locations-*.whl'); print([f for f in z.namelist() if 'METADATA' in f])"
+        python -c "import glob; import zipfile; wheel_files = glob.glob('dist/map_locations-*.whl'); z = zipfile.ZipFile(wheel_files[0]); print([f for f in z.namelist() if 'METADATA' in f])"
