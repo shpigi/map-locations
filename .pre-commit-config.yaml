@@ -40,7 +40,7 @@ repos:
       # Separate lenient flake8 for AI package
       - id: flake8
         alias: flake8-ai
-        args: [--max-line-length=100, --extend-ignore=E226,E501]
+        args: [--max-line-length=100, --extend-ignore=E226]
         files: ^(map_locations_ai/)
 
   - repo: https://github.com/pre-commit/mirrors-mypy
