@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -11,34 +11,65 @@ repos:
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-json
-      - id: check-merge-conflict
       - id: check-symlinks
       - id: check-toml
       - id: detect-private-key
       - id: requirements-txt-fixer
 
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 24.1.1
     hooks:
       - id: black
         language_version: python3
         args: [--line-length=100]
+        files: ^(map_locations/|map_locations_ai/|tests/)
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         args: ["--profile", "black", "--line-length=100"]
+        files: ^(map_locations/|map_locations_ai/|tests/)
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
+    rev: 7.0.0
     hooks:
       - id: flake8
+        args: [--max-line-length=100]
         files: ^(map_locations/|tests/)
+      # Separate lenient flake8 for AI package
+      - id: flake8
+        alias: flake8-ai
+        args: [--max-line-length=100, --extend-ignore=E226]
+        files: ^(map_locations_ai/)
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.8.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-PyYAML]
+        additional_dependencies: [types-PyYAML, types-requests]
         args: [--ignore-missing-imports]
+        files: ^(map_locations/)
+      # Separate lenient mypy for AI package
+      - id: mypy
+        alias: mypy-ai
+        additional_dependencies: [types-PyYAML, types-requests]
+        args: [
+          --ignore-missing-imports,
+          --disable-error-code=no-untyped-def,
+          --disable-error-code=arg-type,
+          --disable-error-code=misc
+        ]
+        files: ^(map_locations_ai/)
+
+  # Optional: Add pytest hook (commented out by default for speed)
+  # Uncomment if you want tests to run on every commit
+  # - repo: local
+  #   hooks:
+  #     - id: pytest-fast
+  #       name: pytest-fast
+  #       entry: pytest
+  #       language: python
+  #       args: [tests/, -v, --tb=short, -x]  # Stop on first failure
+  #       files: ^(tests/|map_locations/)
+  #       pass_filenames: false

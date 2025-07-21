@@ -3,60 +3,16 @@ import json
 import os
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, TypedDict, Union, cast
+from typing import Any, Dict, List, Optional, Set, Union, cast
 
 import folium
 import yaml
 
-
-class Location(TypedDict, total=False):
-    """Type definition for a location entry.
-
-    Attributes:
-        name: The name of the location (required)
-        type: The type/category of the location (required)
-        latitude: Latitude coordinate (required)
-        longitude: Longitude coordinate (required)
-        tags: List of tags for filtering (optional)
-        neighborhood: Neighborhood or area name (optional)
-        date_added: Date when location was added (optional)
-        date_of_visit: Date when location was visited (optional)
-    """
-
-    name: str
-    type: str
-    latitude: float
-    longitude: float
-    tags: List[str]
-    neighborhood: str
-    date_added: str
-    date_of_visit: str
+# Import common models
+from .common import Location, LocationList, load_locations_from_yaml
 
 
-def load_locations_from_yaml(yaml_path: str) -> List[Location]:
-    """
-    Load locations from a YAML file with the expected structure.
-
-    Args:
-        yaml_path: Path to the YAML file containing location data
-
-    Returns:
-        List of location dictionaries with standardized structure
-
-    Raises:
-        FileNotFoundError: If the YAML file doesn't exist
-        yaml.YAMLError: If the YAML file is malformed
-
-    Example:
-        >>> locations = load_locations_from_yaml("my_locations.yaml")
-        >>> print(f"Loaded {len(locations)} locations")
-    """
-    with open(yaml_path, "r") as f:
-        data = cast(Dict[str, Any], yaml.safe_load(f))
-    return cast(List[Location], data.get("locations", []))
-
-
-def export_to_json(locations: List[Location], output_path: str) -> None:
+def export_to_json(locations: LocationList, output_path: str) -> None:
     """
     Export locations to JSON format.
 
@@ -79,7 +35,7 @@ def export_to_json(locations: List[Location], output_path: str) -> None:
     print(f"📄 JSON exported to: {Path(output_path).resolve()}")
 
 
-def export_to_csv(locations: List[Location], output_path: str) -> None:
+def export_to_csv(locations: LocationList, output_path: str) -> None:
     """
     Export locations to CSV format.
 
@@ -121,7 +77,7 @@ def export_to_csv(locations: List[Location], output_path: str) -> None:
     print(f"📊 CSV exported to: {Path(output_path).resolve()}")
 
 
-def export_to_geojson(locations: List[Location], output_path: str) -> None:
+def export_to_geojson(locations: LocationList, output_path: str) -> None:
     """
     Export locations to GeoJSON format.
 
@@ -164,7 +120,7 @@ def export_to_geojson(locations: List[Location], output_path: str) -> None:
     print(f"🗺️ GeoJSON exported to: {Path(output_path).resolve()}")
 
 
-def export_to_kml(locations: List[Location], output_path: str) -> None:
+def export_to_kml(locations: LocationList, output_path: str) -> None:
     """
     Export locations to KML format with separate folders for each location type.
 
@@ -421,7 +377,7 @@ def export_to_kml(locations: List[Location], output_path: str) -> None:
         print(f"   • {loc_type.title()} ({len(type_locations)} locations)")
 
 
-def export_to_all_formats(locations: List[Location], base_path: str) -> None:
+def export_to_all_formats(locations: LocationList, base_path: str) -> None:
     """
     Export locations to all supported formats.
 
@@ -502,7 +458,7 @@ def get_type_color(loc_type: str) -> str:
 
 
 def show_locations_grouped(
-    locations: List[Location],
+    locations: LocationList,
     group_by: str = "type",
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
@@ -629,7 +585,7 @@ def show_locations_grouped(
 
 
 def show_locations_with_filtering(
-    locations: List[Location],
+    locations: LocationList,
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
     filter_types: Optional[List[str]] = None,
@@ -654,7 +610,7 @@ def show_locations_with_filtering(
     )
 
 
-def get_available_types(locations: List[Location]) -> List[str]:
+def get_available_types(locations: LocationList) -> List[str]:
     """
     Get a list of all available location types from the locations data.
 
@@ -672,7 +628,7 @@ def get_available_types(locations: List[Location]) -> List[str]:
     return sorted(list(set(loc.get("type", "") for loc in locations if loc.get("type"))))
 
 
-def get_available_tags(locations: List[Location]) -> List[str]:
+def get_available_tags(locations: LocationList) -> List[str]:
     """
     Get a list of all available tags from the locations data.
 
@@ -694,7 +650,7 @@ def get_available_tags(locations: List[Location]) -> List[str]:
     return sorted(list(all_tags))
 
 
-def get_available_neighborhoods(locations: List[Location]) -> List[str]:
+def get_available_neighborhoods(locations: LocationList) -> List[str]:
     """
     Get a list of all available neighborhoods from the locations data.
 
@@ -714,9 +670,7 @@ def get_available_neighborhoods(locations: List[Location]) -> List[str]:
     )
 
 
-def filter_locations_by_type(
-    locations: List[Location], location_types: List[str]
-) -> List[Location]:
+def filter_locations_by_type(locations: LocationList, location_types: List[str]) -> LocationList:
     """
     Filter locations by their type.
 
@@ -735,7 +689,7 @@ def filter_locations_by_type(
     return [loc for loc in locations if loc.get("type") in location_types]
 
 
-def filter_locations_by_tags(locations: List[Location], tags: List[str]) -> List[Location]:
+def filter_locations_by_tags(locations: LocationList, tags: List[str]) -> LocationList:
     """
     Filter locations by tags (locations must have at least one of the specified tags).
 
@@ -761,8 +715,8 @@ def filter_locations_by_tags(locations: List[Location], tags: List[str]) -> List
 
 
 def filter_locations_by_neighborhood(
-    locations: List[Location], neighborhoods: List[str]
-) -> List[Location]:
+    locations: LocationList, neighborhoods: List[str]
+) -> LocationList:
     """
     Filter locations by neighborhood.
 
@@ -781,7 +735,7 @@ def filter_locations_by_neighborhood(
     return [loc for loc in locations if loc.get("neighborhood") in neighborhoods]
 
 
-def get_location_summary(locations: List[Location]) -> Dict[str, Any]:
+def get_location_summary(locations: LocationList) -> Dict[str, Any]:
     """
     Get a summary of location data including counts and available options.
 
@@ -807,7 +761,7 @@ def get_location_summary(locations: List[Location]) -> Dict[str, Any]:
     }
 
 
-def validate_location_data(locations: List[Location]) -> Dict[str, List[str]]:
+def validate_location_data(locations: LocationList) -> Dict[str, List[str]]:
     """
     Validate location data and return any issues found.
 
@@ -851,7 +805,7 @@ def validate_location_data(locations: List[Location]) -> Dict[str, List[str]]:
     return issues
 
 
-def create_sample_locations() -> List[Location]:
+def create_sample_locations() -> LocationList:
     """
     Create sample location data for testing and examples.
 
@@ -894,7 +848,7 @@ def create_sample_locations() -> List[Location]:
 
 
 def show_locations_with_google_maps(
-    locations: List[Location],
+    locations: LocationList,
     group_by: str = "type",
     map_filename: str = "map.html",
     satellite: bool = False,
