@@ -229,9 +229,7 @@ build-main: clean
 build-ai: clean
 	@echo "🏗️  Building AI package..."
 	@if [ -f "map_locations_ai/pyproject.toml" ]; then \
-		cd map_locations_ai && python -m build; \
-	elif [ -f "pyproject-ai.toml" ]; then \
-		python -m build --config-setting=--config-file=pyproject-ai.toml; \
+		python scripts/build_ai.py; \
 	else \
 		echo "⚠️  No build configuration found for AI package"; \
 	fi

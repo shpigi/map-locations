@@ -147,8 +147,10 @@ jobs:
     - name: Check version consistency
       run: |
         echo "🔍 Checking version consistency..."
-        echo "Version from __init__.py: $(python -c "import map_locations; print(map_locations.__version__)")"
-        echo "Version from pyproject.toml: $(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['dynamic'])")"
+        echo "Main package version from __init__.py: $(python -c "import map_locations; print(map_locations.__version__)")"
+        echo "Main package version from pyproject.toml: $(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['dynamic'])")"
+        echo "AI package version from __init__.py: $(python -c "import map_locations_ai; print(map_locations_ai.__version__)")"
+        echo "AI package version from pyproject.toml: $(python -c "import tomllib; print(tomllib.load(open('map_locations_ai/pyproject.toml', 'rb'))['project']['dynamic'])")"
         echo "✅ Version check completed"
 
     - name: Build package
@@ -166,3 +168,32 @@ jobs:
         echo ""
         echo "Package metadata:"
         python -c "import glob; import zipfile; wheel_files = glob.glob('dist/map_locations-*.whl'); z = zipfile.ZipFile(wheel_files[0]); print([f for f in z.namelist() if 'METADATA' in f])"
+
+    - name: Build AI package
+      run: |
+        echo "🏗️  Building AI package..."
+        python scripts/build_ai.py
+
+    - name: Verify AI package build
+      run: |
+        echo "📦 AI package build verification:"
+        ls -la dist/
+        echo ""
+        echo "AI package metadata:"
+        python -c "import glob; import zipfile; wheel_files = glob.glob('dist/map_locations_ai-*.whl'); z = zipfile.ZipFile(wheel_files[0]); print([f for f in z.namelist() if 'METADATA' in f])"
+
+    - name: Check all packages
+      run: |
+        echo "🔍 Checking all built packages:"
+        twine check dist/*
+        echo "✅ All packages validated successfully"
+
+    - name: Test combined build process
+      run: |
+        echo "🧹 Cleaning for combined build test..."
+        make clean
+        echo "🏗️  Testing combined build process..."
+        make build
+        echo "📦 Combined build results:"
+        ls -la dist/
+        echo "✅ Combined build test completed"

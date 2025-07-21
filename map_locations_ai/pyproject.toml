@@ -87,7 +87,7 @@ where = ["."]
 include = ["*"]
 
 [tool.setuptools.dynamic]
-version = {attr = "__init__.__version__"}
+version = {attr = "map_locations_ai.__version__"}
 
 [tool.black]
 line-length = 100
