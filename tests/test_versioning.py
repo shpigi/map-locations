@@ -51,7 +51,14 @@ def test_version_function():
 
 def test_pyproject_toml_dynamic_version():
     """Test that pyproject.toml uses dynamic version."""
-    import tomllib
+    # Use tomli for Python < 3.11, tomllib for Python >= 3.11
+    try:
+        import tomllib
+    except ImportError:
+        try:
+            import tomli as tomllib
+        except ImportError:
+            pytest.skip("Neither tomllib nor tomli available")
 
     with open("pyproject.toml", "rb") as f:
         config = tomllib.load(f)
