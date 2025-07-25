@@ -5,10 +5,45 @@ This module provides extractors that can identify and extract location informati
 from different types of input sources including text, URLs, and structured data.
 """
 
+import os
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urlparse
 
+import requests
+from bs4 import BeautifulSoup
 from map_locations.common import Location, LocationList
+from smolagents import ChatMessage, LiteLLMModel, ToolCallingAgent, tool
+
+
+# Minimal extraction schema (before enrichment to full Location objects)
+class ExtractedLocation:
+    """Minimal extracted location data before enrichment."""
+
+    def __init__(
+        self,
+        name: str,
+        address_or_hint: str = "",
+        source_type: str = "text",
+        source_snippet_or_url: str = "",
+        confidence: float = 0.5,
+    ):
+        self.name = name
+        self.address_or_hint = address_or_hint
+        self.source_type = source_type  # "text" or "url"
+        self.source_snippet_or_url = source_snippet_or_url
+        self.confidence = confidence
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary format."""
+        return {
+            "name": self.name,
+            "address_or_hint": self.address_or_hint,
+            "source_type": self.source_type,
+            "source_snippet_or_url": self.source_snippet_or_url,
+            "confidence": self.confidence,
+        }
 
 
 class BaseExtractor(ABC):
@@ -26,7 +61,7 @@ class BaseExtractor(ABC):
     @abstractmethod
     def extract(
         self, input_data: Union[str, List[str], Dict[str, Any]], **kwargs: Any
-    ) -> LocationList:
+    ) -> List[ExtractedLocation]:
         """
         Extract locations from input data.
 
@@ -35,17 +70,56 @@ class BaseExtractor(ABC):
             **kwargs: Additional arguments
 
         Returns:
-            List of extracted Location objects
+            List of extracted ExtractedLocation objects
         """
         pass
 
 
 class TextExtractor(BaseExtractor):
-    """Extract locations from text using NLP techniques."""
+    """Extract locations from text using pure LLM techniques."""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize with LLM agent for extraction."""
+        super().__init__(config)
+
+        # Initialize LLM agent
+        api_key = os.environ.get("LAVI_OPENAI_KEY")
+        if not api_key:
+            raise ValueError("LAVI_OPENAI_KEY environment variable is required")
+
+        # Create LiteLLM model (gpt-4o)
+        self.model = LiteLLMModel(model_id="gpt-4o", api_key=api_key)
+
+        # Store system prompt for use in conversations
+        self.system_prompt = """
+You are an extraction-only agent. Your task is to list every location explicitly
+named or linked in the user's input.
+
+Rules:
+1. Do NOT invent locations unless the text explicitly asks for suggestions.
+2. For each item output:
+   • name, address_or_hint, source_type, source_snippet_or_url, confidence
+3. Preserve duplicates; de-duplication happens later.
+4. Extract from complete addresses, venue names, attraction names, meeting points, etc.
+5. Use confidence scores: 0.9 for explicit addresses, 0.7 for clear venue names,
+   0.5 for ambiguous mentions
+6. Output JSON array ONLY, no extra commentary.
+
+Expected JSON format:
+[
+  {
+    "name": "Location Name",
+    "address_or_hint": "Address or hint text",
+    "source_type": "text",
+    "source_snippet_or_url": "exact text from input",
+    "confidence": 0.8
+  }
+]
+"""
 
     def extract(  # type: ignore[override]
         self, text: str, region: Optional[str] = None
-    ) -> LocationList:
+    ) -> List[ExtractedLocation]:
         """
         Extract location mentions from text.
 
@@ -54,22 +128,95 @@ class TextExtractor(BaseExtractor):
             region: Optional region hint for better resolution
 
         Returns:
-            List of extracted Location objects
+            List of extracted ExtractedLocation objects
         """
-        # Placeholder implementation
-        # TODO: Implement text-based location extraction using:
-        # - Named Entity Recognition (NER)
-        # - Geocoding services
-        # - Pattern matching
-        return []
+        try:
+            # Prepare prompt with region hint if provided
+            user_prompt = f"Extract all locations from this text:\n\n{text}"
+            if region:
+                user_prompt += f"\n\nRegion hint: {region}"
+
+            # Create messages for the LLM
+            messages = [
+                ChatMessage(role="system", content=self.system_prompt),
+                ChatMessage(role="user", content=user_prompt),
+            ]
+
+            # Get LLM response using the model directly
+            # LiteLLMModel uses __call__ method for completion
+            response = self.model(messages)
+
+            # Parse JSON response
+            import json
+
+            response_text = response.strip() if isinstance(response, str) else str(response)
+
+            # Debug: print the response to see what we're getting
+            print(f"DEBUG: Raw LLM response: {response_text[:200]}...")
+
+            # Handle smol-agents ChatMessage response format
+            if hasattr(response, "content"):
+                response_text = response.content
+            elif hasattr(response, "message"):
+                response_text = response.message.content
+            else:
+                response_text = str(response)
+
+            # Try to extract JSON from response
+            json_start = response_text.find("[")
+            json_end = response_text.rfind("]") + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                try:
+                    locations_data = json.loads(json_str)
+                except json.JSONDecodeError as e:
+                    print(f"DEBUG: JSON parsing failed: {e}")
+                    print(f"DEBUG: Attempted to parse: {json_str}")
+                    return []
+            else:
+                # Try parsing the entire response as JSON
+                try:
+                    locations_data = json.loads(response_text)
+                except json.JSONDecodeError as e:
+                    print(f"DEBUG: Full response JSON parsing failed: {e}")
+                    print(f"DEBUG: Full response: {response_text}")
+                    return []
+
+            # Convert to ExtractedLocation objects
+            extracted_locations = []
+            for loc_data in locations_data:
+                if isinstance(loc_data, dict):
+                    extracted_locations.append(
+                        ExtractedLocation(
+                            name=loc_data.get("name", "Unknown"),
+                            address_or_hint=loc_data.get("address_or_hint", ""),
+                            source_type="text",
+                            source_snippet_or_url=loc_data.get("source_snippet_or_url", ""),
+                            confidence=float(loc_data.get("confidence", 0.5)),
+                        )
+                    )
+
+            return extracted_locations
+
+        except Exception as e:
+            print(f"Error in TextExtractor: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return []
 
 
 class URLExtractor(BaseExtractor):
     """Extract locations from web URLs and their content."""
 
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize URL extractor."""
+        super().__init__(config)
+        self.timeout = self.config.get("timeout", 3)  # 3 second timeout as per plan
+
     def extract(  # type: ignore[override]
         self, urls: List[str], region: Optional[str] = None
-    ) -> LocationList:
+    ) -> List[ExtractedLocation]:
         """
         Extract locations from web content.
 
@@ -78,14 +225,75 @@ class URLExtractor(BaseExtractor):
             region: Optional region hint
 
         Returns:
-            List of extracted Location objects
+            List of extracted ExtractedLocation objects
         """
-        # Placeholder implementation
-        # TODO: Implement URL-based location extraction:
-        # - Web scraping
-        # - Structured data extraction (JSON-LD, microdata)
-        # - Content analysis
-        return []
+        extracted_locations = []
+
+        for url in urls:
+            try:
+                # Fast title fetch (≤3 s as per plan)
+                response = requests.get(url, timeout=self.timeout)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.content, "html.parser")
+
+                # Try multiple title sources
+                title = None
+
+                # Try Open Graph title
+                og_title = soup.find("meta", property="og:title")
+                if og_title and og_title.get("content"):
+                    title = og_title["content"]
+
+                # Try Twitter title
+                if not title:
+                    twitter_title = soup.find("meta", name="twitter:title")
+                    if twitter_title and twitter_title.get("content"):
+                        title = twitter_title["content"]
+
+                # Try regular title tag
+                if not title:
+                    title_tag = soup.find("title")
+                    if title_tag:
+                        title = title_tag.get_text().strip()
+
+                # Fallback: derive from URL slug
+                if not title:
+                    parsed = urlparse(url)
+                    path_parts = [p for p in parsed.path.split("/") if p]
+                    if path_parts:
+                        title = path_parts[-1].replace("-", " ").replace("_", " ").title()
+
+                if title:
+                    # Set confidence based on success
+                    confidence = 0.6 if title else 0.3
+
+                    extracted_locations.append(
+                        ExtractedLocation(
+                            name=title,
+                            address_or_hint="",
+                            source_type="url",
+                            source_snippet_or_url=url,
+                            confidence=confidence,
+                        )
+                    )
+
+            except Exception as e:
+                print(f"Error processing URL {url}: {e}")
+                # Still create a low-confidence entry
+                parsed = urlparse(url)
+                fallback_name = parsed.netloc or "Unknown Website"
+                extracted_locations.append(
+                    ExtractedLocation(
+                        name=fallback_name,
+                        address_or_hint="",
+                        source_type="url",
+                        source_snippet_or_url=url,
+                        confidence=0.2,
+                    )
+                )
+
+        return extracted_locations
 
 
 class StructuredExtractor(BaseExtractor):
@@ -93,7 +301,7 @@ class StructuredExtractor(BaseExtractor):
 
     def extract(  # type: ignore[override]
         self, data: Dict[str, Any], format_type: str = "auto"
-    ) -> LocationList:
+    ) -> List[ExtractedLocation]:
         """
         Extract locations from structured data.
 
@@ -102,8 +310,8 @@ class StructuredExtractor(BaseExtractor):
             format_type: Data format type (json, csv, xml, auto)
 
         Returns:
-            List of extracted Location objects
+            List of extracted ExtractedLocation objects
         """
-        # Placeholder implementation
+        # Placeholder implementation for future structured data support
         # TODO: Implement structured data extraction
         return []
