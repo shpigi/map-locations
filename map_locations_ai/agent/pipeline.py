@@ -2,9 +2,24 @@
 Main processing pipeline for location data extraction and enrichment.
 """
 
+import re
 from typing import Any, Dict, List, Optional
 
 from map_locations.common import Location, LocationList
+
+from .extractors import ExtractedLocation, TextExtractor, URLExtractor
+
+
+def extract_urls_from_text(text: str) -> List[str]:
+    """Extract URLs from text using regex."""
+    url_pattern = r'https?://[^\s<>"\'()[\]{}]+'
+    return re.findall(url_pattern, text)
+
+
+def remove_urls_from_text(text: str) -> str:
+    """Remove URLs from text to avoid duplicate processing."""
+    url_pattern = r'https?://[^\s<>"\'()[\]{}]+'
+    return re.sub(url_pattern, "", text)
 
 
 class LocationPipeline:
@@ -26,47 +41,78 @@ class LocationPipeline:
             config: Optional configuration dictionary for pipeline settings
         """
         self.config = config or {}
-        # Initialize components (will be implemented later)
-        self.extractors = None
+
+        # Initialize extractors
+        try:
+            self.text_extractor: Optional[TextExtractor] = TextExtractor(config)
+            self.url_extractor: Optional[URLExtractor] = URLExtractor(config)
+        except ValueError as e:
+            print(f"Warning: Could not initialize extractors: {e}")
+            self.text_extractor = None
+            self.url_extractor = None
+
+        # Initialize enrichers and validators (to be implemented later)
         self.enrichers = None
         self.validators = None
 
-    def process_text(self, text: str, region: Optional[str] = None) -> LocationList:
+    def process_text(self, text: str, region: Optional[str] = None) -> List[ExtractedLocation]:
         """
-        Extract and enrich locations from text input.
+        Extract locations from text input.
 
         Args:
             text: Input text containing location mentions
             region: Optional region hint for better location resolution
 
         Returns:
-            List of processed Location objects
+            List of processed ExtractedLocation objects
         """
-        # Placeholder implementation
-        # TODO: Implement text processing pipeline
-        return []
+        if not self.text_extractor:
+            print("TextExtractor not available - missing API key?")
+            return []
 
-    def process_urls(self, urls: List[str], region: Optional[str] = None) -> LocationList:
+        # First extract URLs from text and process them separately
+        urls = extract_urls_from_text(text)
+        text_without_urls = remove_urls_from_text(text)
+
+        locations = []
+
+        # Process text (without URLs)
+        if text_without_urls.strip():
+            text_locations = self.text_extractor.extract(text_without_urls, region)
+            locations.extend(text_locations)
+
+        # Process extracted URLs
+        if urls:
+            url_locations = self.process_urls(urls, region)
+            locations.extend(url_locations)
+
+        return locations
+
+    def process_urls(
+        self, urls: List[str], region: Optional[str] = None
+    ) -> List[ExtractedLocation]:
         """
-        Extract and enrich locations from web URLs.
+        Extract locations from web URLs.
 
         Args:
             urls: List of URLs to process
             region: Optional region hint for better location resolution
 
         Returns:
-            List of processed Location objects
+            List of processed ExtractedLocation objects
         """
-        # Placeholder implementation
-        # TODO: Implement URL processing pipeline
-        return []
+        if not self.url_extractor:
+            print("URLExtractor not available")
+            return []
+
+        return self.url_extractor.extract(urls, region)
 
     def process_mixed_input(
         self,
         text: Optional[str] = None,
         urls: Optional[List[str]] = None,
         region: Optional[str] = None,
-    ) -> LocationList:
+    ) -> List[ExtractedLocation]:
         """
         Process mixed input sources (text and URLs).
 
@@ -76,7 +122,7 @@ class LocationPipeline:
             region: Optional region hint
 
         Returns:
-            Combined list of processed Location objects
+            Combined list of processed ExtractedLocation objects
         """
         locations = []
 
@@ -114,4 +160,38 @@ class LocationPipeline:
         """
         # Placeholder implementation
         # TODO: Implement location validation
+        return locations
+
+    def extracted_to_locations(self, extracted: List[ExtractedLocation]) -> LocationList:
+        """
+        Convert ExtractedLocation objects to full Location objects.
+
+        This is a basic conversion - full enrichment will be implemented later.
+
+        Args:
+            extracted: List of ExtractedLocation objects
+
+        Returns:
+            List of Location objects
+        """
+        locations = []
+
+        for ext_loc in extracted:
+            # Create a minimal Location object
+            # Most fields will be filled by enrichment later
+            location: Location = {
+                "name": ext_loc.name,
+                "type": "unknown",  # Will be determined by enrichment
+                "latitude": 0.0,  # Will be geocoded later
+                "longitude": 0.0,  # Will be geocoded later
+                "confidence_score": ext_loc.confidence,
+                "data_sources": [ext_loc.source_snippet_or_url or "text_extraction"],
+            }
+
+            # Add address hint if available
+            if ext_loc.address_or_hint:
+                location["neighborhood"] = ext_loc.address_or_hint
+
+            locations.append(location)
+
         return locations

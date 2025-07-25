@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 import yaml
-
 from map_locations.common import LocationList, save_locations_to_yaml
 
 from ..agent.pipeline import LocationPipeline
@@ -130,7 +129,7 @@ class WebInterface:
         except Exception as e:
             return f"❌ Error enriching locations: {str(e)}", None
 
-    def create_interface(self) -> gr.Blocks:
+    def create_interface(self) -> Any:  # type: ignore[no-any-return]
         """Create the Gradio interface."""
         with gr.Blocks(
             title="Map Locations AI Agent",

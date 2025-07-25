@@ -26,6 +26,7 @@ pytest-cov>=4.0.0
 # Base requirements
 pyyaml>=6.0
 requests>=2.28.0
+smolagents[litellm]>=0.1.0  # For agent framework with tool calling
 
 # Optional enhanced NLP
 spacy>=3.5.0  # For advanced text processing
