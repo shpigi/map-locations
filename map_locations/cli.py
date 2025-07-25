@@ -16,6 +16,7 @@ from .core import (
     export_to_kml,
     load_locations_from_yaml,
     show_locations_grouped,
+    show_locations_with_advanced_filtering,
 )
 
 
@@ -34,6 +35,9 @@ Examples:
 
   # Create map with Google Satellite view (locations grouped by type)
   map-locations passages.yaml --tile-provider google_satellite --output maps/passages/map.html
+
+  # Create map with advanced filtering controls (dropdown menus for field and value selection)
+  map-locations passages.yaml --advanced-filter --output maps/passages/advanced_map.html
 
   # Export to JSON format
   map-locations passages.yaml --format json --output maps/passages/locations.json
@@ -55,6 +59,10 @@ Examples:
 
 Note: When creating HTML maps, locations are automatically grouped by type (or other field)
 and can be toggled on/off using the layer controls in the top-right corner of the map.
+
+Advanced filtering (--advanced-filter) adds dropdown controls that allow users to select
+a field (type, neighborhood, or date_of_visit) and then filter by specific values within
+that field. This provides more granular control than the standard grouped view.
 
 KML exports create separate folders for each location type, allowing you to toggle
 groups on/off when imported into Google Maps.
@@ -97,6 +105,12 @@ groups on/off when imported into Google Maps.
         choices=["openstreetmap", "google_maps", "google_satellite"],
         help="Map tile provider for HTML maps (default: openstreetmap)",
     )
+    parser.add_argument(
+        "--advanced-filter",
+        action="store_true",
+        help="Enable advanced filtering with dropdown controls for field selection and "
+        "value filtering",
+    )
 
     return parser
 
@@ -131,12 +145,19 @@ def handle_command(args: argparse.Namespace) -> None:
         if args.format == "html":
             # Create HTML map
             print("🗺️ Creating interactive map...")
-            show_locations_grouped(
-                locations,
-                group_by=args.group_by,
-                map_filename=args.output,
-                tile_provider=args.tile_provider,
-            )
+            if args.advanced_filter:
+                show_locations_with_advanced_filtering(
+                    locations,
+                    map_filename=args.output,
+                    tile_provider=args.tile_provider,
+                )
+            else:
+                show_locations_grouped(
+                    locations,
+                    group_by=args.group_by,
+                    map_filename=args.output,
+                    tile_provider=args.tile_provider,
+                )
             print("✅ Map created successfully!")
 
         elif args.format == "all":
@@ -147,12 +168,19 @@ def handle_command(args: argparse.Namespace) -> None:
             # Also create HTML map
             html_path = output_path.with_suffix(".html")
             print("🗺️ Creating interactive HTML map...")
-            show_locations_grouped(
-                locations,
-                group_by=args.group_by,
-                map_filename=str(html_path),
-                tile_provider=args.tile_provider,
-            )
+            if args.advanced_filter:
+                show_locations_with_advanced_filtering(
+                    locations,
+                    map_filename=str(html_path),
+                    tile_provider=args.tile_provider,
+                )
+            else:
+                show_locations_grouped(
+                    locations,
+                    group_by=args.group_by,
+                    map_filename=str(html_path),
+                    tile_provider=args.tile_provider,
+                )
             print("✅ All formats exported successfully!")
 
         else:
