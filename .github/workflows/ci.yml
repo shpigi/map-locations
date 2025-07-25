@@ -85,6 +85,7 @@ jobs:
 
     - name: Type checking
       run: |
+        pip install types-PyYAML types-requests
         mypy map_locations/ --ignore-missing-imports
 
   example-tests:

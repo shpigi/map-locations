@@ -1090,8 +1090,8 @@ def show_locations_with_advanced_filtering(
     """
 
     # Add the control HTML to the map
-    m.get_root().html.add_child(folium.Element(filter_control_html))
-    m.get_root().html.add_child(folium.Element(filter_script))
+    m.get_root().html.add_child(folium.Element(filter_control_html))  # type: ignore[attr-defined]
+    m.get_root().html.add_child(folium.Element(filter_script))  # type: ignore[attr-defined]
 
     # Create output directory if needed
     dirname = os.path.dirname(map_filename)
