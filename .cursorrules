@@ -369,3 +369,45 @@ Location = {
 - Plan for multiple map layers
 
 Remember to update these rules as the project evolves and new patterns emerge.
+
+## AI Agent Integration
+
+### AI Package Structure
+- `map_locations_ai/` contains AI-powered location processing
+- Use `agent/` for AI pipeline components (extractors, enrichers, validators)
+- Follow `interfaces/` for CLI and web app integration
+- Maintain separation between core library and AI features
+
+### AI Data Processing
+- Validate AI-extracted location data against core models
+- Use `data_sources/` for external data integration
+- Implement proper error handling for AI-generated content
+- Test AI features with `evaluation/` framework
+
+## Data Format Standards
+
+### Location Data Structure
+- Refer to `docs/data-format.md` for complete field specifications
+- Validate coordinate ranges (lat: -90 to 90, lon: -180 to 180)
+- Use `examples/sample_locations.yaml` for format examples
+
+## Export Format Specifications
+
+### Export Formats
+- Refer to `docs/export-formats.md` for detailed format specifications
+- Use `examples/` directory for format examples
+- Follow established patterns in existing export implementations
+
+## Performance Guidelines
+
+### Large Dataset Handling
+- Process locations in chunks (1000+ locations)
+- Use generators for memory-efficient iteration
+- Implement clustering for dense location areas
+- Cache expensive map operations
+
+### Memory Optimization
+- Clean up Folium map objects after export
+- Use streaming for large file operations
+- Monitor memory usage during map generation
+- Implement progress indicators for long operations
