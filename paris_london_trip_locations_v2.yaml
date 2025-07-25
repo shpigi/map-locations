@@ -1,0 +1,261 @@
+locations:
+  - name: "Musée Picasso Paris"
+    type: "museum"
+    latitude: 48.8599
+    longitude: 2.3623
+    tags: ["art", "museum", "picasso", "marais"]
+    neighborhood: "3rd arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Musée d'Orsay"
+    type: "museum"
+    latitude: 48.8600
+    longitude: 2.3266
+    tags: ["art", "impressionist", "museum", "seine"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Eiffel Tower"
+    type: "landmark"
+    latitude: 48.8584
+    longitude: 2.2945
+    tags: ["iconic", "landmark", "historic", "viewpoint"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Fondation Louis Vuitton"
+    type: "gallery"
+    latitude: 48.8762
+    longitude: 2.2633
+    tags: ["art", "contemporary", "architecture", "gallery"]
+    neighborhood: "16th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Père Lachaise Cemetery"
+    type: "landmark"
+    latitude: 48.8614
+    longitude: 2.3933
+    tags: ["historic", "cemetery", "culture", "memorial"]
+    neighborhood: "20th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Jardin des Tuileries"
+    type: "park"
+    latitude: 48.8635
+    longitude: 2.3275
+    tags: ["park", "garden", "historic", "scenic"]
+    neighborhood: "1st arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Palace of Versailles"
+    type: "landmark"
+    latitude: 48.8049
+    longitude: 2.1204
+    tags: ["palace", "royal", "historic", "world-heritage"]
+    neighborhood: "Versailles"
+    date_added: "2025-07-21"
+
+  - name: "Paris Catacombs"
+    type: "museum"
+    latitude: 48.8338
+    longitude: 2.3324
+    tags: ["historic", "underground", "bones", "museum"]
+    neighborhood: "14th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Jardin du Luxembourg"
+    type: "park"
+    latitude: 48.8462
+    longitude: 2.3371
+    tags: ["park", "garden", "relaxation", "historic"]
+    neighborhood: "6th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Atelier des Lumières"
+    type: "museum"
+    latitude: 48.8592
+    longitude: 2.3829
+    tags: ["digital", "art", "immersive", "modern"]
+    neighborhood: "11th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Parc des Buttes-Chaumont"
+    type: "park"
+    latitude: 48.8809
+    longitude: 2.3822
+    tags: ["park", "scenic", "lake", "hiking"]
+    neighborhood: "19th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Centre Pompidou"
+    type: "museum"
+    latitude: 48.8606
+    longitude: 2.3522
+    tags: ["art", "modern", "museum", "architecture"]
+    neighborhood: "4th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Tour Montparnasse Observation Deck"
+    type: "viewpoint"
+    latitude: 48.8422
+    longitude: 2.3211
+    tags: ["viewpoint", "skyscraper", "panorama"]
+    neighborhood: "15th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Musée Rodin"
+    type: "museum"
+    latitude: 48.8556
+    longitude: 2.3159
+    tags: ["art", "sculpture", "museum", "garden"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Musée de l'Orangerie"
+    type: "museum"
+    latitude: 48.8638
+    longitude: 2.3227
+    tags: ["art", "monet", "museum", "impressionist"]
+    neighborhood: "1st arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Jardin des Plantes"
+    type: "park"
+    latitude: 48.8443
+    longitude: 2.3589
+    tags: ["garden", "botanical", "park", "science"]
+    neighborhood: "5th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Place de la Concorde"
+    type: "landmark"
+    latitude: 48.8656
+    longitude: 2.3211
+    tags: ["landmark", "square", "historic", "monument"]
+    neighborhood: "8th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Musée du Quai Branly – Jacques Chirac"
+    type: "museum"
+    latitude: 48.8600
+    longitude: 2.2975
+    tags: ["museum", "ethnographic", "culture", "art"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-07-21"
+
+  - name: "Paradox Museum Paris"
+    type: "museum"
+    latitude: 48.8710
+    longitude: 2.3344
+    tags: ["museum", "interactive", "optical-illusion", "family"]
+    neighborhood: "9th arrondissement"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:0]{index=0}
+
+  - name: "Residence Inn London Kensington"
+    type: "hotel"
+    latitude: 51.4936
+    longitude: -0.2017
+    tags: ["hotel", "apartment", "family", "kitchen"]
+    neighborhood: "Kensington and Chelsea"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:1]{index=1}
+
+  - name: "Vaudeville Theatre"
+    type: "theater"
+    latitude: 51.5106
+    longitude: -0.1225
+    tags: ["theater", "west-end", "musical", "historic"]
+    neighborhood: "Strand, Westminster"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:2]{index=2}
+
+  - name: "Warner Bros. Studio Tour London – The Making of Harry Potter"
+    type: "museum"
+    latitude: 51.6904
+    longitude: -0.4180
+    tags: ["harry-potter", "studio", "family", "museum"]
+    neighborhood: "Leavesden"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:3]{index=3}
+
+  - name: "Old Spitalfields Market"
+    type: "market"
+    latitude: 51.5194
+    longitude: -0.0753
+    tags: ["market", "shopping", "food", "historic"]
+    neighborhood: "Spitalfields"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:4]{index=4}
+
+  - name: "Borough Market"
+    type: "market"
+    latitude: 51.5056
+    longitude: -0.0908
+    tags: ["market", "food", "historic", "gourmet"]
+    neighborhood: "Southwark"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:5]{index=5}
+
+  - name: "Little Venice"
+    type: "landmark"
+    latitude: 51.5200
+    longitude: -0.1800
+    tags: ["canal", "scenic", "boat", "leisure"]
+    neighborhood: "Maida Vale / Paddington"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:6]{index=6}
+
+  - name: "Camden Market"
+    type: "market"
+    latitude: 51.5414
+    longitude: -0.1464
+    tags: ["market", "alternative", "shopping", "street-food"]
+    neighborhood: "Camden Town"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:7]{index=7}
+
+  - name: "Leadenhall Market"
+    type: "market"
+    latitude: 51.5128
+    longitude: -0.0835
+    tags: ["market", "victorian", "covered", "architecture"]
+    neighborhood: "City of London"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:8]{index=8}
+
+  - name: "Saatchi Gallery"
+    type: "gallery"
+    latitude: 51.4906
+    longitude: -0.1589
+    tags: ["art", "contemporary", "gallery", "museum"]
+    neighborhood: "Chelsea"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:9]{index=9}
+
+  - name: "Parliament Hill (Viewpoint)"
+    type: "viewpoint"
+    latitude: 51.5597
+    longitude: -0.1597
+    tags: ["viewpoint", "park", "hiking", "nature"]
+    neighborhood: "Hampstead Heath"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:10]{index=10}
+
+  - name: "Hay's Galleria"
+    type: "market"
+    latitude: 51.5058
+    longitude: -0.0837
+    tags: ["market", "riverside", "shopping", "covered"]
+    neighborhood: "London Bridge City, Southwark"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:11]{index=11}
+
+  - name: "HMS Belfast"
+    type: "museum"
+    latitude: 51.5067
+    longitude: -0.0814
+    tags: ["museum", "ship", "naval", "historic"]
+    neighborhood: "Southwark (River Thames)"
+    date_added: "2025-07-21"
+    # :contentReference[oaicite:12]{index=12}

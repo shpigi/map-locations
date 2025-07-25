@@ -3,18 +3,31 @@ repos:
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^\.specstory/
       - id: end-of-file-fixer
+        exclude: ^\.specstory/
       - id: check-yaml
+        exclude: ^\.specstory/
       - id: check-added-large-files
+        exclude: ^\.specstory/
       - id: check-merge-conflict
+        exclude: ^\.specstory/
       - id: debug-statements
+        exclude: ^\.specstory/
       - id: check-case-conflict
+        exclude: ^\.specstory/
       - id: check-docstring-first
+        exclude: ^\.specstory/
       - id: check-json
+        exclude: ^\.specstory/
       - id: check-symlinks
+        exclude: ^\.specstory/
       - id: check-toml
+        exclude: ^\.specstory/
       - id: detect-private-key
+        exclude: ^\.specstory/
       - id: requirements-txt-fixer
+        exclude: ^\.specstory/
 
   - repo: https://github.com/psf/black
     rev: 24.1.1

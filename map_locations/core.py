@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union, cast
@@ -10,6 +11,143 @@ import yaml
 
 # Import common models
 from .common import Location, LocationList, load_locations_from_yaml
+
+
+def _is_url(text: str) -> bool:
+    """Check if a string is a URL."""
+    url_pattern = re.compile(
+        r"^https?://"  # http:// or https://
+        r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|"  # domain...
+        r"localhost|"  # localhost...
+        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
+        r"(?::\d+)?"  # optional port
+        r"(?:/?|[/?]\S+)$",
+        re.IGNORECASE,
+    )
+    return bool(url_pattern.match(str(text)))
+
+
+def _format_field_value(field_name: str, value: Any) -> str:
+    """Format field value for display, handling special cases like URLs and lists."""
+    if value is None or value == "":
+        return ""
+
+    # Handle lists (like tags)
+    if isinstance(value, list):
+        if not value:  # Empty list
+            return ""
+        # Check if any items in the list are URLs
+        formatted_items = []
+        for item in value:
+            item_str = str(item)
+            if _is_url(item_str):
+                formatted_items.append(f'<a href="{item_str}" target="_blank">{item_str}</a>')
+            else:
+                formatted_items.append(item_str)
+        return ", ".join(formatted_items)
+
+    # Handle URLs
+    value_str = str(value)
+    if _is_url(value_str):
+        return f'<a href="{value_str}" target="_blank">{value_str}</a>'
+
+    return value_str
+
+
+def _generate_popup_html(location: Union[Dict[str, Any], Location], style: str = "folium") -> str:
+    """
+    Generate comprehensive HTML popup content for a location.
+
+    Args:
+        location: Location dictionary
+        style: Style format - 'folium' for folium maps, 'kml' for KML export
+
+    Returns:
+        HTML string for popup content
+    """
+    # Standard field order (these will appear first)
+    standard_fields = [
+        "name",
+        "type",
+        "tags",
+        "neighborhood",
+        "date_added",
+        "date_of_visit",
+        "description",
+        "website",
+        "url",
+        "phone",
+        "address",
+        "notes",
+    ]
+
+    # Field display names
+    field_names = {
+        "name": "Name",
+        "type": "Type",
+        "tags": "Tags",
+        "neighborhood": "Neighborhood",
+        "date_added": "Date Added",
+        "date_of_visit": "Date of Visit",
+        "description": "Description",
+        "website": "Website",
+        "url": "URL",
+        "phone": "Phone",
+        "address": "Address",
+        "notes": "Notes",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+    }
+
+    # Get all fields in location, starting with standard ones
+    all_fields = []
+    for field in standard_fields:
+        if field in location:
+            all_fields.append(field)
+
+    # Add any additional fields not in standard list (excluding coordinates)
+    for field in sorted(location.keys()):
+        if field not in standard_fields and field not in ["latitude", "longitude"]:
+            all_fields.append(field)
+
+    if style == "kml":
+        # KML style with CDATA wrapper
+        html_parts = [
+            "<![CDATA[",
+            '<div style="font-family: Arial, sans-serif; max-width: 350px;">',
+            f'<h3 style="color: #333; margin: 0 0 10px 0;">'
+            f'{location.get("name", "Unnamed Location")}</h3>',
+        ]
+
+        for field in all_fields:
+            if field == "name":  # Skip name as it's already in header
+                continue
+
+            formatted_value = _format_field_value(field, location.get(field))
+            if formatted_value:  # Only include non-empty fields
+                display_name = field_names.get(field, field.replace("_", " ").title())
+                html_parts.append(
+                    f'<p style="margin: 5px 0;"><strong>{display_name}:</strong> '
+                    f"{formatted_value}</p>"
+                )
+
+        html_parts.extend(["</div>", "]]>"])
+        return "".join(html_parts)
+
+    else:  # folium style
+        html_parts = ["<div>", f'<h4>{location.get("name", "Unnamed Location")}</h4>']
+
+        for field in all_fields:
+            if field == "name":  # Skip name as it's already in header
+                continue
+
+            formatted_value = _format_field_value(field, location.get(field))
+            if formatted_value:  # Only include non-empty fields
+                display_name = field_names.get(field, field.replace("_", " ").title())
+                html_parts.append(f"<p><strong>{display_name}: </strong>{formatted_value}</p>")
+
+        html_parts.append("</div>")
+        return "".join(html_parts)
 
 
 def export_to_json(locations: LocationList, output_path: str) -> None:
@@ -122,7 +260,7 @@ def export_to_geojson(locations: LocationList, output_path: str) -> None:
 
 def export_to_kml(locations: LocationList, output_path: str) -> None:
     """
-    Export locations to KML format with separate folders for each location type.
+    Export locations to KML format matching Google My Maps style with proper coloring by type.
 
     Args:
         locations: List of location dictionaries
@@ -137,244 +275,233 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    # Define color and icon mapping for different location types
-    type_styles = {
-        # Food & Drink (Red)
-        "restaurant": {
-            "color": "ff0000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
-        },
-        "cafe": {
-            "color": "ff0000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
-        },
-        "bar": {
-            "color": "ff0000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
-        },
-        # Culture & Arts (Light Blue)
-        "museum": {
-            "color": "ff00ffff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
-        },
-        "gallery": {
-            "color": "ff00ffff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
-        },
-        "theater": {
-            "color": "ff00ffff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
-        },
-        "theatre": {
-            "color": "ff00ffff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/ltblu-circle.png",
-        },
-        # Nature & Outdoors (Green)
-        "park": {
-            "color": "ff00ff00",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/grn-circle.png",
-        },
-        "garden": {
-            "color": "ff00ff00",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/grn-circle.png",
-        },
-        # Shopping & Commerce (Blue)
-        "shopping": {
-            "color": "ffff0000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
-        },
-        "store": {
-            "color": "ffff0000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
-        },
-        "market": {
-            "color": "ffff0000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
-        },
-        # Accommodation (Yellow)
-        "hotel": {
-            "color": "ffffff00",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png",
-        },
-        "accommodation": {
-            "color": "ffffff00",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png",
-        },
+    # Define type to color mapping (AABBGGRR format - note reversed byte order)
+    type_colors = {
+        # Food & Drink (Red variants)
+        "restaurant": "ff0000ff",  # Red
+        "cafe": "ff0000ff",
+        "bar": "ff0000ff",
+        # Museums (Blue variants)
+        "museum": "ffd18802",  # Blue
+        "gallery": "ffd18802",
+        # Parks (Green)
+        "park": "ff42b37c",  # Green
+        "garden": "ff42b37c",
+        # Landmarks (Orange/Yellow variants)
+        "landmark": "ff25a8f9",  # Yellow
+        "monument": "ff25a8f9",
+        "church": "ff25a8f9",
+        "temple": "ff25a8f9",
+        # Hotels (Orange/Red)
+        "hotel": "ff0051e6",  # Orange-red
+        "accommodation": "ff0051e6",
+        # Shopping (Purple variants)
+        "shopping": "ffb73a67",  # Purple
+        "store": "ffb73a67",
+        "market": "ffb73a67",
+        # Entertainment (Purple)
+        "cinema": "ffb0279c",  # Purple
+        "entertainment": "ffb0279c",
+        "theme_park": "ffb0279c",
+        "experience": "ffb0279c",
+        # Neighborhoods (Yellow)
+        "neighborhood": "ff00eaff",  # Yellow
         # Transport (Gray)
-        "transport": {
-            "color": "ff808080",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
-        },
-        "station": {
-            "color": "ff808080",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
-        },
-        # Landmarks & Monuments (Orange)
-        "landmark": {
-            "color": "ffff8000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
-        },
-        "monument": {
-            "color": "ffff8000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
-        },
-        "church": {
-            "color": "ffff8000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
-        },
-        "temple": {
-            "color": "ffff8000",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
-        },
-        # Entertainment & Experiences (Purple)
-        "cinema": {
-            "color": "ff8000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
-        },
-        "entertainment": {
-            "color": "ff8000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
-        },
-        "theme_park": {
-            "color": "ff8000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
-        },
-        "experience": {
-            "color": "ff8000ff",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
-        },
-        # Neighborhoods & Areas (Brown)
-        "neighborhood": {
-            "color": "ff8b4513",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
-        },
-        # Bridges (Gray)
-        "bridge": {
-            "color": "ff808080",
-            "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
-        },
+        "transport": "ff646000",  # Gray
+        "station": "ff646000",
+        # Default
+        "bridge": "ff646000",  # Gray
     }
 
-    # Default style for unknown types
-    default_style = {
-        "color": "ff808080",
-        "icon": "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png",
-    }
+    # Default color for unknown types
+    default_color = "ff808080"  # Gray
 
-    # Group locations by type
-    from collections import defaultdict
-
-    grouped_locations = defaultdict(list)
+    # Get unique types and create styles
+    all_types = set()
     for loc in locations:
         loc_type = loc.get("type", "").lower()
-        grouped_locations[loc_type].append(loc)
+        all_types.add(loc_type)
 
-    kml_content = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
-        "  <Document>\n"
-        "    <name>Map Locations</name>\n"
-        "    <description>Exported locations grouped by type</description>\n"
-    )
+    # Start KML content
+    kml_content = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<kml xmlns="http://www.opengis.net/kml/2.2">',
+        "  <Document>",
+        "    <name>Map Locations</name>",
+    ]
 
-    # Add styles for each location type
-    for loc_type, style in type_styles.items():
-        style_id = f"style_{loc_type}"
-        kml_content += (
-            f'    <Style id="{style_id}">\n'
-            f"      <IconStyle>\n"
-            f"        <color>{style['color']}</color>\n"
-            f"        <scale>1.0</scale>\n"
-            f"        <Icon>\n"
-            f"          <href>{style['icon']}</href>\n"
-            f"        </Icon>\n"
-            f"      </IconStyle>\n"
-            f"      <LabelStyle>\n"
-            f"        <color>{style['color']}</color>\n"
-            f"        <scale>0.8</scale>\n"
-            f"      </LabelStyle>\n"
-            f"    </Style>\n"
-        )
+    # Create styles for each type
+    for loc_type in all_types:
+        if loc_type:  # Skip empty types
+            color = type_colors.get(loc_type, default_color)
+            style_id = f"icon-1899-{color[2:].upper()}-labelson"
+
+            style = [
+                f'    <Style id="{style_id}">',
+                "      <IconStyle>",
+                f"        <color>{color}</color>",
+                "        <scale>1</scale>",
+                "        <Icon>",
+                "          <href>https://www.gstatic.com/mapspro/images/stock/"
+                "503-wht-blank_maps.png</href>",
+                "        </Icon>",
+                '        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>',
+                "      </IconStyle>",
+                "    </Style>",
+            ]
+            kml_content.extend(style)
 
     # Add default style
-    kml_content += (
-        f'    <Style id="style_default">\n'
-        f"      <IconStyle>\n"
-        f"        <color>{default_style['color']}</color>\n"
-        f"        <scale>1.0</scale>\n"
-        f"        <Icon>\n"
-        f"          <href>{default_style['icon']}</href>\n"
-        f"        </Icon>\n"
-        f"      </IconStyle>\n"
-        f"      <LabelStyle>\n"
-        f"        <color>{default_style['color']}</color>\n"
-        f"        <scale>0.8</scale>\n"
-        f"      </LabelStyle>\n"
-        f"    </Style>\n"
-    )
+    default_style = [
+        '    <Style id="icon-1899-808080-labelson">',
+        "      <IconStyle>",
+        f"        <color>{default_color}</color>",
+        "        <scale>1</scale>",
+        "        <Icon>",
+        "          <href>https://www.gstatic.com/mapspro/images/stock/"
+        "503-wht-blank_maps.png</href>",
+        "        </Icon>",
+        '        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>',
+        "      </IconStyle>",
+        "    </Style>",
+    ]
+    kml_content.extend(default_style)
 
-    # Create folders for each location type
-    for loc_type, type_locations in grouped_locations.items():
-        # Get style for this type
-        style = type_styles.get(loc_type, default_style)
-        style_id = f"#style_{loc_type}" if loc_type in type_styles else "#style_default"
+    # Add placemarks
+    for loc in locations:
+        loc_type = loc.get("type", "").lower()
+        color = type_colors.get(loc_type, default_color)
+        style_id = f"#icon-1899-{color[2:].upper()}-labelson"
 
-        # Create folder name with count
-        folder_name = f"📍 {loc_type.title()} ({len(type_locations)} locations)"
+        # Create simple description (field: value<br> format)
+        description_parts = ["<![CDATA["]
 
-        kml_content += (
-            f"    <Folder>\n"
-            f"      <name>{folder_name}</name>\n"
-            f"      <description>Locations of type: {loc_type}</description>\n"
-        )
+        # Standard field order for consistent display
+        all_fields = [
+            "accessibility",
+            "address",
+            "booking_required",
+            "date_added",
+            "description",
+            "languages",
+            "latitude",
+            "longitude",
+            "neighborhood",
+            "opening_hours",
+            "phone",
+            "price_range",
+            "rating",
+            "tags",
+            "type",
+            "website",
+        ]
 
-        # Add placemarks for this type
-        for loc in type_locations:
-            tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags", []) else ""
-            neighborhood = loc.get("neighborhood", "") or "Not specified"
-            date_added = loc.get("date_added", "") or "Not specified"
-            date_of_visit = loc.get("date_of_visit", "") or "Not specified"
+        # Add any additional fields not in standard list
+        for field in sorted(loc.keys()):
+            if field not in all_fields and field not in ["name", "latitude", "longitude"]:
+                all_fields.append(field)
 
-            description = (
-                f"<![CDATA["
-                f'<div style="font-family: Arial, sans-serif; max-width: 300px;">'
-                f"<h3 style=\"color: #333; margin: 0 0 10px 0;\">{loc['name']}</h3>"
-                f'<p style="margin: 5px 0;"><strong>Type:</strong> '
-                f"{loc.get('type', 'Not specified')}</p>"
-                f'<p style="margin: 5px 0;"><strong>Tags:</strong> {tags_str}</p>'
-                f'<p style="margin: 5px 0;"><strong>Neighborhood:</strong> '
-                f"{neighborhood}</p>"
-                f'<p style="margin: 5px 0;"><strong>Date Added:</strong> '
-                f"{date_added}</p>"
-                f'<p style="margin: 5px 0;"><strong>Date of Visit:</strong> '
-                f"{date_of_visit}</p>"
-                f"</div>"
-                f"]]>"
-            )
+        for field in all_fields:
+            value = loc.get(field, "")
+            if isinstance(value, list):
+                if value:  # Non-empty list
+                    value_str = ", ".join(str(item) for item in value)
+                else:
+                    value_str = ""
+            else:
+                value_str = str(value) if value else ""
 
-            placemark = (
-                f"      <Placemark>\n"
-                f"        <name>{loc['name']}</name>\n"
-                f"        <description>{description}</description>\n"
-                f"        <styleUrl>{style_id}</styleUrl>\n"
-                f"        <Point>\n"
-                f"          <coordinates>{loc['longitude']}, {loc['latitude']}, 0</coordinates>\n"
-                f"        </Point>\n"
-                f"      </Placemark>\n"
-            )
-            kml_content += placemark
+            description_parts.append(f"{field}: {value_str}<br>")
 
-        kml_content += "    </Folder>\n"
+        description_parts.append("]]>")
+        description = "".join(description_parts)
 
-    kml_content += "  </Document>\n</kml>\n"
+        # Create ExtendedData
+        extended_data_parts = ["      <ExtendedData>"]
+        for field in all_fields:
+            value = loc.get(field, "")
+            if isinstance(value, list):
+                value_str = str(value) if value else ""
+                if value_str:
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            f"          <value><![CDATA[{value_str}]]></value>",
+                            "        </Data>",
+                        ]
+                    )
+                else:
+                    extended_data_parts.extend(
+                        [f'        <Data name="{field}">', "          <value/>", "        </Data>"]
+                    )
+            else:
+                value_str = str(value) if value else ""
+                if value_str:
+                    # Handle special characters in value
+                    if any(char in value_str for char in ["<", ">", "&", '"']):
+                        extended_data_parts.extend(
+                            [
+                                f'        <Data name="{field}">',
+                                f"          <value><![CDATA[{value_str}]]></value>",
+                                "        </Data>",
+                            ]
+                        )
+                    else:
+                        extended_data_parts.extend(
+                            [
+                                f'        <Data name="{field}">',
+                                f"          <value>{value_str}</value>",
+                                "        </Data>",
+                            ]
+                        )
+                else:
+                    extended_data_parts.extend(
+                        [f'        <Data name="{field}">', "          <value/>", "        </Data>"]
+                    )
+        extended_data_parts.append("      </ExtendedData>")
+        extended_data = "\n".join(extended_data_parts)
 
+        # Handle location name with CDATA if needed
+        location_name = loc.get("name", "Unnamed Location")
+        if any(char in location_name for char in ["<", ">", "&", '"']):
+            name_element = f"      <name><![CDATA[{location_name}]]></name>"
+        else:
+            name_element = f"      <name>{location_name}</name>"
+
+        placemark = [
+            "    <Placemark>",
+            name_element,
+            f"      <description>{description}</description>",
+            f"      <styleUrl>{style_id}</styleUrl>",
+            extended_data,
+            "      <Point>",
+            "        <coordinates>",
+            f'          {loc["longitude"]},{loc["latitude"]},0',
+            "        </coordinates>",
+            "      </Point>",
+            "    </Placemark>",
+        ]
+        kml_content.extend(placemark)
+
+    # Close KML
+    kml_content.extend(["  </Document>", "</kml>"])
+
+    # Write file
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write(kml_content)
+        f.write("\n".join(kml_content))
 
     print(f"🗺️ KML exported to: {Path(output_path).resolve()}")
-    print(f"📋 Created {len(grouped_locations)} separate groups in KML:")
-    for loc_type, type_locations in grouped_locations.items():
-        print(f"   • {loc_type.title()} ({len(type_locations)} locations)")
+
+    # Show type distribution
+    type_counts: Dict[str, int] = {}
+    for loc in locations:
+        loc_type = loc.get("type", "unknown")
+        type_counts[loc_type] = type_counts.get(loc_type, 0) + 1
+
+    print(f"📋 Created KML with {len(locations)} locations:")
+    for loc_type, count in sorted(type_counts.items()):
+        color = type_colors.get(loc_type.lower(), default_color)
+        print(f"   • {loc_type.title()}: {count} locations (color: #{color[2:]})")
 
 
 def export_to_all_formats(locations: LocationList, base_path: str) -> None:
@@ -491,21 +618,26 @@ def show_locations_grouped(
     first = locations[0]
     m = folium.Map(location=[first["latitude"], first["longitude"]], zoom_start=14)
 
-    # Add tile layer based on provider
+    # Add additional tile layers based on provider selection
+    # The default OpenStreetMap is already added by folium.Map()
     if tile_provider == "google_maps":
+        # Add Google Maps as additional base layer option
         folium.TileLayer(
             tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
             attr="Google Maps",
             name="Google Maps",
+            overlay=False,
+            control=True,
         ).add_to(m)
     elif tile_provider == "google_satellite":
+        # Add Google Satellite as additional base layer option
         folium.TileLayer(
             tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
             attr="Google Satellite",
             name="Google Satellite",
+            overlay=False,
+            control=True,
         ).add_to(m)
-    else:  # Default to OpenStreetMap
-        folium.TileLayer(tiles="OpenStreetMap", name="OpenStreetMap").add_to(m)
 
     # Group locations
     groups = defaultdict(list)
@@ -539,20 +671,7 @@ def show_locations_grouped(
             color = get_type_color(loc.get("type", ""))
 
             # Create popup content with better styling
-            tags_str = ", ".join(loc.get("tags", [])) if loc.get("tags") else "None"
-            neighborhood = loc.get("neighborhood", "") or "Not specified"
-            date_added = loc.get("date_added", "") or "Not specified"
-            date_of_visit = loc.get("date_of_visit", "") or "Not specified"
-
-            # Create popup with better structure and width
-            popup_html = (
-                f"<div><h4>{loc['name']}</h4>"
-                f"<p><strong>Type: </strong>{loc.get('type', 'Not specified')}</p>"
-                f"<p><strong>Tags: </strong>{tags_str}</p>"
-                f"<p><strong>Neighborhood: </strong>{neighborhood}</p>"
-                f"<p><strong>Date Added: </strong>{date_added}</p>"
-                f"<p><strong>Date of Visit: </strong>{date_of_visit}</p></div>"
-            )
+            popup_html = _generate_popup_html(loc)
 
             folium.Marker(
                 location=[loc["latitude"], loc["longitude"]],
@@ -608,6 +727,386 @@ def show_locations_with_filtering(
         tile_provider=tile_provider,
         filter_types=filter_types,
     )
+
+
+def show_locations_with_advanced_filtering(
+    locations: LocationList,
+    map_filename: str = "map.html",
+    tile_provider: str = "openstreetmap",
+    filter_types: Optional[List[str]] = None,
+) -> None:
+    """
+    Create a folium map with advanced filtering capabilities using dropdown controls.
+    Users can select a field (type, neighborhood, date_of_visit) and filter by specific values.
+
+    Args:
+        locations: List of location dictionaries
+        map_filename: Path to save the HTML map
+        tile_provider: Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        filter_types: List of location types to pre-filter (optional)
+
+    Example:
+        >>> locations = load_locations_from_yaml("locations.yaml")
+        >>> show_locations_with_advanced_filtering(locations, "advanced_map.html")
+    """
+    if not locations:
+        raise ValueError("No locations provided.")
+
+    # Filter locations by type if filter_types is provided
+    if filter_types:
+        locations = [
+            loc
+            for loc in locations
+            if loc.get("type", "").lower() in [t.lower() for t in filter_types]
+        ]
+        if not locations:
+            raise ValueError(f"No locations found matching the specified types: {filter_types}")
+
+    # Center the map
+    first = locations[0]
+
+    # Always start with default OpenStreetMap to avoid URL-named layers
+    m = folium.Map(location=[first["latitude"], first["longitude"]], zoom_start=14)
+
+    # Add additional tile layer options for advanced filtering
+    # Add Google Maps
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        attr="Google Maps",
+        name="Google Maps",
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Add Google Satellite
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google Satellite",
+        name="Google Satellite",
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Collect unique values for each filterable field
+    field_values = {
+        "type": sorted(list(set(loc.get("type", "") for loc in locations if loc.get("type")))),
+        "neighborhood": sorted(
+            list(set(loc.get("neighborhood", "") for loc in locations if loc.get("neighborhood")))
+        ),
+        "date_of_visit": sorted(
+            list(set(loc.get("date_of_visit", "") for loc in locations if loc.get("date_of_visit")))
+        ),
+        "name": sorted([loc.get("name", f"Location {i + 1}") for i, loc in enumerate(locations)]),
+    }
+
+    # Add all markers to the map
+    markers_data = []
+    for i, loc in enumerate(locations):
+        # Get color based on location type
+        color = get_type_color(loc.get("type", ""))
+
+        # Create popup content
+        popup_html = _generate_popup_html(loc)
+
+        marker = folium.Marker(
+            location=[loc["latitude"], loc["longitude"]],
+            popup=folium.Popup(popup_html, max_width=450),
+            tooltip=loc["name"],
+            icon=folium.Icon(color=color),
+        )
+        marker.add_to(m)
+
+        # Store marker data for JavaScript filtering
+        markers_data.append(
+            {
+                "id": i,
+                "type": loc.get("type", ""),
+                "neighborhood": loc.get("neighborhood", ""),
+                "date_of_visit": loc.get("date_of_visit", ""),
+                "name": loc.get("name", f"Location {i + 1}"),
+            }
+        )
+
+    # Add layer control for tile providers (positioned on top right to avoid filter panel)
+    folium.LayerControl(
+        position="topright",
+        collapsed=False,
+        autoZIndex=True,
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Create the advanced filtering control HTML with multi-selection checkboxes
+    filter_control_html = f"""
+    <div id="filter-control" style="
+        position: fixed;
+        top: 80px;
+        left: 10px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        min-width: 320px;
+        max-width: 350px;
+        max-height: 80vh;
+        overflow-y: auto;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+    ">
+        <div style="margin-bottom: 10px;">
+            <strong>🔍 Advanced Filter</strong>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+            <label for="field-select" style="display: block; margin-bottom: 5px; "
+                "font-weight: bold;">
+                Filter by:
+            </label>
+            <select id="field-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; "
+                "border-radius: 4px;">
+                <option value="">-- Select Field --</option>
+                <option value="type">Type</option>
+                <option value="neighborhood">Neighborhood</option>
+                <option value="date_of_visit">Date of Visit</option>
+                <option value="name">Location Name</option>
+            </select>
+        </div>
+
+        <div id="checkbox-container" style="
+            display: none;
+            margin-bottom: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background: #fafafa;
+        ">
+            <div style="margin-bottom: 8px; font-weight: bold;">
+                Select values:
+            </div>
+            <div style="margin-bottom: 8px;">
+                <button id="select-all" style="
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    margin-right: 5px;
+                    font-size: 12px;
+                ">Select All</button>
+                <button id="select-none" style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">Clear All</button>
+            </div>
+            <div id="checkbox-list"></div>
+        </div>
+
+        <div>
+            <button id="apply-filter" style="
+                background: #2196F3;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-right: 5px;
+            ">Apply Filter</button>
+            <button id="clear-filter" style="
+                background: #f44336;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-right: 5px;
+            ">Clear Filter</button>
+        </div>
+        <div style="margin-top: 8px;">
+            <span id="result-count" style="color: #666; font-size: 12px;">
+                Showing all {len(locations)} locations
+            </span>
+        </div>
+    </div>
+    """
+
+    # JavaScript for advanced multi-selection filtering
+    filter_script = f"""
+    <script>
+    // Field values data
+    const fieldValues = {json.dumps(field_values)};
+
+    // Markers data with location information
+    const markersData = {json.dumps(markers_data)};
+
+    // Get references to all markers (they are added in order)
+    let allMarkers = [];
+
+    // Wait for map to be ready and collect marker references
+    setTimeout(function() {{
+        // Find all markers in the map
+        window[Object.keys(window).find(key => key.startsWith('map_'))].eachLayer(function(layer) {{
+            if (layer instanceof L.Marker) {{
+                allMarkers.push(layer);
+            }}
+        }});
+
+        console.log('Found', allMarkers.length, 'markers');
+    }}, 1000);
+
+    // Get DOM elements
+    const fieldSelect = document.getElementById('field-select');
+    const checkboxContainer = document.getElementById('checkbox-container');
+    const checkboxList = document.getElementById('checkbox-list');
+    const selectAllBtn = document.getElementById('select-all');
+    const selectNoneBtn = document.getElementById('select-none');
+    const applyFilterBtn = document.getElementById('apply-filter');
+    const clearFilterBtn = document.getElementById('clear-filter');
+    const resultCount = document.getElementById('result-count');
+
+    // Handle field selection change
+    fieldSelect.addEventListener('change', function() {{
+        const selectedField = this.value;
+
+        if (selectedField && fieldValues[selectedField]) {{
+            checkboxContainer.style.display = 'block';
+            populateCheckboxes(selectedField);
+        }} else {{
+            checkboxContainer.style.display = 'none';
+            showAllMarkers();
+        }}
+    }});
+
+    // Populate checkboxes for selected field
+    function populateCheckboxes(field) {{
+        checkboxList.innerHTML = '';
+        const values = fieldValues[field];
+
+        values.forEach(function(value, index) {{
+            const checkboxId = `checkbox_${{field}}_${{index}}`;
+            const displayValue = value || '(empty)';
+
+            const checkboxHtml = `
+                <div style="margin-bottom: 5px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="${{checkboxId}}" value="${{value}}"
+                               style="margin-right: 8px;" checked>
+                        <span style="font-size: 13px;">${{displayValue}}</span>
+                    </label>
+                </div>
+            `;
+            checkboxList.innerHTML += checkboxHtml;
+        }});
+    }}
+
+    // Select all checkboxes
+    selectAllBtn.addEventListener('click', function() {{
+        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = true);
+    }});
+
+    // Clear all checkboxes
+    selectNoneBtn.addEventListener('click', function() {{
+        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+    }});
+
+    // Apply filter based on selected checkboxes
+    applyFilterBtn.addEventListener('click', function() {{
+        const selectedField = fieldSelect.value;
+        if (!selectedField) {{
+            showAllMarkers();
+            return;
+        }}
+
+        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
+        const selectedValues = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selectedValues.length === 0) {{
+            // No values selected - hide all markers
+            hideAllMarkers();
+            resultCount.textContent = `Showing 0 of {len(locations)} locations`;
+            return;
+        }}
+
+        let visibleCount = 0;
+
+        allMarkers.forEach(function(marker, index) {{
+            if (index < markersData.length) {{
+                const markerData = markersData[index];
+                const fieldValue = markerData[selectedField] || '';
+
+                if (selectedValues.includes(fieldValue)) {{
+                    marker.setOpacity(1);
+                    marker._icon.style.display = 'block';
+                    if (marker._shadow) marker._shadow.style.display = 'block';
+                    visibleCount++;
+                }} else {{
+                    marker.setOpacity(0);
+                    marker._icon.style.display = 'none';
+                    if (marker._shadow) marker._shadow.style.display = 'none';
+                }}
+            }}
+        }});
+
+        resultCount.textContent = `Showing ${{visibleCount}} of {len(locations)} locations`;
+    }});
+
+    // Clear filter
+    clearFilterBtn.addEventListener('click', function() {{
+        fieldSelect.value = '';
+        checkboxContainer.style.display = 'none';
+        showAllMarkers();
+    }});
+
+    // Show all markers
+    function showAllMarkers() {{
+        allMarkers.forEach(function(marker) {{
+            marker.setOpacity(1);
+            marker._icon.style.display = 'block';
+            if (marker._shadow) marker._shadow.style.display = 'block';
+        }});
+
+        resultCount.textContent = `Showing all {len(locations)} locations`;
+    }}
+
+    // Hide all markers
+    function hideAllMarkers() {{
+        allMarkers.forEach(function(marker) {{
+            marker.setOpacity(0);
+            marker._icon.style.display = 'none';
+            if (marker._shadow) marker._shadow.style.display = 'none';
+        }});
+    }}
+    </script>
+    """
+
+    # Add the control HTML to the map
+    m.get_root().html.add_child(folium.Element(filter_control_html))  # type: ignore[attr-defined]
+    m.get_root().html.add_child(folium.Element(filter_script))  # type: ignore[attr-defined]
+
+    # Create output directory if needed
+    dirname = os.path.dirname(map_filename)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
+
+    m.save(map_filename)
+    print(f"🗺️ Advanced filtering map saved to: {Path(map_filename).resolve()}")
+    print("🔍 Interactive filtering controls:")
+    print(f"   • Filter by type: {len(field_values['type'])} options")
+    print(f"   • Filter by neighborhood: {len(field_values['neighborhood'])} options")
+    print(f"   • Filter by date of visit: {len(field_values['date_of_visit'])} options")
+    print("   • Clear filter button to show all locations")
+    if tile_provider != "openstreetmap":
+        print("🗺️ Tile layer controls available in top-right corner")
 
 
 def get_available_types(locations: LocationList) -> List[str]:

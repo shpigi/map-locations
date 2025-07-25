@@ -495,12 +495,16 @@ class TestKMLIconURLs:
             # Check that the KML file contains valid icon URLs
             with open(temp_path, "r") as f:
                 content = f.read()
-                assert "http://maps.google.com/mapfiles/kml/paddle/" in content
+                assert (
+                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png" in content
+                )
 
             # Test that icon URLs are accessible (optional test)
             try:
                 # This might fail in some environments, so we make it optional
-                response = urlopen("http://maps.google.com/mapfiles/kml/paddle/red-circle.png")
+                response = urlopen(
+                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png"
+                )
                 assert response.getcode() == 200
             except URLError:
                 # If the URL is not accessible, that's okay for testing
@@ -539,10 +543,13 @@ class TestKMLIconURLs:
 
             with open(temp_path, "r") as f:
                 content = f.read()
-                # Check that restaurant icon is used
-                assert "red-circle.png" in content
-                # Check that museum icon is used
-                assert "ltblu-circle.png" in content
+                # Check that the modern Google Static Maps icon is used
+                assert (
+                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png" in content
+                )
+                # Check that different colors are used for different types
+                assert "ff0000ff" in content  # Red for restaurant
+                assert "ffd18802" in content  # Blue for museum
 
         finally:
             os.unlink(temp_path)
