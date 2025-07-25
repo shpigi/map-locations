@@ -115,7 +115,8 @@ def _generate_popup_html(location: Union[Dict[str, Any], Location], style: str =
         html_parts = [
             "<![CDATA[",
             '<div style="font-family: Arial, sans-serif; max-width: 350px;">',
-            f'<h3 style="color: #333; margin: 0 0 10px 0;">{location.get("name", "Unnamed Location")}</h3>',
+            f'<h3 style="color: #333; margin: 0 0 10px 0;">'
+            f'{location.get("name", "Unnamed Location")}</h3>',
         ]
 
         for field in all_fields:
@@ -127,7 +128,7 @@ def _generate_popup_html(location: Union[Dict[str, Any], Location], style: str =
                 display_name = field_names.get(field, field.replace("_", " ").title())
                 html_parts.append(
                     f'<p style="margin: 5px 0;"><strong>{display_name}:</strong> '
-                    f'{formatted_value}</p>'
+                    f"{formatted_value}</p>"
                 )
 
         html_parts.extend(["</div>", "]]>"])
@@ -341,7 +342,8 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
                 f"        <color>{color}</color>",
                 "        <scale>1</scale>",
                 "        <Icon>",
-                "          <href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>",
+                "          <href>https://www.gstatic.com/mapspro/images/stock/"
+                "503-wht-blank_maps.png</href>",
                 "        </Icon>",
                 '        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>',
                 "      </IconStyle>",
@@ -356,7 +358,8 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
         f"        <color>{default_color}</color>",
         "        <scale>1</scale>",
         "        <Icon>",
-        "          <href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>",
+        "          <href>https://www.gstatic.com/mapspro/images/stock/"
+        "503-wht-blank_maps.png</href>",
         "        </Icon>",
         '        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>',
         "      </IconStyle>",
@@ -856,10 +859,12 @@ def show_locations_with_advanced_filtering(
         </div>
 
         <div style="margin-bottom: 10px;">
-            <label for="field-select" style="display: block; margin-bottom: 5px; font-weight: bold;">
+            <label for="field-select" style="display: block; margin-bottom: 5px; "
+                "font-weight: bold;">
                 Filter by:
             </label>
-            <select id="field-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+            <select id="field-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; "
+                "border-radius: 4px;">
                 <option value="">-- Select Field --</option>
                 <option value="type">Type</option>
                 <option value="neighborhood">Neighborhood</option>
