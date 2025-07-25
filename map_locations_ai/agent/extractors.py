@@ -16,6 +16,9 @@ from bs4 import BeautifulSoup
 from map_locations.common import Location, LocationList
 from smolagents import ChatMessage, LiteLLMModel, ToolCallingAgent, tool
 
+from ..utils.net_utils import classify_url, slug_to_name, url_title_fetch
+from ..utils.nlp_utils import extract_entities
+
 
 # Minimal extraction schema (before enrichment to full Location objects)
 class ExtractedLocation:
@@ -231,65 +234,59 @@ class URLExtractor(BaseExtractor):
 
         for url in urls:
             try:
-                # Fast title fetch (≤3 s as per plan)
-                response = requests.get(url, timeout=self.timeout)
-                response.raise_for_status()
+                # Use the improved net_utils functions
+                title_result = url_title_fetch(url)
+                slug_result = slug_to_name(url)
+                url_classification = classify_url(url)
 
-                soup = BeautifulSoup(response.content, "html.parser")
+                # Determine best name and confidence
+                name = "Unknown Website"
+                confidence = 0.2
 
-                # Try multiple title sources
-                title = None
+                if title_result.get("success") and title_result.get("title"):
+                    name = title_result["title"]
+                    confidence = 0.6
+                elif slug_result.get("name"):
+                    name = slug_result["name"]
+                    confidence = slug_result.get("confidence", 0.3)
 
-                # Try Open Graph title
-                og_title = soup.find("meta", property="og:title")
-                if og_title and og_title.get("content"):
-                    title = og_title["content"]
+                # Adjust confidence based on URL classification
+                url_conf = url_classification.get("confidence", 0.4)
+                confidence = min(confidence, url_conf)
 
-                # Try Twitter title
-                if not title:
-                    twitter_title = soup.find("meta", name="twitter:title")
-                    if twitter_title and twitter_title.get("content"):
-                        title = twitter_title["content"]
+                # Add error context if available
+                error_info = ""
+                if title_result.get("error"):
+                    error_info = f"Title fetch: {title_result['error']}"
 
-                # Try regular title tag
-                if not title:
-                    title_tag = soup.find("title")
-                    if title_tag:
-                        title = title_tag.get_text().strip()
-
-                # Fallback: derive from URL slug
-                if not title:
-                    parsed = urlparse(url)
-                    path_parts = [p for p in parsed.path.split("/") if p]
-                    if path_parts:
-                        title = path_parts[-1].replace("-", " ").replace("_", " ").title()
-
-                if title:
-                    # Set confidence based on success
-                    confidence = 0.6 if title else 0.3
-
-                    extracted_locations.append(
-                        ExtractedLocation(
-                            name=title,
-                            address_or_hint="",
-                            source_type="url",
-                            source_snippet_or_url=url,
-                            confidence=confidence,
-                        )
+                extracted_locations.append(
+                    ExtractedLocation(
+                        name=name,
+                        address_or_hint=error_info,
+                        source_type="url",
+                        source_snippet_or_url=url,
+                        confidence=confidence,
                     )
+                )
 
             except Exception as e:
                 print(f"Error processing URL {url}: {e}")
-                # Still create a low-confidence entry
-                parsed = urlparse(url)
-                fallback_name = parsed.netloc or "Unknown Website"
+                # Still create a low-confidence entry with fallback name
+                try:
+                    parsed = urlparse(url)
+                    fallback_name = parsed.netloc or "Unknown Website"
+                    if fallback_name.startswith("www."):
+                        fallback_name = fallback_name[4:]
+                except Exception:
+                    fallback_name = "Unknown Website"
+
                 extracted_locations.append(
                     ExtractedLocation(
                         name=fallback_name,
-                        address_or_hint="",
+                        address_or_hint=f"Error: {str(e)}",
                         source_type="url",
                         source_snippet_or_url=url,
-                        confidence=0.2,
+                        confidence=0.1,
                     )
                 )
 

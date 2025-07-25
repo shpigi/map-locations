@@ -6,11 +6,14 @@ for the LLM agent to use during URL-based location extraction.
 """
 
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, PageElement
+
+# Type alias for BeautifulSoup elements
+SoupElement = Union[PageElement, None]
 
 
 def url_title_fetch(url: str) -> Dict[str, Any]:
@@ -33,30 +36,53 @@ def url_title_fetch(url: str) -> Dict[str, Any]:
         # Try multiple title sources as per plan
         title = None
 
-        # Try Open Graph title
-        og_title = soup.find("meta", property="og:title")
-        if og_title and og_title.get("content"):
-            title = og_title["content"]
+        # Try Open Graph title - use attrs parameter to avoid keyword argument conflicts
+        try:
+            og_title: SoupElement = soup.find("meta", attrs={"property": "og:title"})
+            if og_title and hasattr(og_title, "get") and og_title.get("content"):
+                title = og_title["content"]  # type: ignore[index]
+        except Exception as e:
+            print(f"Error parsing Open Graph title for {url}: {e}")
 
-        # Try Twitter title
+        # Try Twitter title - use attrs parameter
         if not title:
-            twitter_title = soup.find("meta", name="twitter:title")
-            if twitter_title and twitter_title.get("content"):
-                title = twitter_title["content"]
+            try:
+                twitter_title: SoupElement = soup.find("meta", attrs={"name": "twitter:title"})
+                if twitter_title and hasattr(twitter_title, "get") and twitter_title.get("content"):
+                    title = twitter_title["content"]  # type: ignore[index]
+            except Exception as e:
+                print(f"Error parsing Twitter title for {url}: {e}")
 
         # Try regular title tag
         if not title:
-            title_tag = soup.find("title")
-            if title_tag:
-                title = title_tag.get_text().strip()
+            try:
+                title_tag: SoupElement = soup.find("title")
+                if title_tag and hasattr(title_tag, "get_text"):
+                    title = title_tag.get_text().strip()
+            except Exception as e:
+                print(f"Error parsing title tag for {url}: {e}")
 
         if title:
             return {"title": title, "success": True, "error": None, "source": "html_title"}
         else:
             return {"title": None, "success": False, "error": "No title found", "source": None}
 
+    except requests.exceptions.Timeout:
+        return {"title": None, "success": False, "error": "Request timeout", "source": None}
+    except requests.exceptions.RequestException as e:
+        return {
+            "title": None,
+            "success": False,
+            "error": f"Request error: {str(e)}",
+            "source": None,
+        }
     except Exception as e:
-        return {"title": None, "success": False, "error": str(e), "source": None}
+        return {
+            "title": None,
+            "success": False,
+            "error": f"Parsing error: {str(e)}",
+            "source": None,
+        }
 
 
 def slug_to_name(url: str) -> Dict[str, Any]:

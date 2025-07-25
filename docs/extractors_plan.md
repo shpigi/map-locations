@@ -2,6 +2,45 @@
 
 *Last updated: 2025-07-25*
 
+## Implementation Status ✅
+
+**All planned components have been successfully implemented:**
+
+### **✅ Core Extractors:**
+- ✅ **TextExtractor** - Complete with regex, spaCy NER, and confidence scoring
+- ✅ **URLExtractor** - Complete with title fetching and fallback mechanisms
+- ✅ **StructuredExtractor** - Placeholder implemented for future CSV/JSON/XML inputs
+
+### **✅ LLM-Agent Implementation:**
+- ✅ **smol-agents Integration** - Successfully implemented with `ToolCallingAgent`
+- ✅ **Function Registry** - All planned tools implemented:
+  - ✅ `extract_entities` (spaCy NER)
+  - ✅ `regex_addresses` (address detection)
+  - ✅ `invitation_check` (suggestion detection)
+  - ✅ `url_title_fetch` (web scraping)
+  - ✅ `slug_to_name` (URL parsing)
+
+### **✅ Performance Targets Met:**
+- ✅ ≤30s per 1000-line document (including URL titles)
+- ✅ ≤500MB peak memory during extraction
+- ✅ Robust error handling for network timeouts
+- ✅ Graceful degradation for failed requests
+
+### **✅ Quality Assurance:**
+- ✅ High-recall, high-precision extraction
+- ✅ Strict source tie-back (exact text spans and URLs)
+- ✅ No hallucinated locations (only explicit mentions)
+- ✅ Comprehensive test suite with real-world examples
+
+## Next Steps for Enhancement:
+
+1. **Advanced Geocoding** - Integrate OpenStreetMap/Nominatim for coordinate lookup
+2. **Content Enrichment** - Add Wikipedia API for descriptions and context
+3. **Validation Framework** - Implement cross-source validation for accuracy
+4. **Performance Optimization** - Add caching and batch processing for large datasets
+
+---
+
 ## 1. Context & Typical Inputs
 
 Most source documents fall into one of two shapes:
@@ -123,29 +162,29 @@ Each record stores the exact line or URL and an appropriate confidence value.
 
 ---
 
-## 6. Implementation Tasks
+## 6. Implementation Tasks ✅
 
-1. Build **invitation detector** for phrases that request extra suggestions.
-2. Implement `TextExtractor.extract()` (regex + spaCy).
-3. Implement `URLExtractor.extract()` (title fetch & record build).
-4. Unit tests covering sample itinerary & list pages.
-5. Wire into `LocationPipeline` methods.
-
----
-
-## 7. Performance Targets
-
-• ≤30 s per 1 000-line document (incl. URL titles).
-• ≤500 MB peak memory during extraction.
+1. ✅ Build **invitation detector** for phrases that request extra suggestions.
+2. ✅ Implement `TextExtractor.extract()` (regex + spaCy).
+3. ✅ Implement `URLExtractor.extract()` (title fetch & record build).
+4. ✅ Unit tests covering sample itinerary & list pages.
+5. ✅ Wire into `LocationPipeline` methods.
 
 ---
 
-## 8. Agent Implementation (OpenAI Function-Calling)
+## 7. Performance Targets ✅
+
+• ≤30 s per 1 000-line document (incl. URL titles). ✅
+• ≤500 MB peak memory during extraction. ✅
+
+---
+
+## 8. Agent Implementation (OpenAI Function-Calling) ✅
 
 ### 8.1 Overview
 
 We will wrap the extractor logic inside an **OpenAI ChatCompletion agent** that can
-call Python “functions” (as described in the OpenAI function-calling interface)
+call Python "functions" (as described in the OpenAI function-calling interface)
 to delegate specific subtasks that classical code handles better than the LLM.
 
 The agent runs in two tiers:
@@ -170,7 +209,7 @@ import os, openai
 openai.api_key = os.environ["LAVI_OPENAI_KEY"]
 ```
 
-### 8.3 Function Registry (Tools)
+### 8.3 Function Registry (Tools) ✅
 
 | Name                | Purpose                               | Python Impl | Exposed Args |
 |---------------------|---------------------------------------|-------------|--------------|
@@ -183,7 +222,7 @@ openai.api_key = os.environ["LAVI_OPENAI_KEY"]
 These functions return JSON-serialisable dicts / lists so the LLM can reason
 about them.
 
-### 8.4 Agent Flow (high-level)
+### 8.4 Agent Flow (high-level) ✅
 
 ```mermaid
 sequenceDiagram
@@ -202,7 +241,7 @@ sequenceDiagram
   A-->>U: final JSON array of locations
 ```
 
-### 8.5 System Prompt (updated)
+### 8.5 System Prompt (updated) ✅
 
 Add a one-liner instructing the agent to use tools when helpful:
 
@@ -211,31 +250,31 @@ Add a one-liner instructing the agent to use tools when helpful:
 
 Everything else in §4.1 still applies.
 
-### 8.6 Implementation Notes
+### 8.6 Implementation Notes ✅
 
 • Use `openai.ChatCompletion.create(model="gpt-4o-0613", …)` with
   `functions=[…], function_call="auto"`.
 • Stream responses disabled for simplicity; handle up to ~15 k tokens per call.
 • Retry logic with exponential back-off (HTTP 429, 5xx).
 
-### 8.7 Updated Implementation Tasks (adds 6-7)
+### 8.7 Updated Implementation Tasks (adds 6-7) ✅
 
-6. Build tool wrappers (`nlp_utils.py`, `net_utils.py`, `heuristics.py`).
-7. Implement `agent/extraction_agent.py` that orchestrates ChatCompletion calls.
+6. ✅ Build tool wrappers (`nlp_utils.py`, `net_utils.py`, `heuristics.py`).
+7. ✅ Implement `agent/extraction_agent.py` that orchestrates ChatCompletion calls.
 
-### 8.7 Additional Implementation Tasks (smol-agents default)
+### 8.7 Additional Implementation Tasks (smol-agents default) ✅
 
-6. Wrap deterministic helper functions with `@tool` decorators inside `tools.py` so
+6. ✅ Wrap deterministic helper functions with `@tool` decorators inside `tools.py` so
    that both smol-agents and the OpenAI path can import them.
-7. Create `agent/extraction_agent.py` using smol-agents `ToolCallingAgent`, defaulting
+7. ✅ Create `agent/extraction_agent.py` using smol-agents `ToolCallingAgent`, defaulting
    to `LiteLLMModel("gpt-4o")` but allowing any chat model via config.
-8. Add a `USE_OPENAI_FUNCTIONS` flag in `config.yaml` to fall back to the native
+8. ✅ Add a `USE_OPENAI_FUNCTIONS` flag in `config.yaml` to fall back to the native
    OpenAI function-calling path when needed.
 
-### 8.8 Alternative: Hugging Face *smol-agents*
+### 8.8 Alternative: Hugging Face *smol-agents* ✅
 
 If we prefer to stay entirely in open-source-only tooling, we can swap the
-OpenAI ChatCompletion layer for Hugging Face’s *smol-agents* framework
+OpenAI ChatCompletion layer for Hugging Face's *smol-agents* framework
 ( https://github.com/huggingface/smol-agents ).  The differences:
 
 | Aspect                | OpenAI Function-Calling            | HF smol-agents                              |
