@@ -1,92 +1,19 @@
-# AI Agent Configuration
-# Configuration for the map_locations_ai package
+# Map Locations AI - Configuration
 
-# Agent Settings
-agent:
-  # Use OpenAI function-calling instead of smol-agents (fallback)
-  use_openai_functions: false
+# LLM Settings
+llm:
+  model: "gpt-4o-mini"  # Can be changed to "gpt-4o" for production
+  temperature: 0.1      # Low temperature for consistent extraction
+  max_tokens: 2000      # Sufficient for location extraction responses
+  timeout: 120          # Increased timeout in seconds for API calls
 
-  # Model selection
-  model_id: "gpt-4o-mini"  # Back to gpt-4o
-  # Alternative models: "gpt-4", "gpt-3.5-turbo", "gpt-4o-mini", "claude-3-sonnet"
+# Processing Settings
+processing:
+  chunk_size: 50        # Reduced chunk size for faster processing
+  overlap_size: 10      # Number of overlapping lines between chunks
 
-  # Timeout settings
-  request_timeout: 30  # seconds
-  url_fetch_timeout: 3  # seconds (as per plan)
-
-# Extraction Settings
-extraction:
-  # Confidence thresholds
-  high_confidence_threshold: 0.7
-  medium_confidence_threshold: 0.5
-  low_confidence_threshold: 0.3
-
-  # Maximum locations to extract per document
-  max_locations_per_document: 1000
-
-  # Enable/disable specific extraction methods
-  enable_ner: true
-  enable_regex: true
-  enable_heuristics: true
-  enable_url_processing: true
-
-# URL Processing Settings
-url_processing:
-  # Enable title fetching
-  fetch_titles: true
-
-  # Enable URL classification
-  classify_urls: true
-
-  # User agent for web requests
-  user_agent: "MapLocationsAI/1.0"
-
-  # Retry settings
-  max_retries: 2
-  retry_delay: 1  # seconds
-
-# NLP Settings
-nlp:
-  # spaCy model to use
-  spacy_model: "en_core_web_sm"
-
-  # Entity types to extract
-  entity_types: ["GPE", "LOC", "FAC"]
-
-  # Regex patterns for address extraction
-  address_patterns:
-    - r'\d+\s+[^,]+?,\s*\d{4,5}\s+[^,\n]+'  # Street with postal code
-    - r'[A-Z][^,]+?,\s*[A-Z][^,\n]+'  # Venue with city
-
-# Performance Settings
-performance:
-  # Memory limit (MB)
-  max_memory_mb: 500
-
-  # Processing timeout (seconds)
-  max_processing_time: 30
-
-  # Enable progress indicators
-  show_progress: true
-
-# Logging Settings
-logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-  # Enable detailed extraction logging
-  log_extraction_details: false
-
-  # Enable tool usage logging
-  log_tool_usage: true
-
-# Development Settings
-development:
-  # Enable debug mode
-  debug: false
-
-  # Enable test mode (uses dummy data)
-  test_mode: false
-
-  # Mock API responses for testing
-  mock_responses: false
+# Output Settings
+output:
+  temp_dir: "temp"      # Directory for temporary YAML files
+  trace_dir: "trace"    # Directory for trace logs
+  chunk_prefix: "chunk" # Prefix for chunk files (chunk_001.yaml, etc.)

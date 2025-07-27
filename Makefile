@@ -96,6 +96,19 @@ install-main:
 install-ai: install-main
 	@echo "📦 Installing AI package..."
 	pip install -e map_locations_ai/
+	@echo "🧠 Installing spaCy and required model..."
+	pip install spacy>=3.5.0
+	@echo "📥 Downloading spaCy English model..."
+	python -m spacy download en_core_web_sm
+	@echo "✅ AI package installation complete!"
+
+# Setup AI package with full dependencies
+setup-ai: install-ai
+	@echo "🤖 Setting up AI package with full dependencies..."
+	@echo "🧪 Testing AI package imports..."
+	python -c "import map_locations_ai; print('✅ AI package imported successfully')"
+	python -c "import spacy; nlp = spacy.load('en_core_web_sm'); print('✅ spaCy model loaded successfully')"
+	@echo "✅ AI package setup complete!"
 
 # =============================================================================
 # DEVELOPMENT SETUP TARGETS
