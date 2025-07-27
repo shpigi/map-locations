@@ -175,24 +175,21 @@ jobs:
         echo "Package metadata:"
         python -c "import glob; import zipfile; wheel_files = [f for f in glob.glob('dist/*') if f.endswith('.whl') and 'map_locations' in f and not 'map_locations_ai' in f]; print(f'Filtered wheel files: {wheel_files}'); print(f'All dist files: {glob.glob(\"dist/*\")}'); z = zipfile.ZipFile(wheel_files[0]) if wheel_files else exit(1); print([f for f in z.namelist() if 'METADATA' in f])"
 
-    - name: Build AI package
+    - name: Verify AI package structure
       run: |
-        echo "🏗️  Building AI package..."
-        if [ -f "scripts/build_ai.py" ]; then
-          python scripts/build_ai.py
-          echo "📦 AI build output:"
-          ls -la dist/
+        echo "🔍 Verifying AI package structure..."
+        if [ -d "map_locations_ai" ]; then
+          echo "✅ AI package directory exists"
+          ls -la map_locations_ai/
+          echo ""
+          echo "Required files check:"
+          [ -f "map_locations_ai/pipeline.py" ] && echo "✅ pipeline.py exists" || echo "❌ pipeline.py missing"
+          [ -f "map_locations_ai/config.yaml" ] && echo "✅ config.yaml exists" || echo "❌ config.yaml missing"
+          [ -f "map_locations_ai/agent_prompt.txt" ] && echo "✅ agent_prompt.txt exists" || echo "❌ agent_prompt.txt missing"
         else
-          echo "⚠️  AI build script not found, skipping AI package build"
+          echo "❌ AI package directory not found"
+          exit 1
         fi
-
-    - name: Verify AI package build
-      run: |
-        echo "📦 AI package build verification:"
-        ls -la dist/
-        echo ""
-        echo "AI package metadata:"
-        python -c "import glob; import zipfile; wheel_files = [f for f in glob.glob('dist/*') if f.endswith('.whl') and 'map_locations_ai' in f]; print(f'Filtered AI wheel files: {wheel_files}'); print(f'All dist files: {glob.glob(\"dist/*\")}'); z = zipfile.ZipFile(wheel_files[0]) if wheel_files else exit(1); print([f for f in z.namelist() if 'METADATA' in f])"
 
     - name: Check all packages
       run: |

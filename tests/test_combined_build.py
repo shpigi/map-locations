@@ -17,10 +17,9 @@ class TestCombinedBuild:
         makefile_path = Path("Makefile")
         content = makefile_path.read_text()
 
-        # Check that build target exists
+        # Check that build target exists (AI package is now part of main build)
         assert "build:" in content
         assert "build-main:" in content
-        assert "build-ai:" in content
 
     def test_make_build_dependencies(self):
         """Test that build targets have proper dependencies."""
@@ -53,12 +52,12 @@ class TestCombinedBuild:
         assert result.returncode == 0
 
     def test_build_script_integration(self):
-        """Test that the build script is properly integrated."""
+        """Test that the build process is properly integrated."""
         makefile_path = Path("Makefile")
         content = makefile_path.read_text()
 
-        # Check that build-ai uses the custom script
-        assert "python scripts/build_ai.py" in content
+        # Check that build process is integrated (no separate AI build needed)
+        assert "python -m build" in content
 
     def test_build_output_structure(self):
         """Test that build produces expected output structure."""
@@ -96,12 +95,15 @@ class TestBuildProcess:
         assert result is not None
 
     def test_build_ai_package(self):
-        """Test building the AI package."""
-        # Check that AI package can be built
-        result = subprocess.run(["python", "scripts/build_ai.py"], capture_output=True, text=True)
-        # Don't fail if build fails (might not have all dependencies)
-        # Just check that the command is valid
-        assert result is not None
+        """Test AI package structure verification."""
+        # Check that AI package structure is correct
+        ai_package_dir = Path("map_locations_ai")
+        assert ai_package_dir.exists()
+
+        # Check for key files in the simplified AI package
+        assert (ai_package_dir / "pipeline.py").exists()
+        assert (ai_package_dir / "config.yaml").exists()
+        assert (ai_package_dir / "agent_prompt.txt").exists()
 
     def test_build_dependencies(self):
         """Test that build dependencies are available."""
@@ -139,16 +141,16 @@ class TestBuildConfiguration:
         assert 'name = "map-locations"' in content
 
     def test_ai_pyproject_toml(self):
-        """Test AI package pyproject.toml configuration."""
-        ai_pyproject_path = Path("map_locations_ai/pyproject.toml")
-        assert ai_pyproject_path.exists()
+        """Test AI package structure (simplified)."""
+        # Since we simplified the AI package, it no longer has its own pyproject.toml
+        # Instead, check that the AI package directory and key files exist
+        ai_package_dir = Path("map_locations_ai")
+        assert ai_package_dir.exists()
 
-        content = ai_pyproject_path.read_text()
-
-        # Check for required sections
-        assert "[project]" in content
-        assert "[build-system]" in content
-        assert 'name = "map-locations-ai"' in content
+        # Check for key files in the simplified AI package
+        assert (ai_package_dir / "pipeline.py").exists()
+        assert (ai_package_dir / "config.yaml").exists()
+        assert (ai_package_dir / "agent_prompt.txt").exists()
 
     def test_manifest_in(self):
         """Test that MANIFEST.in exists for package inclusion."""
@@ -165,15 +167,17 @@ class TestBuildScripts:
     """Test build-related scripts."""
 
     def test_build_script_exists(self):
-        """Test that the build script exists."""
-        script_path = Path("scripts/build_ai.py")
-        assert script_path.exists()
+        """Test that the build process is available."""
+        # Since we removed the build script, just verify the main build works
+        pyproject_path = Path("pyproject.toml")
+        assert pyproject_path.exists()
 
     def test_build_script_executable(self):
-        """Test that the build script is executable."""
-        script_path = Path("scripts/build_ai.py")
-        content = script_path.read_text()
-        assert content.startswith("#!/usr/bin/env python3")
+        """Test that the main build process is available."""
+        # Since we removed the build script, just verify the main build works
+        pyproject_path = Path("pyproject.toml")
+        content = pyproject_path.read_text()
+        assert "[project]" in content
 
     def test_publish_script_exists(self):
         """Test that the publish script exists."""
@@ -199,13 +203,12 @@ class TestBuildIntegration:
         assert "python -m build" in content
 
     def test_ci_ai_build_step(self):
-        """Test that CI includes AI package build step."""
+        """Test that CI includes AI package verification step."""
         ci_path = Path(".github/workflows/ci.yml")
         content = ci_path.read_text()
 
-        # Check for AI package build step
-        assert "Build AI package" in content
-        assert "python scripts/build_ai.py" in content
+        # Check for AI package verification step
+        assert "Verify AI package structure" in content
 
     def test_ci_package_verification(self):
         """Test that CI verifies built packages."""

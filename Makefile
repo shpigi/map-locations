@@ -238,14 +238,8 @@ build-main: clean
 	@echo "🏗️  Building main package..."
 	python -m build
 
-# Build AI package
-build-ai: clean
-	@echo "🏗️  Building AI package..."
-	@if [ -f "map_locations_ai/pyproject.toml" ]; then \
-		python scripts/build_ai.py; \
-	else \
-		echo "⚠️  No build configuration found for AI package"; \
-	fi
+# AI package is now a module within the main package
+# No separate build needed - included in main package build
 
 # =============================================================================
 # CLEANUP TARGETS
