@@ -22,33 +22,34 @@ class TestAIPackage:
         """Test that the LocationExtractionPipeline can be initialized."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
         assert pipeline is not None
-        assert hasattr(pipeline, "config")
+        assert hasattr(pipeline, "config_manager")
 
     def test_pipeline_with_config(self):
         """Test pipeline initialization with configuration."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
         assert pipeline is not None
-        assert hasattr(pipeline, "config")
+        assert hasattr(pipeline, "config_manager")
 
     def test_pipeline_methods_exist(self):
         """Test that pipeline methods exist."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
         assert hasattr(pipeline, "process_file")
-        assert hasattr(pipeline, "_call_llm")
-        assert hasattr(pipeline, "_read_file_chunks")
+        assert hasattr(pipeline, "text_processor")
+        assert hasattr(pipeline, "llm_processor")
 
     def test_pipeline_config_structure(self):
         """Test that pipeline config has expected structure."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
-        assert "llm" in pipeline.config
-        assert "processing" in pipeline.config
-        assert "output" in pipeline.config
+        config = pipeline.config_manager.get_full_config()
+        assert "llm" in config
+        assert "processing" in config
+        assert "output" in config
 
     def test_pipeline_directories_creation(self):
         """Test that pipeline creates necessary directories."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
-        temp_dir = Path(pipeline.config["output"]["temp_dir"])
-        trace_dir = Path(pipeline.config["output"]["trace_dir"])
+        temp_dir = Path(pipeline.config_manager.get_temp_dir())
+        trace_dir = Path(pipeline.config_manager.get_trace_dir())
 
         # Directories should be created during initialization
         assert temp_dir.exists()
@@ -64,17 +65,17 @@ class TestAIPackage:
         test_file.write_text(test_content)
 
         try:
-            chunks = pipeline._read_file_chunks(str(test_file))
+            chunks = pipeline.text_processor.read_file_chunks(str(test_file))
             assert len(chunks) > 0
-            assert all("id" in chunk for chunk in chunks)
-            assert all("text" in chunk for chunk in chunks)
+            assert all(hasattr(chunk, "id") for chunk in chunks)
+            assert all(hasattr(chunk, "text") for chunk in chunks)
         finally:
             test_file.unlink(missing_ok=True)
 
     def test_agent_prompt_loading(self):
         """Test that agent prompt can be loaded."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
-        prompt = pipeline._load_agent_prompt()
+        prompt = pipeline.config_manager.get_agent_prompt()
         assert isinstance(prompt, str)
         assert len(prompt) > 0
 
@@ -111,7 +112,7 @@ class TestAIPackageConfiguration:
     def test_config_structure(self):
         """Test that config has expected structure."""
         pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
-        config = pipeline.config
+        config = pipeline.config_manager.get_full_config()
 
         # Check LLM settings
         assert "model" in config["llm"]

@@ -22,7 +22,9 @@ class URLProcessor:
         self.config = config
         self.client = client
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "Mozilla/5.0 (compatible; LocationBot/1.0)"})
+        self.session.headers.update(
+            {"User-Agent": "Mozilla/5.0 (compatible; LocationBot/1.0)"}
+        )
 
     def process_url_entries(self, chunk_file: Path) -> bool:
         """Process all URL entries in a chunk file."""
@@ -40,7 +42,9 @@ class URLProcessor:
                 chunk_data = yaml.safe_load(f)
 
             # Find URL entries
-            url_entries = [loc for loc in chunk_data["locations"] if loc.get("is_url", False)]
+            url_entries = [
+                loc for loc in chunk_data["locations"] if loc.get("is_url", False)
+            ]
 
             if not url_entries:
                 return False
@@ -87,12 +91,16 @@ class URLProcessor:
             # Fetch URL content
             content = self._fetch_url_content(url)
             if not content:
-                return self._create_failed_entry(url_entry, "Failed to fetch URL content")
+                return self._create_failed_entry(
+                    url_entry, "Failed to fetch URL content"
+                )
 
             # Extract location info using LLM
             location_info = self._extract_with_llm(url, content)
             if not location_info:
-                return self._create_failed_entry(url_entry, "Failed to extract location info")
+                return self._create_failed_entry(
+                    url_entry, "Failed to extract location info"
+                )
 
             # Merge with original entry
             return self._merge_url_data(url_entry, location_info)
@@ -111,7 +119,9 @@ class URLProcessor:
             soup = BeautifulSoup(response.content, "html.parser")
 
             # Remove noise
-            for element in soup(["nav", "footer", "header", "aside", "script", "style"]):
+            for element in soup(
+                ["nav", "footer", "header", "aside", "script", "style"]
+            ):
                 element.decompose()
 
             # Extract key content
@@ -135,7 +145,7 @@ class URLProcessor:
             if len(content) > 2000:
                 content = content[:2000] + "..."
 
-            return content if content.strip() else None
+            return content if content and content.strip() else None
 
         except Exception as e:
             print(f"    ❌ Fetch error: {e}")
@@ -168,7 +178,10 @@ If not a specific location, return: {{"name": null}}"""
                 max_tokens=500,
             )
 
-            result_text = response.choices[0].message.content.strip()
+            result_text = response.choices[0].message.content
+            if result_text is None:
+                raise ValueError("Empty response from LLM")
+            result_text = result_text.strip()
 
             # Clean JSON if wrapped in markdown
             if result_text.startswith("```json"):
@@ -204,7 +217,9 @@ If not a specific location, return: {{"name": null}}"""
             "extraction_method": "llm",
         }
 
-    def _create_failed_entry(self, original: Dict[str, Any], error_msg: str) -> Dict[str, Any]:
+    def _create_failed_entry(
+        self, original: Dict[str, Any], error_msg: str
+    ) -> Dict[str, Any]:
         """Create entry for failed URL processing."""
         return {
             "name": original["name"],

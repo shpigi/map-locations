@@ -77,7 +77,12 @@ def save_locations_to_yaml(locations: LocationList, yaml_path: str) -> None:
     try:
         with open(yaml_path, "w", encoding="utf-8") as f:
             yaml.dump(
-                data, f, default_flow_style=False, allow_unicode=True, sort_keys=False, indent=2
+                data,
+                f,
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2,
             )
         print(f"📄 YAML saved to: {Path(yaml_path).resolve()}")
     except OSError as e:

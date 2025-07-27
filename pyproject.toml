@@ -90,7 +90,6 @@ include = ["map_locations*", "map_locations_ai*"]
 version = {attr = "map_locations.__version__"}
 
 [tool.black]
-line-length = 100
 target-version = ['py310']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -109,7 +108,6 @@ extend-exclude = '''
 
 [tool.isort]
 profile = "black"
-line_length = 100
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0

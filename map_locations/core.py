@@ -41,7 +41,9 @@ def _format_field_value(field_name: str, value: Any) -> str:
         for item in value:
             item_str = str(item)
             if _is_url(item_str):
-                formatted_items.append(f'<a href="{item_str}" target="_blank">{item_str}</a>')
+                formatted_items.append(
+                    f'<a href="{item_str}" target="_blank">{item_str}</a>'
+                )
             else:
                 formatted_items.append(item_str)
         return ", ".join(formatted_items)
@@ -54,7 +56,9 @@ def _format_field_value(field_name: str, value: Any) -> str:
     return value_str
 
 
-def _generate_popup_html(location: Union[Dict[str, Any], Location], style: str = "folium") -> str:
+def _generate_popup_html(
+    location: Union[Dict[str, Any], Location], style: str = "folium"
+) -> str:
     """
     Generate comprehensive HTML popup content for a location.
 
@@ -144,7 +148,9 @@ def _generate_popup_html(location: Union[Dict[str, Any], Location], style: str =
             formatted_value = _format_field_value(field, location.get(field))
             if formatted_value:  # Only include non-empty fields
                 display_name = field_names.get(field, field.replace("_", " ").title())
-                html_parts.append(f"<p><strong>{display_name}: </strong>{formatted_value}</p>")
+                html_parts.append(
+                    f"<p><strong>{display_name}: </strong>{formatted_value}</p>"
+                )
 
         html_parts.append("</div>")
         return "".join(html_parts)
@@ -398,7 +404,11 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
 
         # Add any additional fields not in standard list
         for field in sorted(loc.keys()):
-            if field not in all_fields and field not in ["name", "latitude", "longitude"]:
+            if field not in all_fields and field not in [
+                "name",
+                "latitude",
+                "longitude",
+            ]:
                 all_fields.append(field)
 
         for field in all_fields:
@@ -432,7 +442,11 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
                     )
                 else:
                     extended_data_parts.extend(
-                        [f'        <Data name="{field}">', "          <value/>", "        </Data>"]
+                        [
+                            f'        <Data name="{field}">',
+                            "          <value/>",
+                            "        </Data>",
+                        ]
                     )
             else:
                 value_str = str(value) if value else ""
@@ -456,7 +470,11 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
                         )
                 else:
                     extended_data_parts.extend(
-                        [f'        <Data name="{field}">', "          <value/>", "        </Data>"]
+                        [
+                            f'        <Data name="{field}">',
+                            "          <value/>",
+                            "        </Data>",
+                        ]
                     )
         extended_data_parts.append("      </ExtendedData>")
         extended_data = "\n".join(extended_data_parts)
@@ -612,7 +630,9 @@ def show_locations_grouped(
             if loc.get("type", "").lower() in [t.lower() for t in filter_types]
         ]
         if not locations:
-            raise ValueError(f"No locations found matching the specified types: {filter_types}")
+            raise ValueError(
+                f"No locations found matching the specified types: {filter_types}"
+            )
 
     # Center the map
     first = locations[0]
@@ -651,17 +671,21 @@ def show_locations_grouped(
         # Create a more descriptive group name
         group_name_str = str(group_name)
         if group_by == "type":
-            group_display_name = f"📍 {group_name_str.title()} ({len(group_locs)} locations)"
+            group_display_name = (
+                f"📍 {group_name_str.title()} ({len(group_locs)} locations)"
+            )
         elif group_by == "neighborhood":
             group_display_name = f"🏘️ {group_name_str} ({len(group_locs)} locations)"
         elif group_by == "date_added":
-            group_display_name = f"📅 Added: {group_name_str} ({len(group_locs)} locations)"
-        elif group_by == "date_of_visit":
-            group_display_name = f"🎯 Visited: {group_name_str} ({len(group_locs)} locations)"
-        else:
             group_display_name = (
-                f"{str(group_by).title()}: {group_name_str} ({len(group_locs)} locations)"
+                f"📅 Added: {group_name_str} ({len(group_locs)} locations)"
             )
+        elif group_by == "date_of_visit":
+            group_display_name = (
+                f"🎯 Visited: {group_name_str} ({len(group_locs)} locations)"
+            )
+        else:
+            group_display_name = f"{str(group_by).title()}: {group_name_str} ({len(group_locs)} locations)"
 
         fg = folium.FeatureGroup(name=group_display_name)
         feature_groups[group_name] = fg
@@ -698,7 +722,9 @@ def show_locations_grouped(
 
     m.save(map_filename)
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
-    print(f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:")
+    print(
+        f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:"
+    )
     for group_name, fg in feature_groups.items():
         print(f"   • {str(group_name).title()} ({len(groups[group_name])} locations)")
 
@@ -760,7 +786,9 @@ def show_locations_with_advanced_filtering(
             if loc.get("type", "").lower() in [t.lower() for t in filter_types]
         ]
         if not locations:
-            raise ValueError(f"No locations found matching the specified types: {filter_types}")
+            raise ValueError(
+                f"No locations found matching the specified types: {filter_types}"
+            )
 
     # Center the map
     first = locations[0]
@@ -789,14 +817,30 @@ def show_locations_with_advanced_filtering(
 
     # Collect unique values for each filterable field
     field_values = {
-        "type": sorted(list(set(loc.get("type", "") for loc in locations if loc.get("type")))),
+        "type": sorted(
+            list(set(loc.get("type", "") for loc in locations if loc.get("type")))
+        ),
         "neighborhood": sorted(
-            list(set(loc.get("neighborhood", "") for loc in locations if loc.get("neighborhood")))
+            list(
+                set(
+                    loc.get("neighborhood", "")
+                    for loc in locations
+                    if loc.get("neighborhood")
+                )
+            )
         ),
         "date_of_visit": sorted(
-            list(set(loc.get("date_of_visit", "") for loc in locations if loc.get("date_of_visit")))
+            list(
+                set(
+                    loc.get("date_of_visit", "")
+                    for loc in locations
+                    if loc.get("date_of_visit")
+                )
+            )
         ),
-        "name": sorted([loc.get("name", f"Location {i + 1}") for i, loc in enumerate(locations)]),
+        "name": sorted(
+            [loc.get("name", f"Location {i + 1}") for i, loc in enumerate(locations)]
+        ),
     }
 
     # Add all markers to the map
@@ -1124,7 +1168,9 @@ def get_available_types(locations: LocationList) -> List[str]:
         >>> types = get_available_types(locations)
         >>> print(f"Available types: {types}")
     """
-    return sorted(list(set(loc.get("type", "") for loc in locations if loc.get("type"))))
+    return sorted(
+        list(set(loc.get("type", "") for loc in locations if loc.get("type")))
+    )
 
 
 def get_available_tags(locations: LocationList) -> List[str]:
@@ -1165,11 +1211,19 @@ def get_available_neighborhoods(locations: LocationList) -> List[str]:
         >>> print(f"Available neighborhoods: {neighborhoods}")
     """
     return sorted(
-        list(set(loc.get("neighborhood", "") for loc in locations if loc.get("neighborhood")))
+        list(
+            set(
+                loc.get("neighborhood", "")
+                for loc in locations
+                if loc.get("neighborhood")
+            )
+        )
     )
 
 
-def filter_locations_by_type(locations: LocationList, location_types: List[str]) -> LocationList:
+def filter_locations_by_type(
+    locations: LocationList, location_types: List[str]
+) -> LocationList:
     """
     Filter locations by their type.
 
@@ -1256,7 +1310,9 @@ def get_location_summary(locations: LocationList) -> Dict[str, Any]:
         "tags": get_available_tags(locations),
         "neighborhoods": get_available_neighborhoods(locations),
         "type_counts": dict(Counter(loc.get("type", "") for loc in locations)),
-        "neighborhood_counts": dict(Counter(loc.get("neighborhood", "") for loc in locations)),
+        "neighborhood_counts": dict(
+            Counter(loc.get("neighborhood", "") for loc in locations)
+        ),
     }
 
 
@@ -1297,9 +1353,13 @@ def validate_location_data(locations: LocationList) -> Dict[str, List[str]]:
         if "latitude" in loc and "longitude" in loc:
             lat, lon = loc["latitude"], loc["longitude"]
             if not (-90 <= lat <= 90):
-                issues["invalid_coordinates"].append(f"Location {i + 1}: invalid latitude {lat}")
+                issues["invalid_coordinates"].append(
+                    f"Location {i + 1}: invalid latitude {lat}"
+                )
             if not (-180 <= lon <= 180):
-                issues["invalid_coordinates"].append(f"Location {i + 1}: invalid longitude {lon}")
+                issues["invalid_coordinates"].append(
+                    f"Location {i + 1}: invalid longitude {lon}"
+                )
 
     return issues
 
@@ -1374,7 +1434,9 @@ def show_locations_with_google_maps(
 
 # ✅ Run this to test
 if __name__ == "__main__":
-    yaml_path = "paris_london_trip_locations.yaml"  # Replace with your actual YAML file path
+    yaml_path = (
+        "paris_london_trip_locations.yaml"  # Replace with your actual YAML file path
+    )
     locations = load_locations_from_yaml(yaml_path)
 
     # Create interactive map
