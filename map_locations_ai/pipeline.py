@@ -95,22 +95,26 @@ class LocationExtractionPipeline:
         # Setup directories
         self.config_manager.setup_directories()
 
-        # Initialize URL processor
-        if self.client is None:
-            raise ValueError("OpenAI client is required for URL processing")
-        self.url_processor = URLProcessor(
-            config=self.config_manager.get_full_config(), client=self.client
-        )
+        # Initialize URL processor (only if client is available)
+        self.url_processor = None
+        if self.client is not None:
+            self.url_processor = URLProcessor(
+                config=self.config_manager.get_full_config(), client=self.client
+            )
 
-        # Initialize enrichment processor
-        enrichment_config = self.config_manager.get_enrichment_config()
-        self.enrichment_processor = EnrichmentProcessor(
-            client=self.client,
-            model=enrichment_config["model"],
-            max_searches_per_location=enrichment_config["max_searches_per_location"],
-            temperature=enrichment_config["temperature"],
-            timeout=enrichment_config["timeout"],
-        )
+        # Initialize enrichment processor (only if client is available)
+        self.enrichment_processor = None
+        if self.client is not None:
+            enrichment_config = self.config_manager.get_enrichment_config()
+            self.enrichment_processor = EnrichmentProcessor(
+                client=self.client,
+                model=enrichment_config["model"],
+                max_searches_per_location=enrichment_config[
+                    "max_searches_per_location"
+                ],
+                temperature=enrichment_config["temperature"],
+                timeout=enrichment_config["timeout"],
+            )
 
         # Memory for locations
         self.locations_memory: List[Dict[str, Any]] = []
@@ -266,6 +270,15 @@ class LocationExtractionPipeline:
 
     def process_urls(self) -> Dict[str, Any]:
         """Process URLs found in extracted locations."""
+        if self.url_processor is None:
+            print("⚠️ URL processing not available (no OpenAI client)")
+            return {
+                "processed_chunks": 0,
+                "total_urls": 0,
+                "processed_urls": 0,
+                "error": "OpenAI client required for URL processing",
+            }
+
         # Get all chunk files
         chunk_files = self.file_manager.list_chunk_files()
         processed_count = 0
@@ -301,6 +314,10 @@ class LocationExtractionPipeline:
                 "hours_coverage": 0,
                 "stats": {},
             }
+
+        if self.enrichment_processor is None:
+            print("⚠️ Enrichment not available (no OpenAI client)")
+            return self._create_minimal_enrichment_result()
 
         print(f"🔍 Enriching {len(self.locations_memory)} locations...")
 
