@@ -139,7 +139,9 @@ class TestAIUtilityFunctions:
         assert set(tags) == expected_tags
         assert len(tags) == 5
 
-    def test_get_available_neighborhoods(self, sample_locations: List[Location]) -> None:
+    def test_get_available_neighborhoods(
+        self, sample_locations: List[Location]
+    ) -> None:
         """Test getting available neighborhoods."""
         neighborhoods = get_available_neighborhoods(sample_locations)
         assert set(neighborhoods) == {"Manhattan", "Midtown"}
@@ -155,7 +157,9 @@ class TestAIUtilityFunctions:
         assert len(cafes) == 1
         assert all(loc["type"] == "cafe" for loc in cafes)
 
-        food_locations = filter_locations_by_type(sample_locations, ["restaurant", "cafe"])
+        food_locations = filter_locations_by_type(
+            sample_locations, ["restaurant", "cafe"]
+        )
         assert len(food_locations) == 3
 
     def test_filter_locations_by_tags(self, sample_locations: List[Location]) -> None:
@@ -171,13 +175,19 @@ class TestAIUtilityFunctions:
         multiple_tags = filter_locations_by_tags(sample_locations, ["food", "coffee"])
         assert len(multiple_tags) == 3
 
-    def test_filter_locations_by_neighborhood(self, sample_locations: List[Location]) -> None:
+    def test_filter_locations_by_neighborhood(
+        self, sample_locations: List[Location]
+    ) -> None:
         """Test filtering locations by neighborhood."""
-        manhattan_locations = filter_locations_by_neighborhood(sample_locations, ["Manhattan"])
+        manhattan_locations = filter_locations_by_neighborhood(
+            sample_locations, ["Manhattan"]
+        )
         assert len(manhattan_locations) == 2
         assert all(loc["neighborhood"] == "Manhattan" for loc in manhattan_locations)
 
-        midtown_locations = filter_locations_by_neighborhood(sample_locations, ["Midtown"])
+        midtown_locations = filter_locations_by_neighborhood(
+            sample_locations, ["Midtown"]
+        )
         assert len(midtown_locations) == 1
         assert all(loc["neighborhood"] == "Midtown" for loc in midtown_locations)
 
@@ -187,14 +197,22 @@ class TestAIUtilityFunctions:
 
         assert summary["total_count"] == 3
         assert set(summary["types"]) == {"restaurant", "cafe"}
-        assert set(summary["tags"]) == {"food", "dinner", "coffee", "breakfast", "lunch"}
+        assert set(summary["tags"]) == {
+            "food",
+            "dinner",
+            "coffee",
+            "breakfast",
+            "lunch",
+        }
         assert set(summary["neighborhoods"]) == {"Manhattan", "Midtown"}
         assert summary["type_counts"]["restaurant"] == 2
         assert summary["type_counts"]["cafe"] == 1
         assert summary["neighborhood_counts"]["Manhattan"] == 2
         assert summary["neighborhood_counts"]["Midtown"] == 1
 
-    def test_validate_location_data_valid(self, sample_locations: List[Location]) -> None:
+    def test_validate_location_data_valid(
+        self, sample_locations: List[Location]
+    ) -> None:
         """Test validation with valid data."""
         issues = validate_location_data(sample_locations)
         assert not any(issues.values())
@@ -219,7 +237,9 @@ class TestAIUtilityFunctions:
         )
 
         issues = validate_location_data(invalid_locations)
-        assert len(issues["missing_required"]) == 3  # 2 missing lat/lon + 1 missing type
+        assert (
+            len(issues["missing_required"]) == 3
+        )  # 2 missing lat/lon + 1 missing type
 
     def test_validate_location_data_invalid_coordinates(self) -> None:
         """Test validation with invalid coordinates."""
@@ -341,7 +361,9 @@ class TestExportFunctions:
 
     def test_export_to_geojson(self, sample_locations: List[Location]) -> None:
         """Test GeoJSON export."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".geojson", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".geojson", delete=False
+        ) as f:
             temp_path = f.name
 
         try:
@@ -435,7 +457,9 @@ class TestMapGeneration:
             ],
         )
 
-    def test_show_locations_grouped_creates_file(self, sample_locations: List[Location]) -> None:
+    def test_show_locations_grouped_creates_file(
+        self, sample_locations: List[Location]
+    ) -> None:
         """Test that show_locations_grouped creates an HTML file."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
             temp_path = f.name
@@ -496,7 +520,8 @@ class TestKMLIconURLs:
             with open(temp_path, "r") as f:
                 content = f.read()
                 assert (
-                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png" in content
+                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png"
+                    in content
                 )
 
             # Test that icon URLs are accessible (optional test)
@@ -545,7 +570,8 @@ class TestKMLIconURLs:
                 content = f.read()
                 # Check that the modern Google Static Maps icon is used
                 assert (
-                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png" in content
+                    "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png"
+                    in content
                 )
                 # Check that different colors are used for different types
                 assert "ff0000ff" in content  # Red for restaurant

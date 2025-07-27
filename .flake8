@@ -1,5 +1,4 @@
 [flake8]
-max-line-length = 120
 exclude =
     .git,
     __pycache__,
@@ -9,7 +8,9 @@ exclude =
     dist,
     *.egg-info,
     .pytest_cache,
-    .ipynb_checkpoints
+    .ipynb_checkpoints,
+    *_backup.py,
+    *_old.py
 ignore =
     E203,
     W503,
@@ -20,4 +21,5 @@ ignore =
     W292,
     E221,
     E702,
-    E231
+    E231,
+    E501

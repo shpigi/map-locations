@@ -2,7 +2,7 @@
          test-fast test-pre-commit test-staged \
          setup-dev-full \
          pre-commit pre-commit-quick pre-commit-full \
-         check-clean clean-all version
+         check-clean clean-all clean-runs version
 
 # Default target
 help:
@@ -43,6 +43,7 @@ help:
 	@echo "🧹 CLEANUP:"
 	@echo "  clean             - Clean build artifacts"
 	@echo "  clean-all         - Deep clean (includes cache files)"
+	@echo "  clean-runs        - Clean previous AI processing runs (temp + trace)"
 	@echo ""
 	@echo "📊 VERSION MANAGEMENT:"
 	@echo "  version           - Show current version and update commands"
@@ -106,8 +107,8 @@ test-pre-commit:
 # Run linting for all packages
 lint:
 	@echo "🔍 Linting package..."
-	flake8 map_locations/ map_locations_ai/ tests/ --max-line-length=100
-	mypy map_locations/ map_locations_ai/ --ignore-missing-imports
+	flake8 map_locations/ map_locations_ai/ tests/
+	mypy map_locations/ map_locations_ai/ --ignore-missing-imports --exclude "pipeline_old_backup.py"
 
 # Run linting on staged files only
 lint-staged:
@@ -120,8 +121,8 @@ lint-staged:
 # Format code for all packages
 format:
 	@echo "🎨 Formatting package..."
-	black map_locations/ map_locations_ai/ tests/ --line-length=100
-	isort map_locations/ map_locations_ai/ tests/ --profile=black --line-length=100
+	black map_locations/ map_locations_ai/ tests/
+	isort map_locations/ map_locations_ai/ tests/ --profile=black
 
 # =============================================================================
 # BUILD TARGETS
@@ -153,6 +154,15 @@ clean-all: clean
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	rm -rf htmlcov/
 	rm -rf .coverage
+
+# Clean previous AI processing runs (temp + trace)
+clean-runs:
+	@echo "🧹 Cleaning previous AI processing runs..."
+	rm -rf map_locations_ai/temp/
+	rm -rf map_locations_ai/trace/
+	mkdir -p map_locations_ai/temp/
+	mkdir -p map_locations_ai/trace/
+	@echo "✅ Previous AI processing runs cleaned!"
 
 # =============================================================================
 # PUBLISHING TARGETS

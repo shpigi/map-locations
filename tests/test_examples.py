@@ -33,7 +33,9 @@ class TestExamples:
             try:
                 import map_locations
             except ImportError:
-                pytest.skip("map_locations package not available - skipping example test")
+                pytest.skip(
+                    "map_locations package not available - skipping example test"
+                )
 
             # Run with PYTHONPATH to include current directory
             env = os.environ.copy()
@@ -52,7 +54,11 @@ class TestExamples:
             output_dir = Path("maps/google_maps_example")
             if output_dir.exists():
                 # Check for map files
-                expected_files = ["map_osm.html", "map_google.html", "map_satellite.html"]
+                expected_files = [
+                    "map_osm.html",
+                    "map_google.html",
+                    "map_satellite.html",
+                ]
                 for filename in expected_files:
                     file_path = output_dir / filename
                     assert file_path.exists(), f"Map file {filename} should be created"
@@ -67,7 +73,9 @@ class TestExamples:
             try:
                 import map_locations
             except ImportError:
-                pytest.skip("map_locations package not available - skipping example test")
+                pytest.skip(
+                    "map_locations package not available - skipping example test"
+                )
 
             # Run with PYTHONPATH to include current directory
             env = os.environ.copy()
@@ -94,7 +102,9 @@ class TestExamples:
                 if exports_dir.exists():
                     # Check for exported files
                     exported_files = list(exports_dir.glob("complete_dataset.*"))
-                    assert len(exported_files) >= 4, "Should export at least 4 file formats"
+                    assert (
+                        len(exported_files) >= 4
+                    ), "Should export at least 4 file formats"
 
                     # Check for specific formats
                     assert (exports_dir / "complete_dataset.json").exists()

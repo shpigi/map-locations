@@ -9,4 +9,9 @@ from .formats import load_locations_from_yaml, save_locations_to_yaml
 from .models import Location, LocationList
 
 __version__ = "0.1.0"
-__all__ = ["Location", "LocationList", "load_locations_from_yaml", "save_locations_to_yaml"]
+__all__ = [
+    "Location",
+    "LocationList",
+    "load_locations_from_yaml",
+    "save_locations_to_yaml",
+]

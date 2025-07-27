@@ -86,7 +86,9 @@ class TestBuildProcess:
     def test_build_main_package(self):
         """Test building the main package."""
         # Check that main package can be built
-        result = subprocess.run(["python", "-m", "build"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["python", "-m", "build"], capture_output=True, text=True
+        )
         # Don't fail if build fails (might not have all dependencies)
         # Just check that the command is valid
         assert result is not None

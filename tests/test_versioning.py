@@ -68,7 +68,10 @@ def test_pyproject_toml_dynamic_version():
     assert "version" in config["project"]["dynamic"]
 
     # Check that it references the package
-    assert config["tool"]["setuptools"]["dynamic"]["version"]["attr"] == "map_locations.__version__"
+    assert (
+        config["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+        == "map_locations.__version__"
+    )
 
     print("✅ pyproject.toml dynamic version configuration is correct")
 
@@ -91,11 +94,15 @@ def test_build_with_dynamic_version():
         try:
             # Install in editable mode
             subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-e", "."], check=True, capture_output=True
+                [sys.executable, "-m", "pip", "install", "-e", "."],
+                check=True,
+                capture_output=True,
             )
 
             # Try to build
-            result = subprocess.run([sys.executable, "-m", "build"], capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, "-m", "build"], capture_output=True, text=True
+            )
 
             if result.returncode != 0:
                 print(f"Build failed: {result.stderr}")
