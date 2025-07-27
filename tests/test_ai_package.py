@@ -142,6 +142,9 @@ class TestAIPackageStructure:
 
     def test_temp_directories_exist(self):
         """Test that temp directories exist."""
+        # Initialize pipeline to create directories
+        _ = LocationExtractionPipeline("map_locations_ai/config.yaml")
+
         temp_dir = Path("map_locations_ai/temp")
         trace_dir = Path("map_locations_ai/trace")
 
