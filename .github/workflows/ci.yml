@@ -149,7 +149,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install build twine
         pip install -e .
-        pip install -e map_locations_ai/
 
     - name: Check version consistency
       run: |
@@ -157,7 +156,6 @@ jobs:
         echo "Main package version from __init__.py: $(python -c "import map_locations; print(map_locations.__version__)")"
         echo "Main package version from pyproject.toml: $(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['dynamic'])")"
         echo "AI package version from __init__.py: $(python -c "import map_locations_ai; print(map_locations_ai.__version__)")"
-        echo "AI package version from pyproject.toml: $(python -c "import tomllib; print(tomllib.load(open('map_locations_ai/pyproject.toml', 'rb'))['project']['dynamic'])")"
         echo "✅ Version check completed"
 
     - name: Build package
