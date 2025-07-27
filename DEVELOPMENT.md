@@ -146,7 +146,7 @@ This project uses pre-commit hooks to enforce code quality standards:
 
 ### Code Quality Hooks
 
-- **Black**: Code formatting with 100-character line length
+- **Black**: Code formatting with 100-character line length (flake8 allows 120)
 - **isort**: Import sorting with Black profile
 - **Flake8**: Style checking with project-specific rules
 - **MyPy**: Type checking with appropriate configurations
@@ -184,8 +184,9 @@ This project uses pre-commit hooks to enforce code quality standards:
 ## Code Style Standards
 
 ### Line Length
-- **Maximum**: 100 characters (project standard)
-- **Rationale**: Allows for readable code on modern wide screens while maintaining readability
+- **Black formatting**: 100 characters (for consistent formatting)
+- **Flake8 linting**: 120 characters (to avoid conflicts with Black)
+- **Rationale**: Black formats to 100 chars for consistency, flake8 allows up to 120 to avoid false positives
 
 ### Linting
 
@@ -448,7 +449,7 @@ Add to `.vscode/settings.json`:
 
 1. Install Black and isort plugins
 2. Configure Black as external tool with `--line-length=100`
-3. Set project line length to 100 characters
+3. Set project line length: Black at 100 chars, flake8 at 120 chars
 4. Enable auto-formatting on save
 5. Configure pytest as default test runner
 
