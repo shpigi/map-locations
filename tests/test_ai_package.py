@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from map_locations_ai import LocationPipeline
+from map_locations_ai.pipeline import LocationExtractionPipeline
 
 
 class TestAIPackage:
@@ -14,116 +14,147 @@ class TestAIPackage:
 
     def test_ai_package_import(self):
         """Test that the AI package can be imported."""
-        from map_locations_ai import LocationPipeline
+        from map_locations_ai.pipeline import LocationExtractionPipeline
 
-        assert LocationPipeline is not None
+        assert LocationExtractionPipeline is not None
 
     def test_pipeline_initialization(self):
-        """Test that the LocationPipeline can be initialized."""
-        pipeline = LocationPipeline()
+        """Test that the LocationExtractionPipeline can be initialized."""
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
         assert pipeline is not None
         assert hasattr(pipeline, "config")
 
     def test_pipeline_with_config(self):
         """Test pipeline initialization with configuration."""
-        config = {"test": True}
-        pipeline = LocationPipeline(config=config)
-        assert pipeline.config == config
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+        assert pipeline is not None
+        assert hasattr(pipeline, "config")
 
     def test_pipeline_methods_exist(self):
         """Test that pipeline methods exist."""
-        pipeline = LocationPipeline()
-        assert hasattr(pipeline, "process_text")
-        assert hasattr(pipeline, "process_urls")
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+        assert hasattr(pipeline, "process_file")
+        assert hasattr(pipeline, "_call_llm")
+        assert hasattr(pipeline, "_read_file_chunks")
 
-    def test_process_text_returns_list(self):
-        """Test that process_text returns a list."""
-        pipeline = LocationPipeline()
-        result = pipeline.process_text("Test text")
-        assert isinstance(result, list)
+    def test_pipeline_config_structure(self):
+        """Test that pipeline config has expected structure."""
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+        assert "llm" in pipeline.config
+        assert "processing" in pipeline.config
+        assert "output" in pipeline.config
 
-    def test_process_urls_returns_list(self):
-        """Test that process_urls returns a list."""
-        pipeline = LocationPipeline()
-        result = pipeline.process_urls(["https://example.com"])
-        assert isinstance(result, list)
+    def test_pipeline_directories_creation(self):
+        """Test that pipeline creates necessary directories."""
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+        temp_dir = Path(pipeline.config["output"]["temp_dir"])
+        trace_dir = Path(pipeline.config["output"]["trace_dir"])
 
-    def test_ai_package_version(self):
-        """Test that the AI package has a version."""
-        from map_locations_ai import __version__
+        # Directories should be created during initialization
+        assert temp_dir.exists()
+        assert trace_dir.exists()
 
-        assert __version__ is not None
-        assert isinstance(__version__, str)
-        assert len(__version__) > 0
+    def test_chunk_processing(self):
+        """Test that file chunking works correctly."""
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+
+        # Create a test file
+        test_file = Path("test_input.txt")
+        test_content = "Line 1\nLine 2\nLine 3\n" * 20  # 60 lines
+        test_file.write_text(test_content)
+
+        try:
+            chunks = pipeline._read_file_chunks(str(test_file))
+            assert len(chunks) > 0
+            assert all("id" in chunk for chunk in chunks)
+            assert all("text" in chunk for chunk in chunks)
+        finally:
+            test_file.unlink(missing_ok=True)
+
+    def test_agent_prompt_loading(self):
+        """Test that agent prompt can be loaded."""
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+        prompt = pipeline._load_agent_prompt()
+        assert isinstance(prompt, str)
+        assert len(prompt) > 0
 
 
 class TestAIPackageCLI:
     """Test AI package CLI functionality."""
 
-    def test_cli_import(self):
-        """Test that CLI can be imported."""
-        from map_locations_ai.interfaces import cli
+    def test_cli_script_exists(self):
+        """Test that CLI script exists."""
+        pipeline_script = Path("map_locations_ai/pipeline.py")
+        assert pipeline_script.exists()
 
-        assert cli is not None
-
-    def test_cli_main_exists(self):
-        """Test that CLI main function exists."""
-        from map_locations_ai.interfaces.cli import main
+    def test_cli_main_function_exists(self):
+        """Test that main function exists in pipeline."""
+        from map_locations_ai.pipeline import main
 
         assert main is not None
         assert callable(main)
 
 
-class TestAIPackageInterfaces:
-    """Test AI package interfaces."""
+class TestAIPackageConfiguration:
+    """Test AI package configuration."""
 
-    def test_web_interface_import(self):
-        """Test that web interface can be imported."""
-        try:
-            from map_locations_ai.interfaces import web_app
+    def test_config_file_exists(self):
+        """Test that config file exists."""
+        config_file = Path("map_locations_ai/config.yaml")
+        assert config_file.exists()
 
-            assert web_app is not None
-        except ImportError:
-            # Skip if gradio is not installed (optional dependency)
-            pytest.skip("gradio not installed (optional dependency)")
+    def test_agent_prompt_exists(self):
+        """Test that agent prompt file exists."""
+        prompt_file = Path("map_locations_ai/agent_prompt.txt")
+        assert prompt_file.exists()
 
-    def test_agent_components_import(self):
-        """Test that agent components can be imported."""
-        from map_locations_ai.agent import enrichers, extractors, validators
+    def test_config_structure(self):
+        """Test that config has expected structure."""
+        pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+        config = pipeline.config
 
-        assert extractors is not None
-        assert enrichers is not None
-        assert validators is not None
+        # Check LLM settings
+        assert "model" in config["llm"]
+        assert "temperature" in config["llm"]
+        assert "max_tokens" in config["llm"]
+        assert "timeout" in config["llm"]
+
+        # Check processing settings
+        assert "chunk_size" in config["processing"]
+        assert "overlap_size" in config["processing"]
+
+        # Check output settings
+        assert "temp_dir" in config["output"]
+        assert "trace_dir" in config["output"]
+        assert "chunk_prefix" in config["output"]
 
 
 class TestAIPackageStructure:
     """Test AI package structure and organization."""
 
     def test_package_structure(self):
-        """Test that the AI package has the expected structure."""
+        """Test that package has expected structure."""
         ai_package_dir = Path("map_locations_ai")
+        assert ai_package_dir.exists()
+        assert (ai_package_dir / "pipeline.py").exists()
+        assert (ai_package_dir / "config.yaml").exists()
+        assert (ai_package_dir / "agent_prompt.txt").exists()
 
-        # Check main directories exist
-        assert (ai_package_dir / "agent").exists()
-        assert (ai_package_dir / "interfaces").exists()
-        assert (ai_package_dir / "data_sources").exists()
-        assert (ai_package_dir / "evaluation").exists()
-        assert (ai_package_dir / "utils").exists()
+    def test_temp_directories_exist(self):
+        """Test that temp directories exist."""
+        # Initialize pipeline to create directories
+        _ = LocationExtractionPipeline("map_locations_ai/config.yaml")
 
-    def test_agent_components_exist(self):
-        """Test that agent components exist."""
-        agent_dir = Path("map_locations_ai/agent")
+        temp_dir = Path("map_locations_ai/temp")
+        trace_dir = Path("map_locations_ai/trace")
 
-        # Check agent files exist
-        assert (agent_dir / "pipeline.py").exists()
-        assert (agent_dir / "extractors.py").exists()
-        assert (agent_dir / "enrichers.py").exists()
-        assert (agent_dir / "validators.py").exists()
+        # These should be created by the pipeline
+        assert temp_dir.exists()
+        assert trace_dir.exists()
 
-    def test_interfaces_exist(self):
-        """Test that interface files exist."""
-        interfaces_dir = Path("map_locations_ai/interfaces")
-
-        # Check interface files exist
-        assert (interfaces_dir / "cli.py").exists()
-        assert (interfaces_dir / "web_app.py").exists()
+    def test_documentation_exists(self):
+        """Test that documentation exists."""
+        docs_dir = Path("docs")
+        assert docs_dir.exists()
+        assert (docs_dir / "ai-agent-guide.md").exists()
+        assert (docs_dir / "implementation-status.md").exists()

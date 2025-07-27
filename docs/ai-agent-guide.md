@@ -7,15 +7,14 @@ Complete guide for AI agents using the Map Locations package.
 - [Overview](#overview)
 - [Core Data Structure](#core-data-structure)
 - [Quick Start for AI Agents](#quick-start-for-ai-agents)
-- [Available Functions](#available-functions)
-- [Common Workflows](#common-workflows)
+- [Simplified Pipeline](#simplified-pipeline)
 - [Data Validation](#data-validation)
 - [Error Handling](#error-handling)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-This package is designed to be AI-agent friendly with comprehensive type hints, clear function signatures, and utility functions for common operations.
+This package provides a simplified AI-agent friendly approach with direct OpenAI LLM integration, comprehensive tracing, and YAML-based data processing. The AI functionality is included as a module within the main `map-locations` package.
 
 ## Core Data Structure
 
@@ -70,6 +69,75 @@ show_locations_grouped(restaurants, "restaurants_map.html")
 
 # Export to multiple formats
 export_to_all_formats(locations, "exports/my_locations")
+```
+
+## Simplified Pipeline
+
+### Text Processing Pipeline
+```python
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+# Initialize pipeline
+pipeline = LocationExtractionPipeline("config.yaml")
+
+# Process text file
+result = pipeline.process_file("input.txt")
+
+print(f"Extracted {result['total_locations']} locations")
+print(f"Processed {result['total_chunks']} chunks")
+print(f"Trace file: {result['trace_file']}")
+```
+
+### Pipeline Features
+
+The `LocationExtractionPipeline` provides:
+
+- **File Processing**: Process text files in chunks
+- **LLM Integration**: Direct OpenAI API calls for location extraction
+- **YAML Output**: Generate structured location data
+- **Error Recovery**: Auto-fix malformed YAML responses
+- **Comprehensive Tracing**: Log all LLM calls for debugging
+- **Chunk Management**: Process large files in manageable chunks
+
+### Configuration
+```yaml
+# config.yaml
+llm:
+  model: "gpt-4o-mini"
+  temperature: 0.1
+  max_tokens: 2000
+  timeout: 30
+
+processing:
+  chunk_size: 100
+  overlap_size: 10
+
+output:
+  temp_dir: "temp"
+  trace_dir: "trace"
+```
+
+### Output Structure
+```
+map_locations_ai/
+├── temp/chunk_chunk_001.yaml    # Individual chunk results
+├── temp/chunk_chunk_002.yaml
+├── trace/trace_TIMESTAMP.json   # Individual LLM call traces
+└── trace/run_TIMESTAMP.json     # Complete run summary
+```
+
+### Processing Result
+```python
+result = pipeline.process_file("input.txt")
+
+# Result contains:
+{
+    "input_file": "input.txt",
+    "total_chunks": 5,
+    "total_locations": 134,
+    "chunk_files": ["temp/chunk_001.yaml", "temp/chunk_002.yaml", ...],
+    "trace_file": "trace/run_20250115_143022.json"
+}
 ```
 
 ## Available Functions

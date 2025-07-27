@@ -2,49 +2,39 @@
 
 ## ✅ Completed Features
 
-### Core AI Pipeline
-- [x] Text extraction with NER and regex
-- [x] URL processing with title fetching
+### Core AI Pipeline (Simplified)
+- [x] Text extraction with OpenAI LLM (no tools)
+- [x] YAML output with auto-fixing capabilities
 - [x] Confidence scoring and validation
-- [x] Error handling and recovery
-
-### User Interfaces
-- [x] CLI interface for batch processing
-- [x] Web interface with Gradio
-- [x] Python API for programmatic use
-
-### Quality Assurance
-- [x] Comprehensive test suite (99 tests)
-- [x] Pre-commit checks (linting, formatting, type checking)
-- [x] Error handling and graceful degradation
-- [x] Performance monitoring and optimization
+- [x] Fail-fast error handling with comprehensive tracing
+- [x] Chunked processing (100 lines ±10 overlap)
 
 ### Data Processing
 - [x] YAML input/output support
 - [x] Location data validation
-- [x] Coordinate validation and formatting
-- [x] Tag-based filtering and organization
+- [x] URL detection and handling
+- [x] Source text preservation
 
 ### AI Agent Features
-- [x] smol-agents integration with ToolCallingAgent
-- [x] Function registry with 5 core tools
-- [x] LLM-based text processing with GPT-4o
+- [x] Direct OpenAI API integration (gpt-4o-mini)
+- [x] LLM-based text processing with maximum recall
 - [x] Confidence scoring (0.1-0.9 range)
 - [x] Source tie-back (exact text spans and URLs)
+- [x] YAML auto-fixing for malformed responses
 
-### Network and Web Scraping
-- [x] Robust URL title fetching (≤3s timeout)
-- [x] BeautifulSoup parsing with error handling
-- [x] Fallback mechanisms for failed requests
-- [x] URL classification and confidence scoring
+### Tracing and Debugging
+- [x] Immediate trace file writing for each LLM call
+- [x] JSON logging with timing information
+- [x] Error capture and debugging
+- [x] Partial extraction fallback
 
 ## 🚧 In Progress
 
-### Enhanced Data Sources
-- [ ] OpenStreetMap/Nominatim geocoding
-- [ ] Google Places API integration
-- [ ] Wikipedia API for descriptions
-- [ ] Official website validation
+### Data Enhancement
+- [ ] URL processing with fetch tools (Phase 2)
+- [ ] Duplicate detection and merging
+- [ ] Content filtering and organization
+- [ ] Enhanced geocoding with multiple providers
 
 ### Evaluation Framework
 - [ ] Coordinate accuracy metrics
@@ -57,67 +47,44 @@
 ### Advanced Features
 - [ ] Batch processing for large datasets
 - [ ] Caching for improved performance
-- [ ] Advanced geocoding with multiple providers
 - [ ] Content enrichment with tourist information
+- [ ] Web interface integration
 
 ### Deployment
-- [ ] PyPI package publishing
-- [ ] Web interface deployment
-- [ ] Documentation and tutorials
-- [ ] User guides and examples
+- [x] PyPI package publishing (unified package)
+- [x] Documentation and tutorials
+- [x] User guides and examples
 
 ## 🎯 Performance Metrics
 
 ### Current Performance
-- ✅ Processing speed: <30 seconds per location
+- ✅ Processing speed: <30 seconds per chunk
 - ✅ Memory usage: <500MB for typical workflows
-- ✅ Batch processing: handles 100+ locations efficiently
-- ✅ Error recovery: graceful degradation for network issues
+- ✅ Chunk processing: handles 100+ lines efficiently
+- ✅ Error recovery: YAML auto-fixing and partial extraction
 
 ### Quality Metrics
 - ✅ High-recall extraction (captures all explicit mentions)
 - ✅ High-precision extraction (no hallucinated locations)
 - ✅ Strict source tie-back (exact text spans and URLs)
-- ✅ Comprehensive test coverage (99 tests passing)
+- ✅ Comprehensive tracing of all operations
 
 ## 🔧 Technical Architecture
 
 ### Core Components
-- **Main Package**: `map_locations/` with core mapping functionality
-- **AI Package**: `map_locations_ai/` with AI agent capabilities
+- **Unified Package**: `map_locations/` with core mapping functionality
+- **AI Module**: `map_locations_ai/` with simplified LLM pipeline (included in main package)
 - **Common Models**: Shared Location data structure
-- **Multiple Interfaces**: CLI, Web, Python API
+- **CLI Interface**: Direct file processing
 
 ### Data Flow
 ```
-User Input → AI Agent → Enriched YAML → Mapping Tool → Interactive Map
+Input File → Chunking → LLM Processing → YAML Output → Trace Logs
+     ↓           ↓           ↓              ↓           ↓
+  Plain Text  100 lines   Locations    temp/chunk_N.yaml  trace/
+             (±10 overlap)   YAML                      timestamp.json
 ```
 
 ### Dependencies
-- **Main Package**: folium, pyyaml, common utilities
-- **AI Package**: requests, beautifulsoup4, gradio, smol-agents
-
-## 🚀 Next Priorities
-
-1. **Enhanced Geocoding** - Integrate OpenStreetMap/Nominatim for coordinate lookup
-2. **Content Enrichment** - Add Wikipedia API for descriptions and context
-3. **Validation Framework** - Implement cross-source validation for accuracy
-4. **Performance Optimization** - Add caching and batch processing for large datasets
-
-## 📊 Success Metrics
-
-### Accuracy Targets
-- Coordinate precision: within 50m for landmarks, 200m for neighborhoods
-- URL relevance: >90% official website detection
-- Content quality: tourist-relevant, factual descriptions
-
-### User Experience
-- Intuitive CLI with helpful error messages ✅
-- Responsive web interface ✅
-- Clear documentation and examples ✅
-
-### Code Quality
-- Comprehensive test suite ✅
-- Pre-commit checks passing ✅
-- Type safety with MyPy ✅
-- Error handling and recovery ✅
+- **Main Package**: folium, pyyaml, openai, common utilities
+- **AI Module**: openai, pyyaml, pathlib (included in main package)
