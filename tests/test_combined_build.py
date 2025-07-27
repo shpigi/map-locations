@@ -17,17 +17,17 @@ class TestCombinedBuild:
         makefile_path = Path("Makefile")
         content = makefile_path.read_text()
 
-        # Check that build target exists (AI package is now part of main build)
+        # Check that build target exists (unified package structure)
         assert "build:" in content
-        assert "build-main:" in content
+        # No longer need build-main since it's unified
 
     def test_make_build_dependencies(self):
         """Test that build targets have proper dependencies."""
         makefile_path = Path("Makefile")
         content = makefile_path.read_text()
 
-        # Check that build depends on build-main and build-ai
-        assert "build: build-main build-ai" in content
+        # Check that build depends on clean (unified package structure)
+        assert "build: clean" in content
 
     def test_make_clean_target(self):
         """Test that clean target exists and works."""
@@ -71,16 +71,13 @@ class TestCombinedBuild:
             if len(files) == 0:
                 pytest.skip("No build artifacts found in dist/ directory")
 
-            # Check for main package files
+            # Check for main package files (AI is included in main package)
             main_wheels = list(dist_dir.glob("map_locations-*.whl"))
             main_tars = list(dist_dir.glob("map_locations-*.tar.gz"))
 
-            # Check for AI package files
-            ai_wheels = list(dist_dir.glob("map_locations_ai-*.whl"))
-            ai_tars = list(dist_dir.glob("map_locations_ai-*.tar.gz"))
-
-            # At least some files should exist
-            assert len(main_wheels) + len(main_tars) + len(ai_wheels) + len(ai_tars) > 0
+            # AI package is now included in main package, so no separate AI files
+            # At least some main package files should exist
+            assert len(main_wheels) + len(main_tars) > 0
 
 
 class TestBuildProcess:
@@ -207,8 +204,8 @@ class TestBuildIntegration:
         ci_path = Path(".github/workflows/ci.yml")
         content = ci_path.read_text()
 
-        # Check for AI package verification step
-        assert "Verify AI package structure" in content
+        # Check for AI package verification step (now part of main package)
+        assert "Verify package structure" in content or "map_locations_ai" in content
 
     def test_ci_package_verification(self):
         """Test that CI verifies built packages."""

@@ -28,6 +28,8 @@ cd map-locations
 pip install -e .
 ```
 
+**Note**: The package includes both core mapping functionality and AI features in a unified installation.
+
 ## Quick Start
 
 ### 1. Create a locations file

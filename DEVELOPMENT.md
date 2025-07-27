@@ -4,12 +4,12 @@ This document provides comprehensive information about the development setup, pr
 
 ## 🏗️ Project Architecture
 
-This project uses a **multi-package architecture** with two separate but related packages:
+This project uses a **unified package architecture** with the AI functionality integrated into the main package:
 
-- **`map_locations/`**: Main mapping and visualization library with common utilities (`map-locations`)
-- **`map_locations_ai/`**: AI agent for location data curation (`map-locations-ai`)
+- **`map_locations/`**: Main mapping and visualization library
+- **`map_locations_ai/`**: AI module for location data curation (included in main package)
 
-Each package has its own `pyproject.toml` and can be developed independently while sharing common functionality through the shared package.
+The AI module is now part of the main `map-locations` package, providing a unified installation and development experience.
 
 ## 🚀 Quick Start
 
@@ -26,22 +26,18 @@ source venv/bin/activate  # On Linux/Mac
 # or
 venv\Scripts\activate     # On Windows
 
-# Complete development environment setup (all packages + tools)
+# Complete development environment setup
 make setup-dev-full
 ```
 
-### 2. Package-Specific Setup
+### 2. Package Installation
 
 ```bash
-# For main package development only
-make setup-dev-main
+# Install package in development mode
+make install
 
-# For AI package development
-make setup-dev-ai
-
-# Individual package installation
-make install-main      # Install main package (includes common utilities)
-make install-ai        # Install AI package
+# Install with development dependencies
+make install-dev
 ```
 
 ### 3. View All Available Commands
@@ -61,9 +57,6 @@ Choose the workflow that matches your development style and current task:
 ```bash
 # Super fast - format and lint only (no tests)
 make pre-commit-quick
-
-# When you need it explicit
-make pre-commit-code
 ```
 **Perfect for**: Work-in-progress commits, quick saves, experimental changes, when tests are still failing.
 
@@ -71,15 +64,12 @@ make pre-commit-code
 ```bash
 # Standard workflow - format, lint, and lightweight tests
 make pre-commit
-
-# Equivalent explicit command
-make pre-commit-check
 ```
 **Perfect for**: Normal feature development, bug fixes, regular commits.
 
 #### **For Feature Completion** 🏆
 ```bash
-# Comprehensive - format, lint, and full test suite
+# Comprehensive - format, lint, tests, build, and CLI verification
 make pre-commit-full
 ```
 **Perfect for**: Feature completion, before pushing to main, release preparation.
@@ -95,16 +85,13 @@ make test-staged         # Only test if test files are staged
 
 #### **Comprehensive Testing**
 ```bash
-make test-all           # Run tests for all packages
-make test-main          # Test main package (includes common utilities)
-make test-ai            # Test AI package only
+make test               # Run all tests for the unified package
 ```
 
 #### **Development Quality Checks**
 ```bash
 make dev-check          # Quick format + lint + fast tests
 make check-clean        # Check if working directory is clean
-make lint-staged        # Run pre-commit hooks on staged files only
 ```
 
 ### 🎯 Recommended Workflow Patterns
@@ -141,7 +128,7 @@ The project now supports multiple levels of pre-commit testing to match your dev
 |---------|-------|---------|----------|
 | `make pre-commit-quick` | ⚡ Instant | Format + Lint | Frequent commits, WIP |
 | `make pre-commit` | 🚀 Fast | Format + Lint + Light Tests | Regular development |
-| `make pre-commit-full` | 🧪 Thorough | Format + Lint + All Tests | Feature complete |
+| `make pre-commit-full` | 🧪 Thorough | Format + Lint + Tests + Build + CLI | Feature complete |
 
 ### Smart File Detection
 
@@ -155,18 +142,14 @@ make check-clean
 
 ## Pre-commit Hooks
 
-This project uses pre-commit hooks with **multi-package support** to enforce code quality standards:
+This project uses pre-commit hooks to enforce code quality standards:
 
 ### Code Quality Hooks
 
-- **Black**: Code formatting with 100-character line length (all packages)
-- **isort**: Import sorting with Black profile (all packages)
-- **Flake8**: Style checking with package-specific rules:
-  - Strict for `shared/` and `map_locations/` packages
-  - Lenient for `map_locations_ai/` (allows for rapid development)
-- **MyPy**: Type checking with package-specific configurations:
-  - Strict for production packages
-  - Lenient for AI package development
+- **Black**: Code formatting with 100-character line length
+- **isort**: Import sorting with Black profile
+- **Flake8**: Style checking with project-specific rules
+- **MyPy**: Type checking with appropriate configurations
 
 ### File Quality Hooks
 
@@ -204,21 +187,16 @@ This project uses pre-commit hooks with **multi-package support** to enforce cod
 - **Maximum**: 100 characters (project standard)
 - **Rationale**: Allows for readable code on modern wide screens while maintaining readability
 
-### Multi-Package Linting
+### Linting
 
 The project supports different linting levels:
 
 ```bash
-# Strict linting (for production-ready code)
-make lint-strict        # All packages with strict rules
-
 # Standard linting (recommended for development)
-make lint               # Lenient mode for AI package
+make lint               # Standard linting for all code
 
-# Package-specific linting
-make lint-main          # Main package (includes common utilities, strict)
-make lint-ai            # AI package (lenient)
-make lint-ai-strict     # AI package (strict mode)
+# Lint only staged files
+make lint-staged        # Run pre-commit checks on staged files only
 ```
 
 ### Import Organization
@@ -234,7 +212,7 @@ import yaml
 
 # Local imports
 from map_locations.core import load_locations_from_yaml
-from map_locations.common import Location, LocationList  # Common models
+from map_locations.common import Location, LocationList
 ```
 
 ### Type Annotations
@@ -299,39 +277,32 @@ git add . && git commit -m "feat: add amazing feature"
 git push origin feature/amazing-feature
 ```
 
-### 2. Multi-Package Development
+### 2. Unified Package Development
 
 ```bash
-# Work on common utilities (now part of main package)
-make install-main
-make format-main
-make test-main
+# Work on the unified package
+make install
+make format
+make test
 
-# Work on main package
-make install-main
-make format-main
-make test-main
-
-# Work on AI features
-make install-ai
-make format-ai
-make test-ai          # Lenient testing during development
-make test-ai-strict   # Strict testing before completion
+# Test specific functionality
+make test-cli          # Test CLI functionality
+make test-fast         # Quick test feedback
 ```
 
 ### 3. Running Checks Manually
 
 ```bash
-# Format all packages
+# Format all code
 make format
 
 # Lint with appropriate levels
-make lint            # Standard (lenient for AI)
-make lint-strict     # Strict for all packages
+make lint            # Standard linting
+make lint-staged     # Lint only staged files
 
 # Testing options
 make test-fast       # Quick feedback
-make test-all        # Comprehensive
+make test            # Comprehensive
 make test-pre-commit # Lightweight for commits
 ```
 
@@ -340,8 +311,8 @@ make test-pre-commit # Lightweight for commits
 If pre-commit hooks fail:
 
 1. **Black/isort failures**: Run `make format` to auto-fix
-2. **Flake8 failures**: Fix style issues manually, or use lenient mode for AI package
-3. **MyPy failures**: Fix type annotation issues, or use lenient mode during development
+2. **Flake8 failures**: Fix style issues manually
+3. **MyPy failures**: Fix type annotation issues
 4. **Test failures**: Use `make test-fast` for quick feedback, fix issues incrementally
 
 ## Testing
@@ -356,12 +327,7 @@ make test-fast           # Essential tests, stops on first failure
 make test-pre-commit     # Lightweight tests suitable for commits
 
 # 🏆 For comprehensive quality assurance
-make test-all           # Complete test suite across all packages
-
-# 🎯 Package-specific testing
-make test-shared        # Shared utilities
-make test-main          # Main package
-make test-ai            # AI package
+make test               # Complete test suite
 
 # 🔍 Smart testing based on staged files
 make test-staged        # Only run if test files are staged
@@ -369,25 +335,20 @@ make test-staged        # Only run if test files are staged
 
 ### Writing Tests
 
-- Place tests in the appropriate `tests/` directory
+- Place tests in the `tests/` directory
 - Use descriptive test names that explain the behavior
 - Test both success and failure cases
-- Mock external dependencies (especially for AI package)
+- Mock external dependencies (especially for AI functionality)
 - Use pytest fixtures for common setup
 - Follow the shared data models for consistency
 
 ## Build and Packaging
 
-### Building Packages
+### Building Package
 
 ```bash
-# Build all packages
+# Build the unified package
 make build
-
-# Build individual packages
-make build-shared       # Shared utilities package
-make build-main         # Main package
-make build-ai           # AI package
 ```
 
 ### Publishing
@@ -404,16 +365,12 @@ make publish-prod       # Publish to Production PyPI
 
 ### Formatting
 ```bash
-make format             # Format all packages
-make format-shared      # Format shared package only
-make format-main        # Format main package only
-make format-ai          # Format AI package only
+make format             # Format all code
 ```
 
 ### Linting
 ```bash
-make lint              # Standard linting (lenient AI mode)
-make lint-strict       # Strict linting for all packages
+make lint              # Standard linting
 make lint-staged       # Lint only staged files
 ```
 
@@ -438,22 +395,11 @@ make ci               # Full CI simulation locally
    make pre-commit          # Standard checks
    ```
 
-3. **Multi-package errors**: Run package-specific commands
-   ```bash
-   make lint-main          # Check main package only
-   make lint-ai            # Check with lenient AI rules
-   ```
-
 ### MyPy Issues
 
-1. **AI Package Development**: Use lenient mode
-   ```bash
-   make lint-ai           # Lenient mode for development
-   make lint-ai-strict    # Strict mode when ready
-   ```
-
-2. **Shared Package**: Ensure proper type annotations
-3. **Import errors**: Add proper type stub packages
+1. **Type annotation errors**: Fix type hints or add appropriate ignores
+2. **Import errors**: Add proper type stub packages
+3. **Union type issues**: Handle None cases properly
 
 ### Test Issues
 
@@ -462,19 +408,15 @@ make ci               # Full CI simulation locally
    make test-fast         # Quick feedback
    ```
 
-2. **Multi-package test failures**: Test packages individually
+2. **Test failures**: Debug incrementally
    ```bash
-   make test-main         # Just main package (includes common utilities)
+   make test-fast         # Quick feedback
+   pytest tests/ -k "test_name"  # Run specific test
    ```
 
-### Multi-Package Setup Issues
+### Setup Issues
 
-1. **Installation order**: Use the proper setup command
-   ```bash
-   make setup-dev-full    # Installs in correct dependency order
-   ```
-
-2. **Package conflicts**: Clean and reinstall
+1. **Installation issues**: Clean and reinstall
    ```bash
    make clean-all         # Deep clean
    make setup-dev-full    # Fresh install
@@ -512,13 +454,13 @@ Add to `.vscode/settings.json`:
 
 ## Continuous Integration
 
-The project uses GitHub Actions for CI/CD with multi-package support:
+The project uses GitHub Actions for CI/CD:
 
-- **Package Installation**: Tests installation order and dependencies
-- **Multi-level Testing**: Runs different test suites for different packages
-- **Quality Checks**: Runs appropriate linting for each package
-- **Coverage Reporting**: Aggregates coverage across packages
-- **Multi-package Building**: Builds and validates all packages
+- **Package Installation**: Tests installation and dependencies
+- **Multi-level Testing**: Runs different test suites
+- **Quality Checks**: Runs appropriate linting
+- **Coverage Reporting**: Aggregates coverage across the package
+- **Building**: Builds and validates the package
 
 ## Version Management
 
@@ -544,18 +486,18 @@ make version-major      # 0.1.2 → 1.0.0
    - Use `make pre-commit-quick` for frequent commits
    - Use `make pre-commit` for regular development
    - Use `make pre-commit-full` before pushing
-5. **Test** your changes: `make test-all`
+5. **Test** your changes: `make test`
 6. **Update** documentation if needed
 7. **Submit** a pull request
 
 ### Contribution Guidelines
 
-- Follow the multi-package architecture
-- Use appropriate linting levels (strict for production packages)
+- Follow the unified package architecture
+- Use appropriate linting levels
 - Write tests for new functionality
 - Update documentation for significant changes
 - Use semantic commit messages
-- Ensure all packages build successfully
+- Ensure the package builds successfully
 
 ## 📚 Resources
 
@@ -583,11 +525,11 @@ make pre-commit-quick   # Fast commit prep
 
 # Testing
 make test-fast          # Quick testing
-make test-all           # Full testing
+make test               # Full testing
 
 # Quality
 make format             # Format all code
-make lint               # Lint all packages
+make lint               # Lint all code
 ```
 
 ### Speed vs Quality Matrix
@@ -596,5 +538,5 @@ make lint               # Lint all packages
 |-------|---------|---------|----------|
 | ⚡ Fastest | `make pre-commit-quick` | Format + Lint | WIP commits |
 | 🚀 Fast | `make pre-commit` | Format + Lint + Light Tests | Regular development |
-| 🔧 Thorough | `make pre-commit-full` | Format + Lint + All Tests | Feature completion |
+| 🔧 Thorough | `make pre-commit-full` | Format + Lint + Tests + Build + CLI | Feature completion |
 | 🏭 Complete | `make ci` | Full build pipeline | Pre-push validation |

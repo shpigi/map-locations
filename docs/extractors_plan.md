@@ -27,6 +27,9 @@
 
 ## Current Architecture
 
+### Unified Package Structure
+The AI extraction functionality is now included as a module within the main `map-locations` package, providing a unified installation and development experience.
+
 ### Simplified Data Flow
 ```
 Input File → Chunking → LLM Processing → YAML Output → Trace Logs
@@ -98,13 +101,3 @@ locations:
    • Validation of required fields
 
 4. **Tracing**
-   • Immediate JSON logging of all calls
-   • Timing information and error capture
-   • Complete debugging support
-
-## Next Steps for Enhancement:
-
-1. **URL Processing** - Integrate fetch tools for URL exploration (Phase 2)
-2. **Deduplication** - Implement duplicate detection and merging
-3. **Content Filtering** - Add filtering capabilities for location types
-4. **Enhanced Geocoding** - Add coordinate lookup for extracted locations

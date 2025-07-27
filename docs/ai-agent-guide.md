@@ -14,7 +14,7 @@ Complete guide for AI agents using the Map Locations package.
 
 ## Overview
 
-This package provides a simplified AI-agent friendly approach with direct OpenAI LLM integration, comprehensive tracing, and YAML-based data processing.
+This package provides a simplified AI-agent friendly approach with direct OpenAI LLM integration, comprehensive tracing, and YAML-based data processing. The AI functionality is included as a module within the main `map-locations` package.
 
 ## Core Data Structure
 
@@ -88,6 +88,17 @@ print(f"Processed {result['total_chunks']} chunks")
 print(f"Trace file: {result['trace_file']}")
 ```
 
+### Pipeline Features
+
+The `LocationExtractionPipeline` provides:
+
+- **File Processing**: Process text files in chunks
+- **LLM Integration**: Direct OpenAI API calls for location extraction
+- **YAML Output**: Generate structured location data
+- **Error Recovery**: Auto-fix malformed YAML responses
+- **Comprehensive Tracing**: Log all LLM calls for debugging
+- **Chunk Management**: Process large files in manageable chunks
+
 ### Configuration
 ```yaml
 # config.yaml
@@ -113,6 +124,20 @@ map_locations_ai/
 ├── temp/chunk_chunk_002.yaml
 ├── trace/trace_TIMESTAMP.json   # Individual LLM call traces
 └── trace/run_TIMESTAMP.json     # Complete run summary
+```
+
+### Processing Result
+```python
+result = pipeline.process_file("input.txt")
+
+# Result contains:
+{
+    "input_file": "input.txt",
+    "total_chunks": 5,
+    "total_locations": 134,
+    "chunk_files": ["temp/chunk_001.yaml", "temp/chunk_002.yaml", ...],
+    "trace_file": "trace/run_20250115_143022.json"
+}
 ```
 
 ## Available Functions

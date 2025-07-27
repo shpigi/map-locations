@@ -51,9 +51,9 @@
 - [ ] Web interface integration
 
 ### Deployment
-- [ ] PyPI package publishing
-- [ ] Documentation and tutorials
-- [ ] User guides and examples
+- [x] PyPI package publishing (unified package)
+- [x] Documentation and tutorials
+- [x] User guides and examples
 
 ## 🎯 Performance Metrics
 
@@ -72,8 +72,8 @@
 ## 🔧 Technical Architecture
 
 ### Core Components
-- **Main Package**: `map_locations/` with core mapping functionality
-- **AI Package**: `map_locations_ai/` with simplified LLM pipeline
+- **Unified Package**: `map_locations/` with core mapping functionality
+- **AI Module**: `map_locations_ai/` with simplified LLM pipeline (included in main package)
 - **Common Models**: Shared Location data structure
 - **CLI Interface**: Direct file processing
 
@@ -86,28 +86,5 @@ Input File → Chunking → LLM Processing → YAML Output → Trace Logs
 ```
 
 ### Dependencies
-- **Main Package**: folium, pyyaml, common utilities
-- **AI Package**: openai, pyyaml, pathlib
-
-## 🚀 Next Priorities
-
-1. **URL Processing** - Integrate fetch tools for URL exploration
-2. **Deduplication** - Implement duplicate detection and merging
-3. **Content Filtering** - Add filtering capabilities for location types
-4. **Enhanced Geocoding** - Add coordinate lookup for extracted locations
-
-## 📊 Success Metrics
-
-### Accuracy Targets
-- Coordinate precision: within 50m for landmarks, 200m for neighborhoods
-- URL relevance: >90% official website detection
-- Content quality: tourist-relevant, factual descriptions
-
-### User Experience
-- Intuitive CLI with helpful error messages ✅
-- Clear documentation and examples ✅
-
-### Code Quality
-- Comprehensive tracing of all operations ✅
-- Fail-fast error handling with no silent failures ✅
-- Clean, maintainable code following KISS principles ✅
+- **Main Package**: folium, pyyaml, openai, common utilities
+- **AI Module**: openai, pyyaml, pathlib (included in main package)
