@@ -55,7 +55,7 @@ class LocationExtractionPipeline:
 
     def _load_agent_prompt(self) -> str:
         """Load the agent prompt from file."""
-        prompt_path = Path("agent_prompt.txt")
+        prompt_path = Path("map_locations_ai/agent_prompt.txt")
         if not prompt_path.exists():
             raise FileNotFoundError("agent_prompt.txt not found")
 
