@@ -1,0 +1,17 @@
+Test URLs for location extraction:
+
+Paris Museums:
+https://ticket.toureiffel.paris/en
+https://paradoxmuseumparis.com/
+https://www.musee-rodin.fr/en
+
+Art Galleries:
+https://www.atelier-lumieres.com/en
+https://www.centrepompidou.fr/en/
+
+Observations:
+https://www.tourmontparnasse56.com/
+
+Some regular locations for context:
+Louvre Museum
+Notre Dame Cathedral

@@ -15,6 +15,12 @@ from typing import Any, Dict, List, Optional
 import yaml
 from openai import OpenAI
 
+try:
+    from .url_processor import URLProcessor
+except ImportError:
+    # Handle script execution
+    from map_locations_ai.url_processor import URLProcessor
+
 
 class LocationExtractionPipeline:
     """Main pipeline for location extraction from text files."""
@@ -69,11 +75,11 @@ class LocationExtractionPipeline:
 
     def _setup_directories(self) -> None:
         """Create necessary directories if they don't exist."""
-        temp_dir = Path(self.config["output"]["temp_dir"])
-        trace_dir = Path(self.config["output"]["trace_dir"])
+        self.temp_dir = Path(self.config["output"]["temp_dir"])
+        self.trace_dir = Path(self.config["output"]["trace_dir"])
 
-        temp_dir.mkdir(exist_ok=True)
-        trace_dir.mkdir(exist_ok=True)
+        self.temp_dir.mkdir(exist_ok=True)
+        self.trace_dir.mkdir(exist_ok=True)
 
     def _read_file_chunks(self, file_path: str) -> List[Dict[str, Any]]:
         """Read file and split into overlapping chunks."""
@@ -621,6 +627,68 @@ Fixed location:"""
 
         return locations
 
+    def process_urls_in_chunks(self) -> Dict[str, Any]:
+        """Process all URL entries in existing chunk files."""
+        url_processor = URLProcessor(self.config, self.client)
+
+        chunk_files = list(self.temp_dir.glob("chunk_*.yaml"))
+        if not chunk_files:
+            print("❌ No chunk files found to process")
+            return {"processed_chunks": 0, "total_urls": 0}
+
+        processed_chunks = 0
+        total_urls = 0
+
+        for chunk_file in chunk_files:
+            # Count URLs in this chunk
+            with open(chunk_file, "r", encoding="utf-8") as f:
+                chunk_data = yaml.safe_load(f)
+                url_count = len(
+                    [loc for loc in chunk_data["locations"] if loc.get("is_url", False)]
+                )
+
+            if url_count > 0:
+                total_urls += url_count
+                if url_processor.process_url_entries(chunk_file):
+                    processed_chunks += 1
+
+        result = {
+            "processed_chunks": processed_chunks,
+            "total_chunks": len(chunk_files),
+            "total_urls": total_urls,
+        }
+
+        print(f"\n✅ URL Processing Complete:")
+        print(f"   Processed {processed_chunks}/{len(chunk_files)} chunks")
+        print(f"   Total URLs processed: {total_urls}")
+
+        return result
+
+    def restore_chunks_from_backup(self) -> Dict[str, Any]:
+        """Restore chunk files from backup."""
+        restored_chunks = 0
+        total_chunks = 0
+
+        for chunk_file in self.temp_dir.glob("chunk_*.yaml"):
+            total_chunks += 1
+            backup_file = chunk_file.with_suffix(".yaml.backup")
+
+            if backup_file.exists():
+                import shutil
+
+                shutil.copy2(backup_file, chunk_file)
+                print(f"  🔄 Restored: {chunk_file.name}")
+                restored_chunks += 1
+            else:
+                print(f"  ⚠️  No backup found: {chunk_file.name}")
+
+        result = {"restored_chunks": restored_chunks, "total_chunks": total_chunks}
+
+        print(f"\n✅ Backup Restoration Complete:")
+        print(f"   Restored {restored_chunks}/{total_chunks} chunks")
+
+        return result
+
     def _write_trace_entry(self, trace_entry: Dict[str, Any]) -> None:
         """Write a single trace entry to file immediately."""
         trace_dir = Path(self.config["output"]["trace_dir"])
@@ -676,10 +744,8 @@ Fixed location:"""
     def _save_chunk_yaml(self, chunk_data: Dict[str, Any], locations: List[Dict[str, Any]]) -> str:
         """Save locations from a chunk to individual YAML file."""
         chunk_prefix = self.config["output"]["chunk_prefix"]
-        temp_dir = Path(self.config["output"]["temp_dir"])
-
         filename = f"{chunk_prefix}_{chunk_data['id']}.yaml"
-        filepath = temp_dir / filename
+        filepath = self.temp_dir / filename
 
         # Prepare YAML data
         yaml_data = {
@@ -781,22 +847,57 @@ Fixed location:"""
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Extract locations from text files")
-    parser.add_argument("input_file", help="Path to input text file")
+    parser.add_argument("input_file", nargs="?", help="Path to input text file")
     parser.add_argument("--config", default="config.yaml", help="Path to configuration file")
+    parser.add_argument(
+        "--process-urls", action="store_true", help="Process URLs in existing chunk files"
+    )
+    parser.add_argument(
+        "--with-urls", action="store_true", help="Process URLs after main extraction"
+    )
+    parser.add_argument(
+        "--restore-backups", action="store_true", help="Restore chunk files from backup"
+    )
 
     args = parser.parse_args()
-
-    # Validate input file
-    if not os.path.exists(args.input_file):
-        print(f"Error: Input file not found: {args.input_file}")
-        return 1
 
     try:
         # Initialize pipeline
         pipeline = LocationExtractionPipeline(args.config)
 
+        # Handle URL-only processing
+        if args.process_urls:
+            if args.input_file:
+                print("⚠️  Ignoring input file when --process-urls is used")
+            result = pipeline.process_urls_in_chunks()
+            return 0
+
+        # Handle backup restoration
+        if args.restore_backups:
+            if args.input_file:
+                print("⚠️  Ignoring input file when --restore-backups is used")
+            result = pipeline.restore_chunks_from_backup()
+            return 0
+
+        # Validate input file for main processing
+        if not args.input_file:
+            print("Error: Input file is required unless using --process-urls")
+            return 1
+
+        if not os.path.exists(args.input_file):
+            print(f"Error: Input file not found: {args.input_file}")
+            return 1
+
         # Process file
         result = pipeline.process_file(args.input_file)
+
+        # Process URLs if requested
+        if args.with_urls:
+            print("\n" + "=" * 50)
+            print("PROCESSING URLS")
+            print("=" * 50)
+            url_result = pipeline.process_urls_in_chunks()
+            result["url_processing"] = url_result
 
         # Print summary
         print("\n" + "=" * 50)
