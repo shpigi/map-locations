@@ -14,6 +14,6 @@ processing:
 
 # Output Settings
 output:
-  temp_dir: "temp"      # Directory for temporary YAML files
-  trace_dir: "trace"    # Directory for trace logs
+  temp_dir: "map_locations_ai/temp"      # Directory for temporary YAML files
+  trace_dir: "map_locations_ai/trace"    # Directory for trace logs
   chunk_prefix: "chunk" # Prefix for chunk files (chunk_001.yaml, etc.)
