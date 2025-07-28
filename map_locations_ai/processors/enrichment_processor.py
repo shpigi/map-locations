@@ -248,7 +248,22 @@ class EnrichmentProcessor:
             response = requests.get(url, timeout=10)
 
             if response.status_code == 200:
-                data = response.json()
+                # Check if response has content
+                if not response.text.strip():
+                    print(f"    ⚠️ Empty response from DuckDuckGo API")
+                    return self._simulate_realistic_web_search(
+                        location_name, location_type
+                    )
+
+                try:
+                    data = response.json()
+                except json.JSONDecodeError as json_error:
+                    print(
+                        f"    ⚠️ Invalid JSON response from DuckDuckGo API: {json_error}"
+                    )
+                    return self._simulate_realistic_web_search(
+                        location_name, location_type
+                    )
 
                 # Extract relevant information
                 content_parts = []
