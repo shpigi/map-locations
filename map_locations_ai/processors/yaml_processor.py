@@ -124,7 +124,7 @@ class YAMLProcessor:
         try:
             # Check if we have a client (for testing environments)
             if self.client is None:
-                return self._create_mock_fixed_response(original_processing_time)
+                raise ValueError("No OpenAI client available for YAML fixing")
 
             import time
 
@@ -364,15 +364,7 @@ Fixed location:"""
         try:
             # Check if we have a client (for testing environments)
             if self.client is None:
-                return {
-                    "name": "Fixed Test Location",
-                    "type": "landmark",
-                    "description": "Mock fixed location for testing",
-                    "source_text": "Test text",
-                    "confidence": 0.8,
-                    "is_url": False,
-                    "url": "",
-                }
+                raise ValueError("No OpenAI client available for location fixing")
 
             # Use max_completion_tokens for o4 models, max_tokens for others
             model = self.llm_config["model"]
@@ -459,29 +451,3 @@ Fixed location:"""
             "url": "",
         }
         return defaults.get(field, "")
-
-    def _create_mock_fixed_response(self, original_processing_time: float) -> LLMResult:
-        """Create mock fixed response for testing."""
-        return LLMResult(
-            success=True,
-            raw_response=(
-                'locations:\n  - name: "Fixed Test Location"\n    type: "landmark"\n'
-                '    description: "Mock fixed location for testing"\n'
-                '    source_text: "Test text"\n'
-                '    confidence: 0.8\n    is_url: false\n    url: ""'
-            ),
-            parsed_locations=[
-                {
-                    "name": "Fixed Test Location",
-                    "type": "landmark",
-                    "description": "Mock fixed location for testing",
-                    "source_text": "Test text",
-                    "confidence": 0.8,
-                    "is_url": False,
-                    "url": "",
-                }
-            ],
-            processing_time=original_processing_time / 1000,
-            processing_time_ms=original_processing_time,
-            error=None,
-        )

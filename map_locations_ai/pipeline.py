@@ -638,14 +638,14 @@ class LocationExtractionPipeline:
         }
 
     def _create_minimal_enrichment_result(self) -> Dict[str, Any]:
-        """Create minimal enrichment result when enrichment is disabled."""
+        """Create result when enrichment is not available or disabled."""
         return {
             "total_locations": len(self.locations_memory),
-            "enriched_locations": 0,
+            "enriched_locations": [],
             "coordinate_coverage": 0,
             "website_coverage": 0,
             "hours_coverage": 0,
-            "stats": {"disabled": True},
+            "stats": {"status": "no_enrichment_data_available"},
         }
 
     def deduplicate_locations(self) -> Dict[str, Any]:

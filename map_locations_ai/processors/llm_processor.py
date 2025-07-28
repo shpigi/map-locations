@@ -339,7 +339,7 @@ class LLMProcessor:
 
         # Check if we have a client (for testing environments)
         if self.client is None:
-            return self._create_mock_response()
+            raise ValueError("No OpenAI client available for LLM processing")
 
         # Prepare the prompt
         user_message = self._format_extraction_prompt(chunk_data.text)
@@ -552,7 +552,9 @@ Fixed YAML:"""
         try:
             # Check if we have a client (for testing environments)
             if self.client is None:
-                return self._create_mock_fixed_response()
+                raise ValueError("No OpenAI client available for YAML fixing")
+
+            import time
 
             fix_start_time = time.time()
 
@@ -636,54 +638,3 @@ Fixed YAML:"""
                 processing_time_ms=original_processing_time,
                 error=f"Failed to fix YAML: {e}",
             )
-
-    def _create_mock_response(self) -> LLMResult:
-        """Create mock response for testing."""
-        return LLMResult(
-            success=True,
-            raw_response=(
-                'locations:\n  - name: "Test Location"\n    type: "landmark"\n'
-                '    description: "Mock location for testing"\n    source_text: "Test text"\n'
-                '    confidence: 0.8\n    is_url: false\n    url: ""'
-            ),
-            parsed_locations=[
-                {
-                    "name": "Test Location",
-                    "type": "landmark",
-                    "description": "Mock location for testing",
-                    "source_text": "Test text",
-                    "confidence": 0.8,
-                    "is_url": False,
-                    "url": "",
-                }
-            ],
-            processing_time=0.0,
-            processing_time_ms=0.0,
-            error=None,
-        )
-
-    def _create_mock_fixed_response(self) -> LLMResult:
-        """Create mock fixed response for testing."""
-        return LLMResult(
-            success=True,
-            raw_response=(
-                'locations:\n  - name: "Fixed Test Location"\n    type: "landmark"\n'
-                '    description: "Mock fixed location for testing"\n'
-                '    source_text: "Test text"\n'
-                '    confidence: 0.8\n    is_url: false\n    url: ""'
-            ),
-            parsed_locations=[
-                {
-                    "name": "Fixed Test Location",
-                    "type": "landmark",
-                    "description": "Mock fixed location for testing",
-                    "source_text": "Test text",
-                    "confidence": 0.8,
-                    "is_url": False,
-                    "url": "",
-                }
-            ],
-            processing_time=0.0,
-            processing_time_ms=0.0,
-            error=None,
-        )

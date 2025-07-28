@@ -140,7 +140,7 @@ class EnrichmentProcessor:
         """
         # Check if we have a client (for testing environments)
         if self.client is None:
-            return self._create_mock_enriched_location(location)
+            raise ValueError("No OpenAI client available for enrichment")
 
         # Use web search + OpenAI approach
         return self._enrich_with_web_search(location)
@@ -251,9 +251,7 @@ class EnrichmentProcessor:
                 # Check if response has content
                 if not response.text.strip():
                     print(f"    ⚠️ Empty response from DuckDuckGo API")
-                    return self._simulate_realistic_web_search(
-                        location_name, location_type
-                    )
+                    return None
 
                 try:
                     data = response.json()
@@ -261,9 +259,7 @@ class EnrichmentProcessor:
                     print(
                         f"    ⚠️ Invalid JSON response from DuckDuckGo API: {json_error}"
                     )
-                    return self._simulate_realistic_web_search(
-                        location_name, location_type
-                    )
+                    return None
 
                 # Extract relevant information
                 content_parts = []
@@ -283,54 +279,12 @@ class EnrichmentProcessor:
                 if content_parts:
                     return "\n\n".join(content_parts)
 
-            # Fallback: Try a simple web search simulation with more realistic data
-            return self._simulate_realistic_web_search(location_name, location_type)
+            # No fallback - return None if API fails
+            return None
 
         except Exception as e:
             print(f"    ⚠️ Web search failed: {e}")
-            return self._simulate_realistic_web_search(location_name, location_type)
-
-    def _simulate_realistic_web_search(
-        self, location_name: str, location_type: str
-    ) -> str:
-        """Provide realistic web search results WITHOUT fake URLs."""
-        # Provide realistic information but NO fake URLs
-        if "hotel" in location_type.lower():
-            return f"""
-WEB SEARCH RESULTS for {location_name}:
-{location_name} is a well-known hotel in London's {location_name.split()[0]} district.
-Opening hours: Check-in 3:00 PM, Check-out 11:00 AM
-Price range: £150-300 per night
-Duration: Overnight stay recommended
-Best time: Book 2-3 months in advance
-Accessibility: Wheelchair accessible rooms available
-Nearby: {location_name.split()[0]} Underground Station, local restaurants, shops
-Note: Official website and booking URLs not found in search results.
-"""
-        elif "museum" in location_type.lower():
-            return f"""
-WEB SEARCH RESULTS for {location_name}:
-{location_name} is a prominent museum in London featuring {location_name.split()[0]} exhibits.
-Opening hours: Tuesday-Sunday 10:00-18:00, Closed Mondays
-Price range: £15-25 admission
-Duration: 2-3 hours recommended
-Best time: Weekday mornings, avoid weekends
-Accessibility: Wheelchair accessible, audio guides available
-Nearby: {location_name.split()[0]} Station, cafes, gift shops
-Note: Official website and ticket URLs not found in search results.
-"""
-        else:
-            return f"""
-WEB SEARCH RESULTS for {location_name}:
-{location_name} is a popular {location_type} in London, known for its historical significance and tourist appeal.
-Opening hours: Daily 9:00-17:00
-Price range: Free to £10
-Duration: 1-2 hours
-Best time: Morning or late afternoon
-Accessibility: Wheelchair accessible
-Nearby: Public transport, restaurants, shops
-Note: Official website and information URLs not found in search results.
-"""
+            return None
 
     def _extract_with_openai(
         self, location: Dict[str, Any], web_content: str
@@ -349,7 +303,7 @@ Note: Official website and information URLs not found in search results.
 
         try:
             if self.client is None:
-                return self._create_mock_enriched_location(location)
+                raise ValueError("No OpenAI client available for extraction")
 
             # Use max_completion_tokens for o4 models, max_tokens for others
             if self.model.startswith("o4"):
@@ -388,7 +342,7 @@ Note: Official website and information URLs not found in search results.
 
         except Exception as e:
             print(f"    ⚠️ OpenAI extraction failed: {e}")
-            return self._create_mock_enriched_location(location)
+            raise
 
     def _get_extraction_system_prompt(self) -> str:
         """Get system prompt for information extraction."""
@@ -550,41 +504,6 @@ Return ONLY the JSON object, no additional text."""
         )
 
         return enriched
-
-    def _create_mock_enriched_location(
-        self, location: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Create mock enriched location for testing."""
-        return {
-            # Core fields
-            "name": f"Enriched {location.get('name', 'Test Location')}",
-            "type": location.get("type", "landmark"),
-            "latitude": 48.8566,  # Mock coordinates (Louvre)
-            "longitude": 2.3522,
-            # Standard fields
-            "address": "",
-            "tags": [location.get("type", "landmark"), "tourist-attraction"],
-            "neighborhood": "Central District",
-            "date_added": "",
-            "date_of_visit": "",
-            # AI-enhanced fields
-            "description": f"Mock enriched description for {location.get('name', 'test location')} - a popular tourist destination with historical significance.",
-            "official_website": "",  # No fake URLs
-            "booking_url": "",  # No fake URLs
-            "reviews_url": "",  # No fake URLs
-            "opening_hours": "Daily 9:00-18:00",
-            "price_range": "$$",
-            "duration_recommended": "2-3 hours",
-            "best_time_to_visit": "Morning or late afternoon",
-            "accessibility_info": "Wheelchair accessible main areas",
-            "nearby_attractions": ["Mock Attraction 1", "Mock Attraction 2"],
-            # Metadata fields
-            "data_sources": ["mock_enrichment"],
-            "confidence_score": 0.8,
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-            "validation_status": "mock_data",
-            "chunk_id": location.get("chunk_id", "test_chunk"),
-        }
 
     def get_retry_statistics(self) -> Dict[str, Any]:
         """
@@ -844,16 +763,10 @@ Return ONLY the JSON object, no additional text."""
                     )
 
                     # Return fallback enrichment
-                    if self.client is None:
-                        return self._create_mock_enriched_location(original_location)
-                    else:
-                        return self._add_minimal_enrichment(original_location)
+                    return self._add_minimal_enrichment(original_location)
 
         # Fallback return in case the loop doesn't handle all cases
-        if self.client is None:
-            return self._create_mock_enriched_location(original_location)
-        else:
-            return self._add_minimal_enrichment(original_location)
+        return self._add_minimal_enrichment(original_location)
 
     def _fix_json_response(
         self,
