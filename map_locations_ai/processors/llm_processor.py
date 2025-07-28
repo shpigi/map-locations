@@ -65,16 +65,28 @@ class LLMProcessor:
         user_message = self._format_extraction_prompt(chunk_data.text)
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": self.agent_prompt},
-                    {"role": "user", "content": user_message},
-                ],
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-                timeout=self.timeout,
-            )
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            if self.model.startswith("o4"):
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": self.agent_prompt},
+                        {"role": "user", "content": user_message},
+                    ],
+                    max_completion_tokens=self.max_tokens,
+                    timeout=self.timeout,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": self.agent_prompt},
+                        {"role": "user", "content": user_message},
+                    ],
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
+                    timeout=self.timeout,
+                )
 
             processing_time = time.time() - start_time
             processing_time_ms = processing_time * 1000

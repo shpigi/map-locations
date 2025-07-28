@@ -18,6 +18,7 @@ class Location(TypedDict, total=False):
         longitude: Longitude coordinate
 
     Standard Fields (optional):
+        address: Address of the location
         tags: List of tags for filtering
         neighborhood: Neighborhood or area name
         date_added: Date when location was added (YYYY-MM-DD format)
@@ -49,6 +50,7 @@ class Location(TypedDict, total=False):
     longitude: float
 
     # Standard optional fields
+    address: str
     tags: List[str]
     neighborhood: str
     date_added: str

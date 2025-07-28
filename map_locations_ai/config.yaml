@@ -2,7 +2,15 @@
 
 # LLM Settings
 llm:
-  model: "gpt-4o-mini"  # Can be changed to "gpt-4o" for production
+  # Model configurations for different processing steps
+  # You can specify different models for different steps to optimize cost/performance
+  models:
+    extraction: "gpt-4o"    # Model for initial location extraction (fast, cost-effective)
+    enrichment: "o4-mini"         # Model for location enrichment (more powerful for complex tasks)
+    geocoding: "o4-mini"     # Model for geocoding assistance (if needed)
+    deduplication: "gpt-4o" # Model for deduplication analysis (if needed)
+  # Default model (used when specific step model not specified)
+  model: "gpt-4o"  # Can be changed to "gpt-4o" for production
   temperature: 0.1      # Low temperature for consistent extraction
   max_tokens: 2000      # Sufficient for location extraction responses
   timeout: 120          # Increased timeout in seconds for API calls

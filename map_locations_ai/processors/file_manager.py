@@ -186,6 +186,47 @@ class FileManager:
 
         return str(filepath)
 
+    def save_location_yaml(
+        self, locations: List[Dict[str, Any]], stats: Dict[str, Any]
+    ) -> str:
+        """
+        Save Location-compliant locations to YAML file.
+
+        Args:
+            locations: List of Location-compliant locations
+            stats: Conversion statistics
+
+        Returns:
+            Path to the saved file
+        """
+        filename = "location_compliant_locations.yaml"
+        filepath = self.temp_dir / filename
+
+        # Prepare YAML data with metadata
+        yaml_data = {
+            "location_model_info": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "total_locations": len(locations),
+                "valid_locations": stats.get("valid_locations", 0),
+                "validation_rate": stats.get("validation_rate", 0),
+                "coordinate_coverage": stats.get("coordinate_coverage", 0),
+                "website_coverage": stats.get("website_coverage", 0),
+                "description_coverage": stats.get("description_coverage", 0),
+                "hours_coverage": stats.get("hours_coverage", 0),
+                "total_errors": stats.get("total_errors", 0),
+                "total_warnings": stats.get("total_warnings", 0),
+            },
+            "locations": locations,
+        }
+
+        # Save to YAML file
+        with open(filepath, "w", encoding="utf-8") as f:
+            yaml.dump(
+                yaml_data, f, default_flow_style=False, allow_unicode=True, indent=2
+            )
+
+        return str(filepath)
+
     def backup_file(self, filepath: str) -> str:
         """
         Create a backup of the specified file.

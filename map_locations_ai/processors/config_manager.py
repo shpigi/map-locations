@@ -13,16 +13,20 @@ import yaml
 class ConfigManager:
     """Centralized configuration management."""
 
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(
+        self, config_path: str = "config.yaml", input_filename: Optional[str] = None
+    ):
         """
         Initialize the configuration manager.
 
         Args:
             config_path: Path to the configuration file
+            input_filename: Input filename to use in output paths (optional)
         """
         self.config_path = config_path
         self.config = self.load_config(config_path)
         self.agent_prompt = self._load_agent_prompt()
+        self.input_filename = input_filename
 
     def load_config(self, config_path: str) -> Dict[str, Any]:
         """
@@ -127,6 +131,19 @@ class ConfigManager:
             Dictionary with LLM configuration
         """
         return dict(self.config["llm"])
+
+    def get_model_for_step(self, step: str) -> str:
+        """
+        Get the appropriate model for a specific processing step.
+
+        Args:
+            step: Processing step (extraction, enrichment, geocoding, deduplication)
+
+        Returns:
+            Model name for the step
+        """
+        models = self.config["llm"].get("models", {})
+        return str(models.get(step, self.config["llm"].get("model", "gpt-4o-mini")))
 
     def get_processing_config(self) -> Dict[str, Any]:
         """
@@ -253,7 +270,14 @@ class ConfigManager:
         Returns:
             Path object for temp directory
         """
-        return Path(self.config["output"]["temp_dir"])
+        base_temp_dir = Path(self.config["output"]["temp_dir"])
+
+        if self.input_filename:
+            # Extract filename without extension
+            input_name = Path(self.input_filename).stem
+            return base_temp_dir / input_name
+        else:
+            return base_temp_dir
 
     def get_trace_dir(self) -> Path:
         """
@@ -262,7 +286,14 @@ class ConfigManager:
         Returns:
             Path object for trace directory
         """
-        return Path(self.config["output"]["trace_dir"])
+        base_trace_dir = Path(self.config["output"]["trace_dir"])
+
+        if self.input_filename:
+            # Extract filename without extension
+            input_name = Path(self.input_filename).stem
+            return base_trace_dir / input_name
+        else:
+            return base_trace_dir
 
     def get_chunk_prefix(self) -> str:
         """
