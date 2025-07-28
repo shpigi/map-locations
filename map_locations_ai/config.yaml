@@ -28,11 +28,12 @@ output:
 
 # Deduplication Settings
 deduplication:
-  similarity_threshold: 0.70    # Minimum similarity score for duplicate detection (0.0-1.0)
-  name_weight: 0.4             # Weight for name similarity in scoring
-  type_weight: 0.2             # Weight for type matching in scoring
-  description_weight: 0.25     # Weight for description similarity in scoring
-  source_weight: 0.15          # Weight for source context similarity in scoring
+  similarity_threshold: 0.75    # Increased from 0.70 for more precision
+  name_weight: 0.35            # Reduced from 0.4 to balance with new factors
+  type_weight: 0.15            # Reduced from 0.2 to balance with new factors
+  description_weight: 0.35     # Increased from 0.25 for better content matching
+  address_weight: 0.10         # NEW: Weight for address similarity
+  source_weight: 0.05          # Reduced from 0.15 to balance with new factors
   merge_strategy:
     name: "highest_confidence"  # Strategy: "highest_confidence" or "longest"
     type: "most_specific"       # Strategy: "most_specific" or "highest_confidence"

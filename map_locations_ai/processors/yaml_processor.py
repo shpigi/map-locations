@@ -389,7 +389,6 @@ Fixed location:"""
                         },
                         {"role": "user", "content": fix_prompt},
                     ],
-                    temperature=0.1,
                     max_completion_tokens=500,
                     timeout=self.llm_config["timeout"],
                     calling_module="YAMLProcessor",
