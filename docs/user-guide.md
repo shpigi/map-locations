@@ -9,6 +9,7 @@ Complete guide for using the Map Locations CLI and library.
 - [Data Format](#data-format)
 - [CLI Usage](#cli-usage)
 - [Library Usage](#library-usage)
+- [AI Processing](#ai-processing)
 - [Export Formats](#export-formats)
 - [Map Features](#map-features)
 - [Tile Providers](#tile-providers)
@@ -89,6 +90,144 @@ map-locations locations.yaml --format html --output exports/locations.html
 
 You can easily import your exported KML files into [Google My Maps](https://www.google.com/maps/d/u/0/) for additional features. See the [Google My Maps Integration](#google-my-maps-integration) section below for detailed instructions.
 
+## AI Processing
+
+The Map Locations package includes powerful AI features for extracting locations from text and enhancing location data.
+
+### AI Location Extraction
+
+Extract locations from any text file using OpenAI's language models:
+
+```bash
+# Basic extraction
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml
+
+# Extract with URL processing
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --with-urls
+
+# Extract with deduplication
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --deduplicate
+
+# Complete workflow
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --with-urls --deduplicate
+```
+
+### AI Features
+
+#### Text Processing
+- **Chunked Processing**: Handles large files efficiently (100-line chunks with overlap)
+- **LLM Integration**: Uses OpenAI GPT-4o-mini for location extraction
+- **YAML Output**: Generates structured location data automatically
+- **Error Recovery**: Auto-fixes malformed responses and partial extraction
+
+#### URL Processing
+- **Web Scraping**: Extracts location info from web pages
+- **Content Cleaning**: Removes navigation/footer content for cleaner processing
+- **Rate Limiting**: Respectful web scraping with configurable delays
+- **Backup System**: Automatic backup creation and restoration
+
+#### Deduplication
+- **Smart Detection**: Multi-level similarity scoring (name, type, description)
+- **Confidence Merging**: Weighted strategies for combining duplicates
+- **Type Compatibility**: Understands related types (museum/gallery, etc.)
+- **Graph Clustering**: Efficient Union-Find algorithm for duplicate grouping
+
+### AI Configuration
+
+The AI features are configured via `map_locations_ai/config.yaml`:
+
+```yaml
+# LLM Settings
+llm:
+  model: "gpt-4o-mini"
+  temperature: 0.1
+  max_tokens: 2000
+  timeout: 120
+
+# Processing Settings
+processing:
+  chunk_size: 50
+  overlap_size: 10
+
+# Output Settings
+output:
+  temp_dir: "map_locations_ai/temp"
+  trace_dir: "map_locations_ai/trace"
+
+# Deduplication Settings
+deduplication:
+  similarity_threshold: 0.70
+  name_weight: 0.4
+  type_weight: 0.2
+  description_weight: 0.25
+  source_weight: 0.15
+```
+
+### AI Output Structure
+
+The AI pipeline generates several output files:
+
+```
+map_locations_ai/
+├── temp/chunk_001.yaml          # Individual chunk results
+├── temp/chunk_002.yaml
+├── temp/merged.yaml             # Combined results
+├── trace/trace_TIMESTAMP.json   # Individual LLM call traces
+└── trace/run_TIMESTAMP.json     # Complete run summary
+```
+
+### AI Data Format
+
+AI-extracted locations include additional fields:
+
+```yaml
+locations:
+  - name: "Location Name"
+    type: "landmark"
+    latitude: 48.8584
+    longitude: 2.2945
+    description: "AI-generated description"
+    source_text: "Exact text from input"
+    confidence: 0.8
+    is_url: false
+    url: ""
+    address: "Full address if available"
+    extraction_method: "llm"
+```
+
+### AI Processing Examples
+
+#### Extract from Travel Notes
+```bash
+# Process travel notes
+python map_locations_ai/pipeline.py travel_notes.txt --config map_locations_ai/config.yaml
+
+# Process with URL exploration
+python map_locations_ai/pipeline.py travel_notes.txt --config map_locations_ai/config.yaml --with-urls
+
+# Create map from extracted locations
+map-locations map_locations_ai/temp/merged.yaml --output travel_map.html
+```
+
+#### Extract from Web Content
+```bash
+# Process content with URLs
+python map_locations_ai/pipeline.py web_content.txt --config map_locations_ai/config.yaml --with-urls
+
+# Process with deduplication
+python map_locations_ai/pipeline.py web_content.txt --config map_locations_ai/config.yaml --deduplicate
+```
+
+#### Complete Workflow
+```bash
+# Extract, enhance, and deduplicate
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --with-urls --deduplicate
+
+# Create maps from results
+map-locations map_locations_ai/temp/merged.yaml --output ai_extracted_map.html
+map-locations map_locations_ai/temp/merged.yaml --format all --output exports/ai_locations
+```
+
 ## Data Format
 
 Each location in your YAML file should include:
@@ -103,6 +242,13 @@ Each location in your YAML file should include:
 | `neighborhood` | string | ❌ | Neighborhood or area |
 | `date_added` | string | ❌ | Date added to collection |
 | `date_of_visit` | string | ❌ | date of visit (use "YYYY-MM-DD") |
+| `description` | string | ❌ | AI-generated description |
+| `source_text` | string | ❌ | Exact text from AI extraction |
+| `confidence` | float | ❌ | AI confidence score (0.1-0.9) |
+| `is_url` | boolean | ❌ | Whether source is a URL |
+| `url` | string | ❌ | Source URL if applicable |
+| `address` | string | ❌ | Full address if available |
+| `extraction_method` | string | ❌ | How location was extracted |
 
 ### Example Location Entry
 
@@ -115,6 +261,13 @@ Each location in your YAML file should include:
   neighborhood: "2nd arrondissement"
   date_added: "2025-07-19"
   date_of_visit: "YYYY-MM-DD"
+  description: "Historic covered passage with glass roof"
+  source_text: "Passage du Grand Cerf - beautiful historic passage"
+  confidence: 0.85
+  is_url: false
+  url: ""
+  address: "145 rue Saint-Denis, 75002 Paris"
+  extraction_method: "llm"
 ```
 
 ## CLI Usage

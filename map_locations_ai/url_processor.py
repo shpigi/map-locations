@@ -171,12 +171,26 @@ Return JSON only:
 If not a specific location, return: {{"name": null}}"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.config["llm"]["model"],
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=500,
-            )
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            model = self.config["llm"]["model"]
+            if model.startswith("o4"):
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_completion_tokens=500,
+                    calling_module="URLProcessor",
+                    operation_type="url_extraction",
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=500,
+                    calling_module="URLProcessor",
+                    operation_type="url_extraction",
+                )
 
             result_text = response.choices[0].message.content
             if result_text is None:

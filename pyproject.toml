@@ -75,6 +75,7 @@ dev = [
 
 [project.scripts]
 map-locations = "map_locations.cli:main"
+map-locations-ai = "map_locations_ai.pipeline:main"
 
 [project.urls]
 Homepage = "https://github.com/shpigi/map-locations"

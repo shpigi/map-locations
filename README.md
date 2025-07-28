@@ -1,6 +1,6 @@
 # Map Locations
 
-A Python library and CLI tool for mapping locations with interactive filtering and visualization capabilities.
+A Python library and CLI tool for mapping locations with interactive filtering and visualization capabilities, plus AI-powered location extraction from text.
 
 [![CI](https://github.com/shpigi/map-locations/workflows/CI/badge.svg)](https://github.com/shpigi/map-locations/actions)
 [![Codecov](https://codecov.io/gh/shpigi/map-locations/branch/main/graph/badge.svg)](https://codecov.io/gh/shpigi/map-locations)
@@ -31,10 +31,23 @@ EOF
 map-locations locations.yaml --output my_map.html
 ```
 
+### AI-Powered Location Extraction
+```bash
+# Extract locations from text using AI
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml
+
+# Process with URL exploration
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --with-urls
+
+# Process with deduplication
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --deduplicate
+```
+
 ### Open the map in your browser and explore!
 
 ## ✨ Features
 
+### Core Mapping Features
 - 📍 **Interactive Maps**: Create beautiful, interactive maps using Folium
 - 🗺️ **Multiple Tile Providers**: Support for OpenStreetMap, Google Maps, and Google Satellite
 - 🏷️ **Tag-based Filtering**: Filter locations by tags and types
@@ -43,6 +56,14 @@ map-locations locations.yaml --output my_map.html
 - 📊 **Multiple Export Formats**: Export to KML, GeoJSON, HTML, JSON, CSV
 - 📁 **YAML Configuration**: Simple YAML format for location data
 - 🖥️ **CLI Interface**: Command-line tool for easy map generation
+
+### AI-Powered Features
+- 🤖 **AI Location Extraction**: Extract locations from text using OpenAI LLM
+- 🌐 **URL Processing**: Automatically extract location info from web pages
+- 🔄 **Smart Deduplication**: Intelligent duplicate detection and merging
+- 📈 **Confidence Scoring**: AI-generated confidence scores for extracted locations
+- 🔍 **Source Tracking**: Exact text spans and URLs preserved for debugging
+- 📝 **Comprehensive Tracing**: Complete logging of all AI operations
 
 ## 📖 Documentation
 
@@ -83,6 +104,21 @@ map-locations locations.yaml --tile-provider google_maps --output map.html
 map-locations locations.yaml --tile-provider google_satellite --output map.html
 ```
 
+### AI Processing
+```bash
+# Extract locations from text
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml
+
+# Process with URL exploration
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --with-urls
+
+# Process with deduplication
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --deduplicate
+
+# Complete workflow
+python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.yaml --with-urls --deduplicate
+```
+
 ### Python Library
 ```python
 from map_locations import load_locations_from_yaml, show_locations_grouped
@@ -110,11 +146,31 @@ show_locations_grouped(locations, map_filename="map.html")
 - **JSON**: Structured data export
 - **CSV**: Spreadsheet-compatible format
 
-## 🤖 AI Agent Support
+## 🤖 AI Features
 
-This package is designed to be AI-agent friendly with comprehensive type hints, clear function signatures, and utility functions for common operations.
+### Location Extraction
+- **Text Processing**: Extract locations from any text using OpenAI LLM
+- **Chunked Processing**: Handle large files efficiently (100-line chunks)
+- **YAML Output**: Generate structured location data automatically
+- **Error Recovery**: Auto-fix malformed responses and partial extraction
 
-See the **[AI Agent Guide](docs/ai-agent-guide.md)** for detailed documentation.
+### URL Processing
+- **Web Scraping**: Extract location info from web pages
+- **Content Cleaning**: Remove navigation/footer content for cleaner processing
+- **Rate Limiting**: Respectful web scraping with configurable delays
+- **Backup System**: Automatic backup creation and restoration
+
+### Deduplication
+- **Smart Detection**: Multi-level similarity scoring (name, type, description)
+- **Confidence Merging**: Weighted strategies for combining duplicates
+- **Type Compatibility**: Understands related types (museum/gallery, etc.)
+- **Graph Clustering**: Efficient Union-Find algorithm for duplicate grouping
+
+### Quality Assurance
+- **Confidence Scoring**: 0.1-0.9 range with source tie-back
+- **Comprehensive Tracing**: Complete logging of all operations
+- **Validation**: Required field checking and format validation
+- **Performance Monitoring**: Timing and memory usage tracking
 
 ## 🏗️ Project Structure
 
@@ -128,11 +184,18 @@ map_locations/                    # Main package
 │   │   └── formats.py           # YAML serialization
 │   └── __init__.py
 │
-map_locations_ai/                 # AI agent package (TBD)
+map_locations_ai/                 # AI processing package
 ├── map_locations_ai/
-│   ├── agent/                   # AI processing pipeline
-│   ├── interfaces/              # CLI and web interfaces
-│   └── utils/                   # AI utilities
+│   ├── pipeline.py              # Main AI processing pipeline
+│   ├── deduplicator.py          # Smart deduplication
+│   ├── url_processor.py         # URL processing
+│   ├── processors/              # Modular processing components
+│   │   ├── llm_processor.py     # OpenAI integration
+│   │   ├── yaml_processor.py    # YAML handling
+│   │   ├── enrichment_processor.py # Location enrichment
+│   │   └── ...                  # Other processors
+│   ├── config.yaml              # AI configuration
+│   └── agent_prompt.txt         # LLM prompts
 ```
 
 ## 🧪 Development
@@ -158,4 +221,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [Folium](https://python-visualization.github.io/folium/) for interactive maps
 - Uses [SimpleKML](https://simplekml.readthedocs.io/) for KML export
+- Powered by [OpenAI](https://openai.com/) for AI location extraction
 - Inspired by the historic passages of Paris

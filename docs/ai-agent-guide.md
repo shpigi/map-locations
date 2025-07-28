@@ -7,14 +7,14 @@ Complete guide for AI agents using the Map Locations package.
 - [Overview](#overview)
 - [Core Data Structure](#core-data-structure)
 - [Quick Start for AI Agents](#quick-start-for-ai-agents)
-- [Simplified Pipeline](#simplified-pipeline)
+- [AI Processing Pipeline](#ai-processing-pipeline)
 - [Data Validation](#data-validation)
 - [Error Handling](#error-handling)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-This package provides a simplified AI-agent friendly approach with direct OpenAI LLM integration, comprehensive tracing, and YAML-based data processing. The AI functionality is included as a module within the main `map-locations` package.
+This package provides a comprehensive AI-agent friendly approach with direct OpenAI LLM integration, modular processing components, comprehensive tracing, and YAML-based data processing. The AI functionality is included as a module within the main `map-locations` package.
 
 ## Core Data Structure
 
@@ -31,6 +31,13 @@ Location = {
     "neighborhood": str,    # Optional: Neighborhood or area name
     "date_added": str,      # Optional: Date when added (YYYY-MM-DD)
     "date_of_visit": str,   # Optional: Date of visit (YYYY-MM-DD)
+    "description": str,     # Optional: AI-generated description
+    "source_text": str,     # Optional: Exact text from AI extraction
+    "confidence": float,    # Optional: AI confidence score (0.1-0.9)
+    "is_url": bool,        # Optional: Whether source is a URL
+    "url": str,            # Optional: Source URL if applicable
+    "address": str,        # Optional: Full address if available
+    "extraction_method": str, # Optional: How location was extracted
 }
 ```
 
@@ -71,14 +78,25 @@ show_locations_grouped(restaurants, "restaurants_map.html")
 export_to_all_formats(locations, "exports/my_locations")
 ```
 
-## Simplified Pipeline
+## AI Processing Pipeline
 
-### Text Processing Pipeline
+### Modular Architecture
+
+The AI processing is built with a modular architecture for easy extension and maintenance:
+
 ```python
 from map_locations_ai.pipeline import LocationExtractionPipeline
+from map_locations_ai.processors import (
+    TextProcessor,
+    LLMProcessor,
+    YAMLProcessor,
+    TraceManager,
+    FileManager,
+    ConfigManager,
+)
 
 # Initialize pipeline
-pipeline = LocationExtractionPipeline("config.yaml")
+pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
 
 # Process text file
 result = pipeline.process_file("input.txt")
@@ -87,6 +105,43 @@ print(f"Extracted {result['total_locations']} locations")
 print(f"Processed {result['total_chunks']} chunks")
 print(f"Trace file: {result['trace_file']}")
 ```
+
+### Pipeline Components
+
+#### TextProcessor
+- **File Reading**: Reads and chunks text files
+- **Chunking**: 100-line chunks with 10-line overlap
+- **Line Tracking**: Preserves line numbers for debugging
+
+#### LLMProcessor
+- **OpenAI Integration**: Direct API calls to GPT-4o-mini
+- **Prompt Management**: Optimized prompts for location extraction
+- **Error Handling**: Comprehensive error recovery
+- **Rate Limiting**: Configurable API call delays
+
+#### YAMLProcessor
+- **YAML Generation**: Creates structured location data
+- **Auto-Fixing**: Handles malformed LLM responses
+- **Validation**: Required field checking
+- **Partial Recovery**: Extracts data from broken responses
+
+#### TraceManager
+- **Comprehensive Logging**: All operations logged immediately
+- **JSON Format**: Structured trace files
+- **Timing Information**: Performance metrics
+- **Error Capture**: Complete error context
+
+#### FileManager
+- **Backup System**: Automatic backup creation and restoration
+- **File I/O**: Safe file operations
+- **Cleanup**: Resource management
+- **Error Recovery**: Graceful failure handling
+
+#### ConfigManager
+- **Configuration Loading**: YAML configuration parsing
+- **Validation**: Config parameter validation
+- **Defaults**: Sensible default values
+- **Environment**: Environment variable support
 
 ### Pipeline Features
 
@@ -98,30 +153,40 @@ The `LocationExtractionPipeline` provides:
 - **Error Recovery**: Auto-fix malformed YAML responses
 - **Comprehensive Tracing**: Log all LLM calls for debugging
 - **Chunk Management**: Process large files in manageable chunks
+- **URL Processing**: Extract location info from web pages
+- **Deduplication**: Smart duplicate detection and merging
 
 ### Configuration
 ```yaml
-# config.yaml
+# map_locations_ai/config.yaml
 llm:
   model: "gpt-4o-mini"
   temperature: 0.1
   max_tokens: 2000
-  timeout: 30
+  timeout: 120
 
 processing:
-  chunk_size: 100
+  chunk_size: 50
   overlap_size: 10
 
 output:
-  temp_dir: "temp"
-  trace_dir: "trace"
+  temp_dir: "map_locations_ai/temp"
+  trace_dir: "map_locations_ai/trace"
+
+deduplication:
+  similarity_threshold: 0.70
+  name_weight: 0.4
+  type_weight: 0.2
+  description_weight: 0.25
+  source_weight: 0.15
 ```
 
 ### Output Structure
 ```
 map_locations_ai/
-├── temp/chunk_chunk_001.yaml    # Individual chunk results
-├── temp/chunk_chunk_002.yaml
+├── temp/chunk_001.yaml          # Individual chunk results
+├── temp/chunk_002.yaml
+├── temp/merged.yaml             # Combined results
 ├── trace/trace_TIMESTAMP.json   # Individual LLM call traces
 └── trace/run_TIMESTAMP.json     # Complete run summary
 ```
@@ -170,6 +235,11 @@ result = pipeline.process_file("input.txt")
 - `export_to_kml(locations: List[Location], output_path: str)`
 - `export_to_all_formats(locations: List[Location], base_path: str)`
 
+### AI Processing
+- `LocationExtractionPipeline(config_path: str)` - Main AI processing pipeline
+- `Deduplicator(config_path: str)` - Smart deduplication
+- `URLProcessor(config_path: str)` - URL processing and web scraping
+
 ## Common Workflows
 
 ### 1. Data Exploration
@@ -215,7 +285,28 @@ show_locations_grouped(food_locations, "food_map.html")
 show_locations_grouped(historic_sites, "historic_map.html")
 ```
 
-### 4. Complete Workflow
+### 4. AI Processing Workflow
+
+```python
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+# Initialize pipeline
+pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+
+# Process with URL exploration
+result = pipeline.process_file_with_urls("input.txt")
+print(f"Extracted {result['total_locations']} locations")
+
+# Process with deduplication
+result = pipeline.process_file_with_deduplication("input.txt")
+print(f"Final locations after deduplication: {result['total_locations']}")
+
+# Complete workflow
+result = pipeline.process_file_with_urls_and_deduplication("input.txt")
+print(f"Complete processing: {result['total_locations']} unique locations")
+```
+
+### 5. Complete Workflow
 
 ```python
 from map_locations import (
@@ -226,9 +317,14 @@ from map_locations import (
     show_locations_grouped,
     export_to_all_formats,
 )
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+# AI extraction
+pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+result = pipeline.process_file_with_urls_and_deduplication("input.txt")
 
 # Load and validate
-locations = load_locations_from_yaml("locations.yaml")
+locations = load_locations_from_yaml("map_locations_ai/temp/merged.yaml")
 issues = validate_location_data(locations)
 if issues['missing_required']:
     print("❌ Data has issues, please fix before proceeding")
@@ -298,6 +394,27 @@ except FileNotFoundError:
 except Exception as e:
     print(f"❌ Unexpected error: {e}")
     sys.exit(1)
+```
+
+### AI Processing Error Handling
+
+```python
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+def safe_ai_processing(input_file: str, config_file: str) -> Dict[str, Any]:
+    """Safely process text with AI extraction."""
+    try:
+        pipeline = LocationExtractionPipeline(config_file)
+        result = pipeline.process_file_with_urls_and_deduplication(input_file)
+
+        print(f"✅ Extracted {result['total_locations']} locations")
+        print(f"📊 Processed {result['total_chunks']} chunks")
+        print(f"📝 Trace file: {result['trace_file']}")
+
+        return result
+    except Exception as e:
+        print(f"❌ AI processing failed: {e}")
+        return {"error": str(e)}
 ```
 
 ### Graceful Degradation
@@ -399,6 +516,37 @@ show_locations_grouped(restaurant_locations, "restaurants_map.html")
 show_locations_grouped(historic_sites, "historic_sites_map.html")
 ```
 
+### 6. AI Processing Best Practices
+
+```python
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+def robust_ai_processing(input_file: str, config_file: str) -> Dict[str, Any]:
+    """Robust AI processing with comprehensive error handling."""
+    result = {"success": False, "output_files": [], "errors": []}
+
+    try:
+        # Initialize pipeline
+        pipeline = LocationExtractionPipeline(config_file)
+
+        # Process with all features
+        result_data = pipeline.process_file_with_urls_and_deduplication(input_file)
+
+        result["success"] = True
+        result["total_locations"] = result_data["total_locations"]
+        result["total_chunks"] = result_data["total_chunks"]
+        result["trace_file"] = result_data["trace_file"]
+        result["output_files"].append("map_locations_ai/temp/merged.yaml")
+
+        print(f"✅ Successfully extracted {result_data['total_locations']} locations")
+
+    except Exception as e:
+        result["errors"].append(f"AI processing error: {e}")
+        print(f"❌ AI processing failed: {e}")
+
+    return result
+```
+
 ## Advanced Patterns
 
 ### Batch Processing
@@ -478,4 +626,54 @@ def robust_location_processing(locations: List[Location]) -> Dict[str, Any]:
         result["errors"].append(f"Processing error: {e}")
 
     return result
+```
+
+### AI Pipeline Integration
+
+```python
+def complete_ai_workflow(input_file: str, config_file: str) -> Dict[str, Any]:
+    """Complete AI workflow from text to maps."""
+    workflow_result = {
+        "input_file": input_file,
+        "extraction_success": False,
+        "validation_success": False,
+        "mapping_success": False,
+        "output_files": [],
+        "errors": []
+    }
+
+    try:
+        # Step 1: AI Extraction
+        pipeline = LocationExtractionPipeline(config_file)
+        extraction_result = pipeline.process_file_with_urls_and_deduplication(input_file)
+        workflow_result["extraction_success"] = True
+        workflow_result["total_locations"] = extraction_result["total_locations"]
+
+        # Step 2: Load and Validate
+        locations = load_locations_from_yaml("map_locations_ai/temp/merged.yaml")
+        issues = validate_location_data(locations)
+        if not any(issues.values()):
+            workflow_result["validation_success"] = True
+
+        # Step 3: Create Maps
+        map_file = show_locations_grouped(locations, "ai_extracted_map.html")
+        workflow_result["mapping_success"] = True
+        workflow_result["output_files"].append(map_file)
+
+        # Step 4: Export
+        export_to_all_formats(locations, "exports/ai_locations")
+        workflow_result["output_files"].extend([
+            "exports/ai_locations.json",
+            "exports/ai_locations.csv",
+            "exports/ai_locations.geojson",
+            "exports/ai_locations.kml"
+        ])
+
+        print(f"✅ Complete workflow: {extraction_result['total_locations']} locations processed")
+
+    except Exception as e:
+        workflow_result["errors"].append(f"Workflow error: {e}")
+        print(f"❌ Workflow failed: {e}")
+
+    return workflow_result
 ```

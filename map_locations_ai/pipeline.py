@@ -7,12 +7,12 @@ Clean orchestration layer using modular processor components.
 import argparse
 import os
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 from openai import OpenAI
 
+# Try relative imports first (when run as module)
 try:
     from .deduplicator import LocationDeduplicator
     from .processors import (
@@ -31,23 +31,47 @@ try:
     from .processors.url_verifier import URLVerifier
     from .url_processor import URLProcessor
 except ImportError:
-    # Handle script execution
-    from map_locations_ai.deduplicator import LocationDeduplicator
-    from map_locations_ai.processors import (
-        ChunkData,
-        ConfigManager,
-        EnrichmentProcessor,
-        FileManager,
-        LLMProcessor,
-        ProcessingOptions,
-        TextProcessor,
-        TraceManager,
-        YAMLProcessor,
-    )
-    from map_locations_ai.processors.geocoding_service import GeocodingService
-    from map_locations_ai.processors.location_converter import LocationConverter
-    from map_locations_ai.processors.url_verifier import URLVerifier
-    from map_locations_ai.url_processor import URLProcessor
+    # Handle script execution or when run directly
+    try:
+        from map_locations_ai.deduplicator import LocationDeduplicator
+        from map_locations_ai.processors import (
+            ChunkData,
+            ConfigManager,
+            EnrichmentProcessor,
+            FileManager,
+            LLMProcessor,
+            ProcessingOptions,
+            TextProcessor,
+            TraceManager,
+            YAMLProcessor,
+        )
+        from map_locations_ai.processors.geocoding_service import GeocodingService
+        from map_locations_ai.processors.location_converter import LocationConverter
+        from map_locations_ai.processors.url_verifier import URLVerifier
+        from map_locations_ai.url_processor import URLProcessor
+    except ImportError:
+        # Add current directory to path for direct execution
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+
+        from map_locations_ai.deduplicator import LocationDeduplicator
+        from map_locations_ai.processors import (
+            ChunkData,
+            ConfigManager,
+            EnrichmentProcessor,
+            FileManager,
+            LLMProcessor,
+            ProcessingOptions,
+            TextProcessor,
+            TraceManager,
+            YAMLProcessor,
+        )
+        from map_locations_ai.processors.geocoding_service import GeocodingService
+        from map_locations_ai.processors.location_converter import LocationConverter
+        from map_locations_ai.processors.url_verifier import URLVerifier
+        from map_locations_ai.url_processor import URLProcessor
 
 
 class LocationExtractionPipeline:
@@ -68,7 +92,12 @@ class LocationExtractionPipeline:
             else:
                 raise ValueError("LAVI_OPENAI_KEY environment variable is required")
         else:
-            self.client = OpenAI(api_key=api_key)
+            # Create tracked OpenAI client (will use singleton usage tracker)
+            try:
+                from .processors.llm_processor import TrackedOpenAI
+            except ImportError:
+                from map_locations_ai.processors.llm_processor import TrackedOpenAI
+            self.client = TrackedOpenAI(api_key=api_key)
 
         # Initialize processors
         processing_config = self.config_manager.get_processing_config()
@@ -85,6 +114,7 @@ class LocationExtractionPipeline:
             temperature=llm_config["temperature"],
             max_tokens=llm_config["max_tokens"],
             timeout=llm_config["timeout"],
+            calling_module="LLMProcessor",
         )
 
         self.yaml_processor = YAMLProcessor(client=self.client, llm_config=llm_config)
@@ -124,6 +154,7 @@ class LocationExtractionPipeline:
                 temperature=enrichment_config["temperature"],
                 timeout=enrichment_config["timeout"],
                 trace_manager=self.trace_manager,
+                max_retries=enrichment_config.get("max_retries", 2),
             )
             # Initialize URL verifier
             self.url_verifier = URLVerifier(timeout=10, max_retries=3)
@@ -159,11 +190,18 @@ class LocationExtractionPipeline:
             options = ProcessingOptions()
 
         # Update config manager with input filename for dynamic paths
-        self.input_filename = Path(input_file).name
+        self.input_filename = os.path.basename(input_file)
         self.config_manager.input_filename = self.input_filename  # type: ignore
 
         # Re-setup directories with new paths
         self.config_manager.setup_directories()
+
+        # Initialize LLM usage tracker singleton with proper directory
+        try:
+            from .processors.llm_processor import LLMUsageTracker
+        except ImportError:
+            from map_locations_ai.processors.llm_processor import LLMUsageTracker
+        LLMUsageTracker.initialize(self.config_manager.get_temp_dir())
 
         # Reinitialize file and trace managers with new paths
         self.file_manager = FileManager(
@@ -332,6 +370,49 @@ class LocationExtractionPipeline:
                                 "locations_count": len(geocoded_locations),
                             },
                         )
+
+                        # Save final geocoded locations to YAML files
+                        print("\n💾 Saving final geocoded locations...")
+                        try:
+                            # Convert to Location model format
+                            location_model_locations = (
+                                self.location_converter.convert_to_location_model(
+                                    geocoded_locations
+                                )
+                            )
+
+                            # Get conversion statistics
+                            conversion_stats = (
+                                self.location_converter.get_conversion_statistics(
+                                    location_model_locations
+                                )
+                            )
+
+                            # Create updated stats for enriched file (combine enrichment and geocoding stats)
+                            stats = enrichment_result.get("stats", {})
+                            updated_stats = stats.copy()
+                            updated_stats.update(geocoding_stats)
+
+                            # Save enriched locations to file (overwrite previous version)
+                            enriched_file = self.file_manager.save_enriched_yaml(
+                                geocoded_locations, updated_stats
+                            )
+
+                            # Save Location-compliant data to separate file (overwrite previous version)
+                            location_file = self.file_manager.save_location_yaml(
+                                location_model_locations, conversion_stats  # type: ignore
+                            )
+
+                            # Update locations in memory with final geocoded versions
+                            self.locations_memory = location_model_locations  # type: ignore
+
+                            print(f"✅ Final locations saved to YAML files")
+                            print(f"   📄 Enriched: {enriched_file}")
+                            print(f"   📄 Location-compliant: {location_file}")
+
+                        except Exception as e:
+                            self.trace_manager.trace_error("final_save", str(e))
+                            print(f"❌ Error saving final locations: {e}")
                     except Exception as e:
                         self.trace_manager.trace_error("geocoding", str(e))
                         print(f"❌ Geocoding error: {e}")
@@ -371,6 +452,8 @@ class LocationExtractionPipeline:
         print(f"  📁 Chunk files: {len(chunk_files)}")
         print(f"  📍 Total locations: {len(self.locations_memory)}")
         print(f"  📋 Trace file: {os.path.basename(trace_file)}")
+        if LLMUsageTracker.get_instance():
+            print(f"  📊 LLM usage tracked in: llm_calls.csv")
 
         return {
             "input_file": input_file,
@@ -399,7 +482,7 @@ class LocationExtractionPipeline:
         total_urls = 0
 
         for chunk_file in chunk_files:
-            if self.url_processor.process_url_entries(Path(chunk_file)):
+            if self.url_processor.process_url_entries(os.path.basename(chunk_file)):
                 processed_count += 1
             # Count URLs in this chunk
             with open(chunk_file, "r", encoding="utf-8") as f:
@@ -469,12 +552,32 @@ class LocationExtractionPipeline:
         # Get enrichment statistics
         stats = self.enrichment_processor.get_enrichment_statistics(enriched_locations)
 
+        # Get retry statistics
+        retry_stats = self.enrichment_processor.get_retry_statistics()
+
+        # Report retry statistics if there were any retries
+        if retry_stats["total_retry_attempts"] > 0:
+            print(f"\n📊 Enrichment Retry Summary:")
+            print(
+                f"   🔄 {retry_stats['locations_with_retries']}/{retry_stats['total_locations_processed']} locations required retries"
+            )
+            print(
+                f"   📈 {retry_stats['successful_retries']}/{retry_stats['total_retry_attempts']} retry attempts succeeded"
+            )
+            if retry_stats["successful_retries"] > 0:
+                success_rate = (
+                    retry_stats["successful_retries"]
+                    / retry_stats["total_retry_attempts"]
+                ) * 100
+                print(f"   📊 Overall retry success rate: {success_rate:.1f}%")
+
         # Trace enrichment process
         self.trace_manager.trace_operation(
             "enrichment_complete",
             f"Enriched {len(enriched_locations)} locations",
             {
                 "enrichment_stats": stats,
+                "retry_stats": retry_stats,
                 "locations_count": len(enriched_locations),
                 "coordinate_coverage": stats["coordinate_coverage"],
                 "website_coverage": stats["website_coverage"],
@@ -531,6 +634,7 @@ class LocationExtractionPipeline:
             "location_file": location_file,
             "stats": stats,
             "conversion_stats": conversion_stats,
+            "retry_stats": retry_stats,
         }
 
     def _create_minimal_enrichment_result(self) -> Dict[str, Any]:

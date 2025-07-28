@@ -500,6 +500,8 @@ Respond with a JSON object:
                         {"role": "user", "content": prompt},
                     ],
                     max_completion_tokens=200,
+                    calling_module="LocationDeduplicator",
+                    operation_type="similarity_check",
                 )
             else:
                 response = self.llm_client.chat.completions.create(
@@ -513,6 +515,8 @@ Respond with a JSON object:
                     ],
                     max_tokens=200,
                     temperature=0.1,
+                    calling_module="LocationDeduplicator",
+                    operation_type="similarity_check",
                 )
 
             response_text = response.choices[0].message.content.strip()
@@ -597,6 +601,8 @@ Respond with a JSON object:
                         {"role": "user", "content": prompt},
                     ],
                     max_completion_tokens=300,
+                    calling_module="LocationDeduplicator",
+                    operation_type="group_validation",
                 )
             else:
                 response = self.llm_client.chat.completions.create(
@@ -610,6 +616,8 @@ Respond with a JSON object:
                     ],
                     max_tokens=300,
                     temperature=0.1,
+                    calling_module="LocationDeduplicator",
+                    operation_type="group_validation",
                 )
 
             response_text = response.choices[0].message.content.strip()

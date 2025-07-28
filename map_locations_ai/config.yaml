@@ -47,6 +47,7 @@ enrichment:
   max_searches_per_location: 3  # Maximum search operations per location
   temperature: 0.1             # Temperature for LLM calls
   timeout: 120                 # Timeout for LLM calls in seconds
+  max_retries: 2               # Maximum retries for JSON parsing failures
   priority_fields:             # Fields to prioritize during enrichment
     - "latitude"               # Geographic coordinates (critical)
     - "longitude"              # Geographic coordinates (critical)

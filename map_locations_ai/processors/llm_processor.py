@@ -4,14 +4,291 @@ LLM processing component for the Map Locations AI pipeline.
 Handles OpenAI LLM communication, response parsing, and error recovery.
 """
 
+import csv
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import yaml
 from openai import OpenAI
 
 from .models import ChunkData, LLMResult
+
+
+class LLMUsageTracker:
+    """Tracks LLM usage and logs to CSV file."""
+
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, output_dir: Optional[Path] = None):
+        """Singleton pattern - ensure only one instance exists."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, output_dir: Optional[Path] = None):
+        """
+        Initialize the LLM usage tracker.
+
+        Args:
+            output_dir: Directory to save the CSV file (only used on first initialization)
+        """
+        # Only initialize once
+        if not self._initialized and output_dir is not None:
+            self.output_dir = output_dir
+            self.csv_path = output_dir / "llm_calls.csv"
+            self._initialize_csv()
+            self._initialized = True
+        elif not self._initialized:
+            # Default initialization if no output_dir provided
+            from pathlib import Path
+
+            self.output_dir = Path("map_locations_ai/temp")
+            self.csv_path = self.output_dir / "llm_calls.csv"
+            self._initialize_csv()
+            self._initialized = True
+
+    @classmethod
+    def get_instance(cls) -> "LLMUsageTracker":
+        """Get the singleton instance."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def initialize(cls, output_dir: Path) -> "LLMUsageTracker":
+        """Initialize the singleton with a specific output directory."""
+        instance = cls(output_dir)
+        return instance
+
+    def _initialize_csv(self) -> None:
+        """Initialize the CSV file with headers if it doesn't exist."""
+        if not self.csv_path.exists():
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            with open(self.csv_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(
+                    [
+                        "timestamp",
+                        "calling_module",
+                        "model",
+                        "temperature",
+                        "max_tokens",
+                        "timeout",
+                        "input_tokens",
+                        "output_tokens",
+                        "total_tokens",
+                        "processing_time_ms",
+                        "success",
+                        "error_message",
+                        "input_length",
+                        "output_length",
+                        "retry_count",
+                        "operation_type",
+                    ]
+                )
+
+    def log_llm_call(
+        self,
+        calling_module: str,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        timeout: int,
+        input_tokens: Optional[int],
+        output_tokens: Optional[int],
+        total_tokens: Optional[int],
+        processing_time_ms: float,
+        success: bool,
+        error_message: Optional[str],
+        input_text: str,
+        output_text: str,
+        retry_count: int = 0,
+        operation_type: str = "extraction",
+    ) -> None:
+        """
+        Log an LLM call to the CSV file.
+
+        Args:
+            calling_module: Name of the module making the call
+            model: LLM model used
+            temperature: Temperature setting
+            max_tokens: Maximum tokens setting
+            timeout: Timeout setting
+            input_tokens: Number of input tokens (if available)
+            output_tokens: Number of output tokens (if available)
+            total_tokens: Total tokens used (if available)
+            processing_time_ms: Processing time in milliseconds
+            success: Whether the call was successful
+            error_message: Error message if failed
+            input_text: Input text sent to LLM
+            output_text: Output text received from LLM
+            retry_count: Number of retries attempted
+            operation_type: Type of operation (extraction, enrichment, etc.)
+        """
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    timestamp,
+                    calling_module,
+                    model,
+                    temperature,
+                    max_tokens,
+                    timeout,
+                    input_tokens if input_tokens is not None else "",
+                    output_tokens if output_tokens is not None else "",
+                    total_tokens if total_tokens is not None else "",
+                    processing_time_ms,
+                    success,
+                    error_message or "",
+                    len(input_text),
+                    len(output_text),
+                    retry_count,
+                    operation_type,
+                ]
+            )
+
+
+class TrackedChatCompletions:
+    """Wrapper for OpenAI chat completions with usage tracking."""
+
+    def __init__(self, client: "TrackedOpenAI", usage_tracker: LLMUsageTracker):
+        self.client = client
+        self.usage_tracker = usage_tracker
+        self._original_chat = client._original_chat
+
+    @property
+    def completions(self):
+        """Return tracked completions interface."""
+        return TrackedCompletions(self.client, self.usage_tracker)
+
+
+class TrackedCompletions:
+    """Wrapper for OpenAI completions with usage tracking."""
+
+    def __init__(self, client: "TrackedOpenAI", usage_tracker: LLMUsageTracker):
+        self.client = client
+        self.usage_tracker = usage_tracker
+        self._original_completions = client._original_chat.completions
+
+    def create(self, model: str, messages: List[Dict[str, str]], **kwargs):
+        """
+        Create a chat completion with usage tracking.
+
+        Args:
+            model: The model to use
+            messages: The messages to send
+            **kwargs: Additional arguments for the OpenAI API
+
+        Returns:
+            The OpenAI response
+
+        Raises:
+            Exception: If the API call fails
+        """
+        start_time = time.time()
+
+        # Extract tracking parameters from kwargs
+        calling_module = kwargs.pop("calling_module", "unknown")
+        operation_type = kwargs.pop("operation_type", "unknown")
+        retry_count = kwargs.pop("retry_count", 0)
+
+        # Extract standard parameters
+        temperature = kwargs.get("temperature", 0.1)
+        max_tokens = kwargs.get("max_tokens", 2000)
+        timeout = kwargs.get("timeout", 120)
+
+        try:
+            # Make the actual API call
+            response = self._original_completions.create(
+                model=model, messages=messages, **kwargs
+            )
+
+            # Extract token usage if available
+            input_tokens = None
+            output_tokens = None
+            total_tokens = None
+            if hasattr(response, "usage") and response.usage:
+                input_tokens = getattr(response.usage, "prompt_tokens", None)
+                output_tokens = getattr(response.usage, "completion_tokens", None)
+                total_tokens = getattr(response.usage, "total_tokens", None)
+
+            processing_time_ms = (time.time() - start_time) * 1000
+
+            # Extract response content
+            output_text = ""
+            if response.choices and response.choices[0].message:
+                output_text = response.choices[0].message.content or ""
+
+            # Log successful call
+            self.usage_tracker.log_llm_call(
+                calling_module=calling_module,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
+                processing_time_ms=processing_time_ms,
+                success=True,
+                error_message=None,
+                input_text=str(messages)[:1000],  # Truncate for logging
+                output_text=output_text[:1000],  # Truncate for logging
+                retry_count=retry_count,
+                operation_type=operation_type,
+            )
+
+            return response
+
+        except Exception as e:
+            processing_time_ms = (time.time() - start_time) * 1000
+
+            # Log failed call
+            self.usage_tracker.log_llm_call(
+                calling_module=calling_module,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout,
+                input_tokens=None,
+                output_tokens=None,
+                total_tokens=None,
+                processing_time_ms=processing_time_ms,
+                success=False,
+                error_message=str(e),
+                input_text=str(messages)[:1000],  # Truncate for logging
+                output_text="",
+                retry_count=retry_count,
+                operation_type=operation_type,
+            )
+            raise
+
+
+class TrackedOpenAI(OpenAI):
+    """OpenAI client with automatic usage tracking."""
+
+    def __init__(self, api_key: str, **kwargs):
+        """
+        Initialize the tracked OpenAI client.
+
+        Args:
+            api_key: OpenAI API key
+            **kwargs: Additional arguments for OpenAI client
+        """
+        super().__init__(api_key=api_key, **kwargs)
+        self.usage_tracker = LLMUsageTracker.get_instance()
+        self._original_chat = super().chat  # Store original chat method
+
+    @property
+    def chat(self):
+        """Return tracked chat completions wrapper."""
+        return TrackedChatCompletions(self, self.usage_tracker)
 
 
 class LLMProcessor:
@@ -25,6 +302,7 @@ class LLMProcessor:
         temperature: float = 0.1,
         max_tokens: int = 2000,
         timeout: int = 120,
+        calling_module: str = "LLMProcessor",
     ):
         """
         Initialize the LLM processor.
@@ -36,6 +314,7 @@ class LLMProcessor:
             temperature: Temperature setting for generation
             max_tokens: Maximum tokens in response
             timeout: Request timeout in seconds
+            calling_module: Name of the calling module for tracking
         """
         self.client = client
         self.agent_prompt = agent_prompt
@@ -43,6 +322,7 @@ class LLMProcessor:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.calling_module = calling_module
 
     def call_llm(self, chunk_data: ChunkData, retry_count: int = 0) -> LLMResult:
         """
@@ -75,6 +355,9 @@ class LLMProcessor:
                     ],
                     max_completion_tokens=self.max_tokens,
                     timeout=self.timeout,
+                    calling_module=self.calling_module,
+                    operation_type="extraction",
+                    retry_count=retry_count,
                 )
             else:
                 response = self.client.chat.completions.create(
@@ -86,6 +369,9 @@ class LLMProcessor:
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
                     timeout=self.timeout,
+                    calling_module=self.calling_module,
+                    operation_type="extraction",
+                    retry_count=retry_count,
                 )
 
             processing_time = time.time() - start_time
@@ -270,13 +556,29 @@ Fixed YAML:"""
 
             fix_start_time = time.time()
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": fix_prompt}],
-                temperature=0.1,  # Lower temperature for fixing
-                max_tokens=self.max_tokens,
-                timeout=self.timeout,
-            )
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            if self.model.startswith("o4"):
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    temperature=0.1,  # Lower temperature for fixing
+                    max_completion_tokens=self.max_tokens,
+                    timeout=self.timeout,
+                    calling_module=self.calling_module,
+                    operation_type="yaml_fix",
+                    retry_count=1,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    temperature=0.1,  # Lower temperature for fixing
+                    max_tokens=self.max_tokens,
+                    timeout=self.timeout,
+                    calling_module=self.calling_module,
+                    operation_type="yaml_fix",
+                    retry_count=1,
+                )
 
             fix_processing_time = time.time() - fix_start_time
             total_processing_time_ms = original_processing_time + (
