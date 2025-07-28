@@ -7,6 +7,7 @@ Complete guide to the YAML data format used by Map Locations.
 - [Overview](#overview)
 - [Required Fields](#required-fields)
 - [Optional Fields](#optional-fields)
+- [AI-Enhanced Fields](#ai-enhanced-fields)
 - [Examples](#examples)
 - [Validation Rules](#validation-rules)
 - [Best Practices](#best-practices)
@@ -97,6 +98,67 @@ Date when you visited the location.
 - `"2025-01-20"`
 - `"2024-12-25"`
 
+## AI-Enhanced Fields
+
+These fields are added by AI processing and provide additional context and metadata.
+
+### `description` (string)
+AI-generated description of the location.
+
+**Examples:**
+- `"Iconic iron lattice tower overlooking Paris"`
+- `"Historic covered passage with glass roof"`
+- `"Popular cafe known for its pastries"`
+
+### `source_text` (string)
+The exact text from the input that was used to extract this location.
+
+**Examples:**
+- `"Eiffel Tower - must see landmark in Paris"`
+- `"Passage du Grand Cerf - beautiful historic passage"`
+- `"Le Comptoir du Relais - great cafe for breakfast"`
+
+### `confidence` (float)
+AI confidence score for the extraction accuracy.
+
+**Range:** 0.1 to 0.9
+
+**Examples:**
+- `0.9` (high confidence)
+- `0.7` (medium confidence)
+- `0.3` (low confidence)
+
+### `is_url` (boolean)
+Whether the source of this location was a URL.
+
+**Examples:**
+- `true` (extracted from web page)
+- `false` (extracted from text)
+
+### `url` (string)
+The source URL if the location was extracted from a web page.
+
+**Examples:**
+- `"https://www.toureiffel.paris/"`
+- `"https://www.louvre.fr/"`
+- `""` (empty if not from URL)
+
+### `address` (string)
+Full address of the location if available.
+
+**Examples:**
+- `"Champ de Mars, 5 Avenue Anatole France, 75007 Paris"`
+- `"145 rue Saint-Denis, 75002 Paris"`
+- `"Central Park, New York, NY 10024"`
+
+### `extraction_method` (string)
+How the location was extracted.
+
+**Values:**
+- `"llm"` (extracted by AI language model)
+- `"manual"` (manually added)
+- `"url"` (extracted from URL)
+
 ## Examples
 
 ### Basic Location
@@ -123,6 +185,27 @@ locations:
     date_of_visit: "2025-01-20"
 ```
 
+### AI-Enhanced Location
+
+```yaml
+locations:
+  - name: "Eiffel Tower"
+    type: "landmark"
+    latitude: 48.8584
+    longitude: 2.2945
+    tags: ["historic", "tourist", "architecture"]
+    neighborhood: "7th arrondissement"
+    date_added: "2025-01-15"
+    date_of_visit: "2025-01-20"
+    description: "Iconic iron lattice tower overlooking Paris"
+    source_text: "Eiffel Tower - must see landmark in Paris"
+    confidence: 0.9
+    is_url: false
+    url: ""
+    address: "Champ de Mars, 5 Avenue Anatole France, 75007 Paris"
+    extraction_method: "llm"
+```
+
 ### Multiple Locations
 
 ```yaml
@@ -135,6 +218,13 @@ locations:
     neighborhood: "Upper East Side"
     date_added: "2025-01-10"
     date_of_visit: "2025-01-25"
+    description: "Large urban park in Manhattan"
+    source_text: "Central Park - great for walking and recreation"
+    confidence: 0.8
+    is_url: false
+    url: ""
+    address: "Central Park, New York, NY 10024"
+    extraction_method: "llm"
 
   - name: "Times Square"
     type: "landmark"
@@ -144,6 +234,13 @@ locations:
     neighborhood: "Midtown"
     date_added: "2025-01-10"
     date_of_visit: "2025-01-26"
+    description: "Famous intersection and entertainment hub"
+    source_text: "Times Square - bright lights and entertainment"
+    confidence: 0.85
+    is_url: false
+    url: ""
+    address: "Times Square, New York, NY 10036"
+    extraction_method: "llm"
 
   - name: "Brooklyn Bridge"
     type: "bridge"
@@ -153,6 +250,13 @@ locations:
     neighborhood: "Brooklyn"
     date_added: "2025-01-10"
     date_of_visit: "2025-01-27"
+    description: "Historic suspension bridge connecting Manhattan and Brooklyn"
+    source_text: "Brooklyn Bridge - iconic bridge with great views"
+    confidence: 0.9
+    is_url: false
+    url: ""
+    address: "Brooklyn Bridge, New York, NY"
+    extraction_method: "llm"
 ```
 
 ## Validation Rules
@@ -180,6 +284,13 @@ locations:
 - **Required**: Cannot be empty
 - **Case**: Case-sensitive
 - **Examples**: `"landmark"`, `"restaurant"`, `"museum"`
+
+### AI Field Validation
+
+- **Confidence**: Must be between 0.1 and 0.9
+- **is_url**: Must be boolean (true/false)
+- **extraction_method**: Must be one of: "llm", "manual", "url"
+- **URL format**: Must be valid URL format if provided
 
 ## Best Practices
 
@@ -269,6 +380,36 @@ locations:
     longitude: 2.3397
 ```
 
+### 7. AI-Enhanced Data Best Practices
+
+```yaml
+# Good - complete AI data
+- name: "Louvre Museum"
+  type: "museum"
+  latitude: 48.8606
+  longitude: 2.3376
+  description: "World's largest art museum"
+  source_text: "Louvre Museum - amazing art collection"
+  confidence: 0.95
+  is_url: false
+  url: ""
+  address: "Rue de Rivoli, 75001 Paris"
+  extraction_method: "llm"
+
+# Good - manual data
+- name: "Personal Favorite Cafe"
+  type: "cafe"
+  latitude: 48.8667
+  longitude: 2.3397
+  description: "My favorite spot for coffee"
+  source_text: "Personal recommendation"
+  confidence: 1.0
+  is_url: false
+  url: ""
+  address: ""
+  extraction_method: "manual"
+```
+
 ## Common Issues
 
 ### 1. Missing Required Fields
@@ -353,6 +494,28 @@ locations:
     longitude: 2.2950
 ```
 
+### 5. Invalid AI Fields
+
+```yaml
+# ❌ Invalid AI fields
+locations:
+  - name: "Test Location"
+    type: "landmark"
+    latitude: 48.8584
+    longitude: 2.2945
+    confidence: 1.5  # Should be 0.1-0.9
+    extraction_method: "invalid"  # Should be llm/manual/url
+
+# ✅ Valid AI fields
+locations:
+  - name: "Test Location"
+    type: "landmark"
+    latitude: 48.8584
+    longitude: 2.2945
+    confidence: 0.8
+    extraction_method: "llm"
+```
+
 ## File Structure
 
 ### Complete Example File
@@ -368,6 +531,13 @@ locations:
     neighborhood: "7th arrondissement"
     date_added: "2025-01-15"
     date_of_visit: "2025-01-20"
+    description: "Iconic iron lattice tower overlooking Paris"
+    source_text: "Eiffel Tower - must see landmark in Paris"
+    confidence: 0.9
+    is_url: false
+    url: ""
+    address: "Champ de Mars, 5 Avenue Anatole France, 75007 Paris"
+    extraction_method: "llm"
 
   - name: "Louvre Museum"
     type: "museum"
@@ -377,6 +547,13 @@ locations:
     neighborhood: "1st arrondissement"
     date_added: "2025-01-15"
     date_of_visit: "2025-01-21"
+    description: "World's largest art museum"
+    source_text: "Louvre Museum - amazing art collection"
+    confidence: 0.95
+    is_url: false
+    url: ""
+    address: "Rue de Rivoli, 75001 Paris"
+    extraction_method: "llm"
 
   - name: "Le Comptoir du Relais"
     type: "restaurant"
@@ -386,4 +563,11 @@ locations:
     neighborhood: "6th arrondissement"
     date_added: "2025-01-15"
     date_of_visit: "2025-01-22"
+    description: "Popular bistro known for traditional French cuisine"
+    source_text: "Le Comptoir du Relais - great French restaurant"
+    confidence: 0.85
+    is_url: false
+    url: ""
+    address: "9 Carrefour de l'Odéon, 75006 Paris"
+    extraction_method: "llm"
 ```

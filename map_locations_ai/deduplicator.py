@@ -22,9 +22,23 @@ class LocationDeduplicator:
     - False positive prevention (<5% target rate)
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize deduplicator with configuration."""
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        llm_client=None,
+        llm_model: str = "gpt-4o-mini",
+    ):
+        """
+        Initialize deduplicator with configuration.
+
+        Args:
+            config: Deduplication configuration
+            llm_client: Optional OpenAI client for LLM-assisted deduplication
+            llm_model: Model to use for LLM-assisted deduplication
+        """
         self.config = config or self._default_config()
+        self.llm_client = llm_client
+        self.llm_model = llm_model
         self.stats: Dict[str, Any] = {
             "processed": 0,
             "duplicates_found": 0,
@@ -36,11 +50,11 @@ class LocationDeduplicator:
     def _default_config(self) -> Dict[str, Any]:
         """Default deduplication configuration."""
         return {
-            "similarity_threshold": 0.75,  # Minimum similarity for duplicate detection
-            "name_weight": 0.4,  # Weight for name similarity
+            "similarity_threshold": 0.6,  # Lowered threshold to see LLM in action
+            "name_weight": 0.5,  # Increased weight for name similarity
             "type_weight": 0.2,  # Weight for type matching
-            "description_weight": 0.25,  # Weight for description similarity
-            "source_weight": 0.15,  # Weight for source context
+            "description_weight": 0.2,  # Reduced weight for description similarity
+            "source_weight": 0.1,  # Reduced weight for source context
             "merge_strategy": {
                 "name": "highest_confidence",
                 "type": "most_specific",
@@ -78,8 +92,26 @@ class LocationDeduplicator:
 
         for group_idx, group in enumerate(duplicate_groups):
             if len(group) > 1:
-                # Merge group members
+                # Get original locations for this group
                 original_locations = [locations[i] for i in group]
+
+                # LLM validation for high-confidence groups
+                should_merge = True
+                if len(group) >= 3:  # Validate larger groups with LLM
+                    should_merge = self._validate_duplicate_group_with_llm(
+                        original_locations
+                    )
+                    if not should_merge:
+                        print(
+                            f"    🤖 LLM rejected merge for group {group_idx + 1} ({len(group)} locations)"
+                        )
+                        # Add locations individually instead of merging
+                        for i in group:
+                            merged_locations.append(locations[i])
+                            processed_indices.add(i)
+                        continue
+
+                # Merge group members
                 merged_location = self._merge_location_group(original_locations)
                 merged_locations.append(merged_location)
                 processed_indices.update(group)
@@ -95,6 +127,7 @@ class LocationDeduplicator:
                         "merge_confidence": merged_location.get(
                             "deduplication", {}
                         ).get("merge_confidence", 0.0),
+                        "llm_validated": should_merge,
                         "original_locations": [
                             {
                                 "name": loc["name"],
@@ -177,7 +210,7 @@ class LocationDeduplicator:
         """
         score = 0.0
 
-        # Name similarity
+        # Name similarity (highest weight)
         name_sim = self._name_similarity(loc1["name"], loc2["name"])
         score += name_sim * float(self.config["name_weight"])
 
@@ -200,6 +233,18 @@ class LocationDeduplicator:
             loc1.get("source_text", ""), loc2.get("source_text", "")
         )
         score += source_sim * float(self.config["source_weight"])
+
+        # Bonus for high name similarity (even if other factors are low)
+        if name_sim >= 0.9:
+            score += 0.1  # Bonus for very similar names
+
+        # LLM-assisted similarity for borderline cases (expanded range)
+        if self.llm_client and 0.35 <= score <= 0.85:
+            llm_score = self._llm_similarity_check(loc1, loc2)
+            if llm_score > 0.7:  # LLM confirms they're similar
+                score += 0.25  # Stronger boost for LLM confirmation
+            elif llm_score < 0.3:  # LLM confirms they're different
+                score -= 0.2  # Stronger reduction for LLM rejection
 
         return min(score, 1.0)  # Allow perfect scores for exact matches
 
@@ -278,6 +323,14 @@ class LocationDeduplicator:
             "center": "centre",
             "theater": "theatre",
             "theatre": "theater",
+            # Handle common typos and variations
+            "marriot": "marriott",  # Common typo
+            "marriott": "marriott",
+            "warner bros": "warner brothers",
+            "warner brothers": "warner bros",
+            "studio tour": "studios",
+            "studios": "studio tour",
+            "studio": "studios",
             # French-English location name mappings
             "louvre museum": "musee du louvre",
             "musee du louvre": "louvre museum",
@@ -333,6 +386,261 @@ class LocationDeduplicator:
                 return True
 
         return False
+
+    def _format_location_for_llm(self, location: Dict[str, Any]) -> str:
+        """
+        Format location data comprehensively for LLM analysis.
+
+        Args:
+            location: Location dictionary
+
+        Returns:
+            Formatted string with all available location information
+        """
+        lines = []
+
+        # Core fields
+        lines.append(f"- Name: {location.get('name', 'Unknown')}")
+        lines.append(f"- Type: {location.get('type', 'Unknown')}")
+
+        # Address and coordinates
+        address = location.get("address", "")
+        if address:
+            lines.append(f"- Address: {address}")
+
+        lat = location.get("latitude", 0)
+        lon = location.get("longitude", 0)
+        if lat != 0 and lon != 0:
+            lines.append(f"- Coordinates: {lat}, {lon}")
+
+        # Description
+        description = location.get("description", "")
+        if description:
+            lines.append(f"- Description: {description}")
+
+        # Additional fields
+        neighborhood = location.get("neighborhood", "")
+        if neighborhood:
+            lines.append(f"- Neighborhood: {neighborhood}")
+
+        tags = location.get("tags", [])
+        if tags:
+            lines.append(f"- Tags: {', '.join(tags)}")
+
+        # Confidence and validation
+        confidence = location.get("confidence_score", location.get("confidence", 0))
+        if confidence:
+            lines.append(f"- Confidence: {confidence}")
+
+        validation_status = location.get("validation_status", "")
+        if validation_status:
+            lines.append(f"- Validation: {validation_status}")
+
+        # Data sources
+        data_sources = location.get("data_sources", [])
+        if data_sources:
+            lines.append(f"- Sources: {', '.join(data_sources)}")
+
+        # Additional metadata
+        opening_hours = location.get("opening_hours", "")
+        if opening_hours:
+            lines.append(f"- Hours: {opening_hours}")
+
+        price_range = location.get("price_range", "")
+        if price_range:
+            lines.append(f"- Price: {price_range}")
+
+        return "\n".join(lines)
+
+    def _llm_similarity_check(
+        self, loc1: Dict[str, Any], loc2: Dict[str, Any]
+    ) -> float:
+        """
+        Use LLM to check if two locations are semantically similar.
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        if not self.llm_client:
+            return 0.5  # Neutral score if no LLM available
+
+        try:
+            prompt = f"""You are a location deduplication expert. Analyze if these two locations are the same place.
+
+Location 1:
+{self._format_location_for_llm(loc1)}
+
+Location 2:
+{self._format_location_for_llm(loc2)}
+
+Are these the same location? Consider:
+1. Name variations, abbreviations, and alternative spellings
+2. Address differences (same place, different address format)
+3. Type variations (e.g., "museum" vs "gallery" for same place)
+4. Description differences (same place, different descriptions)
+5. Brand name variations and common naming patterns
+6. Geographic proximity and context
+
+Respond with a JSON object:
+{{
+    "are_same_location": true/false,
+    "confidence": 0.0-1.0,
+    "reasoning": "brief explanation"
+}}"""
+
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            if self.llm_model.startswith("o4"):
+                response = self.llm_client.chat.completions.create(
+                    model=self.llm_model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a location deduplication expert. Respond only with valid JSON.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_completion_tokens=200,
+                    calling_module="LocationDeduplicator",
+                    operation_type="similarity_check",
+                )
+            else:
+                response = self.llm_client.chat.completions.create(
+                    model=self.llm_model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a location deduplication expert. Respond only with valid JSON.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=200,
+                    temperature=0.1,
+                    calling_module="LocationDeduplicator",
+                    operation_type="similarity_check",
+                )
+
+            response_text = response.choices[0].message.content.strip()
+
+            # Try to parse JSON response
+            import json
+
+            try:
+                result = json.loads(response_text)
+                if result.get("are_same_location", False):
+                    return float(result.get("confidence", 0.5))
+                else:
+                    return 1.0 - float(
+                        result.get("confidence", 0.5)
+                    )  # Inverse for different locations
+            except json.JSONDecodeError:
+                # Fallback: look for keywords in response
+                response_lower = response_text.lower()
+                if "same" in response_lower or "duplicate" in response_lower:
+                    return 0.8
+                elif "different" in response_lower or "not same" in response_lower:
+                    return 0.2
+                else:
+                    return 0.5  # Neutral
+
+        except Exception as e:
+            print(f"    ⚠️ LLM similarity check failed: {e}")
+            return 0.5  # Neutral score on error
+
+    def _validate_duplicate_group_with_llm(
+        self, locations: List[Dict[str, Any]]
+    ) -> bool:
+        """
+        Use LLM to validate if a group of locations should be merged.
+
+        Returns:
+            True if LLM confirms they should be merged, False otherwise
+        """
+        if not self.llm_client or len(locations) < 2:
+            return True  # Default to merge if no LLM or single location
+
+        try:
+            # Create a summary of the locations
+            location_summary = []
+            for i, loc in enumerate(locations, 1):
+                summary = (
+                    f"{i}. {loc.get('name', 'Unknown')} ({loc.get('type', 'Unknown')})"
+                )
+                if loc.get("address"):
+                    summary += f" - {loc.get('address')}"
+                location_summary.append(summary)
+
+            prompt = f"""You are a location deduplication expert. Review this group of locations that were flagged as potential duplicates:
+
+{chr(10).join(location_summary)}
+
+Are these all the same location? Consider:
+- Name variations, abbreviations, and alternative spellings
+- Address format differences and geographic proximity
+- Type variations and category overlaps
+- Missing or incomplete information
+- Brand name variations and common naming patterns
+- Geographic context and regional naming conventions
+
+Respond with a JSON object:
+{{
+    "should_merge": true/false,
+    "confidence": 0.0-1.0,
+    "reasoning": "brief explanation",
+    "suggested_name": "best name for merged location"
+}}"""
+
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            if self.llm_model.startswith("o4"):
+                response = self.llm_client.chat.completions.create(
+                    model=self.llm_model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a location deduplication expert. Respond only with valid JSON.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_completion_tokens=300,
+                    calling_module="LocationDeduplicator",
+                    operation_type="group_validation",
+                )
+            else:
+                response = self.llm_client.chat.completions.create(
+                    model=self.llm_model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a location deduplication expert. Respond only with valid JSON.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=300,
+                    temperature=0.1,
+                    calling_module="LocationDeduplicator",
+                    operation_type="group_validation",
+                )
+
+            response_text = response.choices[0].message.content.strip()
+
+            # Try to parse JSON response
+            import json
+
+            try:
+                result = json.loads(response_text)
+                return bool(result.get("should_merge", True))  # Default to merge
+            except json.JSONDecodeError:
+                # Fallback: look for keywords in response
+                response_lower = response_text.lower()
+                if "merge" in response_lower or "same" in response_lower:
+                    return True
+                elif "different" in response_lower or "separate" in response_lower:
+                    return False
+                else:
+                    return True  # Default to merge
+
+        except Exception as e:
+            print(f"    ⚠️ LLM group validation failed: {e}")
+            return True  # Default to merge on error
 
     def _merge_location_group(self, locations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """

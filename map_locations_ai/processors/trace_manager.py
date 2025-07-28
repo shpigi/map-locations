@@ -26,78 +26,118 @@ class TraceManager:
         self.trace_dir = Path(trace_dir)
         self.config = config
         self.trace_data: List[Dict[str, Any]] = []
+        self.trace_file = None
 
         # Ensure trace directory exists
         self.trace_dir.mkdir(exist_ok=True)
+
+        # Create the trace file for this run
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"run_{timestamp}.json"
+        self.trace_file = self.trace_dir / filename
+
+        # Initialize the trace file with run info
+        self._initialize_trace_file()
+
+    def _initialize_trace_file(self) -> None:
+        """
+        Initialize the trace file with basic structure.
+        """
+        # Write header
+        with open(self.trace_file, "w", encoding="utf-8") as f:
+            f.write(f"# Trace file: {self.trace_file}\n")
+            f.write(f"# Started: {datetime.now(timezone.utc).isoformat()}\n")
+            f.write("# Format: timestamp|operation|message|data\n")
+            f.write("-" * 80 + "\n")
+
+    def _append_trace_entry(self, trace_entry: Dict[str, Any]) -> None:
+        """
+        Append a trace entry to the current trace file.
+
+        Args:
+            trace_entry: Trace entry to append
+        """
+        # Format: timestamp|operation|message|data
+        timestamp = trace_entry.get("timestamp", datetime.now(timezone.utc).isoformat())
+        operation = trace_entry.get("operation", "unknown")
+        message = trace_entry.get("message", "")
+        chunk_id = trace_entry.get("chunk_id", "")
+
+        # Simplify data to key=value format
+        data_parts = []
+        if "data" in trace_entry:
+            for key, value in trace_entry["data"].items():
+                if isinstance(value, (str, int, float, bool)):
+                    data_parts.append(f"{key}={value}")
+                else:
+                    data_parts.append(f"{key}=<complex>")
+
+        data_str = " ".join(data_parts) if data_parts else ""
+
+        # Write simple line format
+        with open(self.trace_file, "a", encoding="utf-8") as f:
+            line = f"{timestamp}|{operation}|{chunk_id}|{message}|{data_str}\n"
+            f.write(line)
 
     def trace_llm_call(
         self, chunk_data: ChunkData, llm_result: LLMResult, llm_config: Dict[str, Any]
     ) -> None:
         """
-        Add LLM call to trace data and write to file immediately.
+        Add LLM call to trace data.
 
         Args:
             chunk_data: The chunk that was processed
             llm_result: Result from LLM processing
             llm_config: LLM configuration used
         """
+        message = f"LLM call for chunk {chunk_data.id}"
+        data = {
+            "model": llm_config.get("model", "unknown"),
+            "success": llm_result.success,
+            "locations_count": (
+                len(llm_result.parsed_locations) if llm_result.success else 0
+            ),
+            "processing_time_ms": llm_result.processing_time_ms,
+        }
+        if llm_result.error:
+            data["error"] = str(llm_result.error)[:100]  # Truncate long errors
+
         trace_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "operation": "llm_call",
             "chunk_id": chunk_data.id,
-            "input": {
-                "chunk_text": (
-                    chunk_data.text[:500] + "..."
-                    if len(chunk_data.text) > 500
-                    else chunk_data.text
-                ),
-                "start_line": chunk_data.start_line,
-                "end_line": chunk_data.end_line,
-                "model": llm_config.get("model", "unknown"),
-                "temperature": llm_config.get("temperature", 0.1),
-            },
-            "output": {
-                "success": llm_result.success,
-                "raw_response": llm_result.raw_response,
-                "parsed_locations": llm_result.parsed_locations,
-                "processing_time_ms": llm_result.processing_time_ms,
-            },
-            "errors": [llm_result.error] if llm_result.error else [],
+            "message": message,
+            "data": data,
         }
 
         self.trace_data.append(trace_entry)
+        self._append_trace_entry(trace_entry)
 
-        # Write trace to file immediately
-        self._write_trace_entry(trace_entry)
-
-    def _write_trace_entry(self, trace_entry: Dict[str, Any]) -> None:
+    def trace_operation(
+        self, operation: str, message: str, data: Dict[str, Any]
+    ) -> None:
         """
-        Write a single trace entry to file immediately.
+        Add general operation to trace data.
 
         Args:
-            trace_entry: Single trace entry to write
+            operation: Name of the operation
+            message: Human-readable message
+            data: Additional data for the operation
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"trace_{timestamp}.json"
-        filepath = self.trace_dir / filename
-
-        # Create a simple trace entry with just this call
-        trace_log = {
-            "run_info": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "single_entry": True,
-                "chunk_id": trace_entry["chunk_id"],
-            },
-            "trace": trace_entry,
+        trace_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "chunk_id": f"{operation}_process",
+            "operation": operation,
+            "message": message,
+            "data": data,
         }
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(trace_log, f, indent=2, ensure_ascii=False)
-
-        print(f"Trace written to: {filepath}")
+        self.trace_data.append(trace_entry)
+        self._append_trace_entry(trace_entry)
 
     def save_trace_log(self, run_info: RunInfo) -> str:
         """
-        Save complete trace data to JSON file.
+        Add final run summary to the trace file.
 
         Args:
             run_info: Information about the processing run
@@ -105,25 +145,13 @@ class TraceManager:
         Returns:
             Path to the saved trace file
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"run_{timestamp}.json"
-        filepath = self.trace_dir / filename
+        # Add final summary line
+        summary_line = f"{datetime.now(timezone.utc).isoformat()}|summary|run_complete|Processing completed|input_file={run_info.input_file} total_chunks={run_info.total_chunks} total_locations={run_info.total_locations}\n"
 
-        trace_log = {
-            "run_info": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "input_file": run_info.input_file,
-                "total_chunks": run_info.total_chunks,
-                "total_locations": run_info.total_locations,
-                "config": run_info.config,
-            },
-            "traces": self.trace_data,
-        }
+        with open(self.trace_file, "a", encoding="utf-8") as f:
+            f.write(summary_line)
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(trace_log, f, indent=2, ensure_ascii=False)
-
-        return str(filepath)
+        return str(self.trace_file)
 
     def trace_url_processing(
         self, chunk_id: str, url_count: int, processing_result: Dict[str, Any]
@@ -136,19 +164,23 @@ class TraceManager:
             url_count: Number of URLs found
             processing_result: Result of URL processing
         """
+        message = f"URL processing for chunk {chunk_id}"
+        data = {
+            "url_count": url_count,
+            "processed_urls": processing_result.get("processed_urls", 0),
+            "total_urls": processing_result.get("total_urls", 0),
+        }
+
         trace_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "chunk_id": f"{chunk_id}_url_processing",
             "operation": "url_processing",
-            "input": {
-                "url_count": url_count,
-            },
-            "output": processing_result,
-            "errors": [],
+            "chunk_id": chunk_id,
+            "message": message,
+            "data": data,
         }
 
         self.trace_data.append(trace_entry)
-        self._write_trace_entry(trace_entry)
+        self._append_trace_entry(trace_entry)
 
     def trace_deduplication(
         self, original_count: int, deduplicated_count: int, stats: Dict[str, Any]
@@ -161,27 +193,29 @@ class TraceManager:
             deduplicated_count: Number of locations after deduplication
             stats: Deduplication statistics
         """
+        reduction_percentage = (
+            100 * (original_count - deduplicated_count) / original_count
+            if original_count > 0
+            else 0
+        )
+
+        message = f"Deduplication completed: {original_count} -> {deduplicated_count} locations"
+        data = {
+            "original_count": original_count,
+            "deduplicated_count": deduplicated_count,
+            "reduction_percentage": round(reduction_percentage, 1),
+        }
+
         trace_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "chunk_id": "deduplication_process",
             "operation": "deduplication",
-            "input": {
-                "original_count": original_count,
-            },
-            "output": {
-                "deduplicated_count": deduplicated_count,
-                "reduction_percentage": (
-                    100 * (original_count - deduplicated_count) / original_count
-                    if original_count > 0
-                    else 0
-                ),
-                "stats": stats,
-            },
-            "errors": [],
+            "chunk_id": "deduplication",
+            "message": message,
+            "data": data,
         }
 
         self.trace_data.append(trace_entry)
-        self._write_trace_entry(trace_entry)
+        self._append_trace_entry(trace_entry)
 
     def trace_enrichment(self, location_count: int, stats: Dict[str, Any]) -> None:
         """
@@ -191,26 +225,24 @@ class TraceManager:
             location_count: Number of locations processed
             stats: Enrichment statistics
         """
+        message = f"Enrichment completed: {location_count} locations processed"
+        data = {
+            "location_count": location_count,
+            "coordinate_coverage": round(stats.get("coordinate_coverage", 0), 1),
+            "website_coverage": round(stats.get("website_coverage", 0), 1),
+            "hours_coverage": round(stats.get("hours_coverage", 0), 1),
+        }
+
         trace_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "chunk_id": "enrichment_process",
             "operation": "enrichment",
-            "input": {
-                "location_count": location_count,
-            },
-            "output": {
-                "enriched_count": location_count,
-                "coordinate_coverage": stats.get("coordinate_coverage", 0),
-                "website_coverage": stats.get("website_coverage", 0),
-                "hours_coverage": stats.get("hours_coverage", 0),
-                "validation_statuses": stats.get("validation_statuses", {}),
-                "stats": stats,
-            },
-            "errors": [],
+            "chunk_id": "enrichment",
+            "message": message,
+            "data": data,
         }
 
         self.trace_data.append(trace_entry)
-        self._write_trace_entry(trace_entry)
+        self._append_trace_entry(trace_entry)
 
     def trace_error(
         self, operation: str, error: str, context: Optional[Dict[str, Any]] = None
@@ -223,17 +255,23 @@ class TraceManager:
             error: Error message
             context: Additional context information
         """
+        message = f"Error in {operation}: {error}"
+        data = {}
+        if context:
+            for key, value in context.items():
+                if isinstance(value, (str, int, float, bool)):
+                    data[key] = value
+
         trace_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "chunk_id": f"error_{operation}",
-            "operation": operation,
-            "input": context or {},
-            "output": {},
-            "errors": [error],
+            "operation": "error",
+            "chunk_id": operation,
+            "message": message,
+            "data": data,
         }
 
         self.trace_data.append(trace_entry)
-        self._write_trace_entry(trace_entry)
+        self._append_trace_entry(trace_entry)
 
     def get_trace_statistics(self) -> Dict[str, Any]:
         """

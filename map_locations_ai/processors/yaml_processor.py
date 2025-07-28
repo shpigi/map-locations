@@ -130,13 +130,28 @@ class YAMLProcessor:
 
             fix_start_time = time.time()
 
-            response = self.client.chat.completions.create(
-                model=self.llm_config["model"],
-                messages=[{"role": "user", "content": fix_prompt}],
-                temperature=0.1,  # Lower temperature for fixing
-                max_tokens=2000,
-                timeout=self.llm_config["timeout"],
-            )
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            model = self.llm_config["model"]
+            if model.startswith("o4"):
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    temperature=0.1,  # Lower temperature for fixing
+                    max_completion_tokens=2000,
+                    timeout=self.llm_config["timeout"],
+                    calling_module="YAMLProcessor",
+                    operation_type="yaml_fix",
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    temperature=0.1,  # Lower temperature for fixing
+                    max_tokens=2000,
+                    timeout=self.llm_config["timeout"],
+                    calling_module="YAMLProcessor",
+                    operation_type="yaml_fix",
+                )
 
             fix_processing_time = time.time() - fix_start_time
             total_processing_time_ms = original_processing_time + (
@@ -359,22 +374,46 @@ Fixed location:"""
                     "url": "",
                 }
 
-            response = self.client.chat.completions.create(
-                model=self.llm_config["model"],
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a YAML formatting expert. Fix malformed location data "
-                            "while preserving all information."
-                        ),
-                    },
-                    {"role": "user", "content": fix_prompt},
-                ],
-                temperature=0.1,
-                max_tokens=500,
-                timeout=self.llm_config["timeout"],
-            )
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            model = self.llm_config["model"]
+            if model.startswith("o4"):
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a YAML formatting expert. Fix malformed location data "
+                                "while preserving all information."
+                            ),
+                        },
+                        {"role": "user", "content": fix_prompt},
+                    ],
+                    temperature=0.1,
+                    max_completion_tokens=500,
+                    timeout=self.llm_config["timeout"],
+                    calling_module="YAMLProcessor",
+                    operation_type="location_fix",
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a YAML formatting expert. Fix malformed location data "
+                                "while preserving all information."
+                            ),
+                        },
+                        {"role": "user", "content": fix_prompt},
+                    ],
+                    temperature=0.1,
+                    max_tokens=500,
+                    timeout=self.llm_config["timeout"],
+                    calling_module="YAMLProcessor",
+                    operation_type="location_fix",
+                )
 
             fixed_response = response.choices[0].message.content
             if fixed_response is None:

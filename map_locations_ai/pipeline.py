@@ -7,12 +7,12 @@ Clean orchestration layer using modular processor components.
 import argparse
 import os
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 from openai import OpenAI
 
+# Try relative imports first (when run as module)
 try:
     from .deduplicator import LocationDeduplicator
     from .processors import (
@@ -26,22 +26,52 @@ try:
         TraceManager,
         YAMLProcessor,
     )
+    from .processors.geocoding_service import GeocodingService
+    from .processors.location_converter import LocationConverter
+    from .processors.url_verifier import URLVerifier
     from .url_processor import URLProcessor
 except ImportError:
-    # Handle script execution
-    from map_locations_ai.deduplicator import LocationDeduplicator
-    from map_locations_ai.processors import (
-        ChunkData,
-        ConfigManager,
-        EnrichmentProcessor,
-        FileManager,
-        LLMProcessor,
-        ProcessingOptions,
-        TextProcessor,
-        TraceManager,
-        YAMLProcessor,
-    )
-    from map_locations_ai.url_processor import URLProcessor
+    # Handle script execution or when run directly
+    try:
+        from map_locations_ai.deduplicator import LocationDeduplicator
+        from map_locations_ai.processors import (
+            ChunkData,
+            ConfigManager,
+            EnrichmentProcessor,
+            FileManager,
+            LLMProcessor,
+            ProcessingOptions,
+            TextProcessor,
+            TraceManager,
+            YAMLProcessor,
+        )
+        from map_locations_ai.processors.geocoding_service import GeocodingService
+        from map_locations_ai.processors.location_converter import LocationConverter
+        from map_locations_ai.processors.url_verifier import URLVerifier
+        from map_locations_ai.url_processor import URLProcessor
+    except ImportError:
+        # Add current directory to path for direct execution
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+
+        from map_locations_ai.deduplicator import LocationDeduplicator
+        from map_locations_ai.processors import (
+            ChunkData,
+            ConfigManager,
+            EnrichmentProcessor,
+            FileManager,
+            LLMProcessor,
+            ProcessingOptions,
+            TextProcessor,
+            TraceManager,
+            YAMLProcessor,
+        )
+        from map_locations_ai.processors.geocoding_service import GeocodingService
+        from map_locations_ai.processors.location_converter import LocationConverter
+        from map_locations_ai.processors.url_verifier import URLVerifier
+        from map_locations_ai.url_processor import URLProcessor
 
 
 class LocationExtractionPipeline:
@@ -49,8 +79,9 @@ class LocationExtractionPipeline:
 
     def __init__(self, config_path: str = "config.yaml"):
         """Initialize the pipeline with refactored components."""
-        # Initialize configuration
+        # Initialize configuration (will be updated with input filename later)
         self.config_manager = ConfigManager(config_path)
+        self.input_filename: Optional[str] = None
 
         # Set up OpenAI client
         api_key = os.getenv("LAVI_OPENAI_KEY")
@@ -61,7 +92,12 @@ class LocationExtractionPipeline:
             else:
                 raise ValueError("LAVI_OPENAI_KEY environment variable is required")
         else:
-            self.client = OpenAI(api_key=api_key)
+            # Create tracked OpenAI client (will use singleton usage tracker)
+            try:
+                from .processors.llm_processor import TrackedOpenAI
+            except ImportError:
+                from map_locations_ai.processors.llm_processor import TrackedOpenAI
+            self.client = TrackedOpenAI(api_key=api_key)
 
         # Initialize processors
         processing_config = self.config_manager.get_processing_config()
@@ -74,10 +110,11 @@ class LocationExtractionPipeline:
         self.llm_processor = LLMProcessor(
             client=self.client,
             agent_prompt=self.config_manager.get_agent_prompt(),
-            model=llm_config["model"],
+            model=self.config_manager.get_model_for_step("extraction"),
             temperature=llm_config["temperature"],
             max_tokens=llm_config["max_tokens"],
             timeout=llm_config["timeout"],
+            calling_module="LLMProcessor",
         )
 
         self.yaml_processor = YAMLProcessor(client=self.client, llm_config=llm_config)
@@ -96,28 +133,45 @@ class LocationExtractionPipeline:
         self.config_manager.setup_directories()
 
         # Initialize URL processor (only if client is available)
-        self.url_processor = None
+        self.url_processor: Optional[URLProcessor] = None
         if self.client is not None:
             self.url_processor = URLProcessor(
                 config=self.config_manager.get_full_config(), client=self.client
             )
 
         # Initialize enrichment processor (only if client is available)
-        self.enrichment_processor = None
+        self.enrichment_processor: Optional[EnrichmentProcessor] = None
+        self.url_verifier: Optional[URLVerifier] = None
+        self.geocoding_service: Optional[GeocodingService] = None
         if self.client is not None:
             enrichment_config = self.config_manager.get_enrichment_config()
             self.enrichment_processor = EnrichmentProcessor(
                 client=self.client,
-                model=enrichment_config["model"],
+                model=self.config_manager.get_model_for_step("enrichment"),
                 max_searches_per_location=enrichment_config[
                     "max_searches_per_location"
                 ],
                 temperature=enrichment_config["temperature"],
                 timeout=enrichment_config["timeout"],
+                trace_manager=self.trace_manager,
+                max_retries=enrichment_config.get("max_retries", 2),
+            )
+            # Initialize URL verifier
+            self.url_verifier = URLVerifier(timeout=10, max_retries=3)
+
+            # Initialize geocoding service
+            self.geocoding_service = GeocodingService(
+                timeout=10,
+                rate_limit_delay=1.0,
+                llm_client=self.client,
+                llm_model=self.config_manager.get_model_for_step("geocoding"),
             )
 
+        # Initialize location converter
+        self.location_converter = LocationConverter()
+
         # Memory for locations
-        self.locations_memory: List[Dict[str, Any]] = []
+        self.locations_memory: List[Dict[str, Any]] = []  # type: ignore
 
     def process_file(
         self, input_file: str, options: Optional[ProcessingOptions] = None
@@ -134,6 +188,30 @@ class LocationExtractionPipeline:
         """
         if options is None:
             options = ProcessingOptions()
+
+        # Update config manager with input filename for dynamic paths
+        self.input_filename = os.path.basename(input_file)
+        self.config_manager.input_filename = self.input_filename  # type: ignore
+
+        # Re-setup directories with new paths
+        self.config_manager.setup_directories()
+
+        # Initialize LLM usage tracker singleton with proper directory
+        try:
+            from .processors.llm_processor import LLMUsageTracker
+        except ImportError:
+            from map_locations_ai.processors.llm_processor import LLMUsageTracker
+        LLMUsageTracker.initialize(self.config_manager.get_temp_dir())
+
+        # Reinitialize file and trace managers with new paths
+        self.file_manager = FileManager(
+            temp_dir=self.config_manager.get_temp_dir(),
+            chunk_prefix=self.config_manager.get_chunk_prefix(),
+        )
+        self.trace_manager = TraceManager(
+            trace_dir=self.config_manager.get_trace_dir(),
+            config=self.config_manager.get_full_config(),
+        )
 
         print("=" * 50)
         print("PROCESSING FILE")
@@ -225,16 +303,132 @@ class LocationExtractionPipeline:
                 print(
                     f"✅ Enrichment complete: {enrichment_result['coordinate_coverage']:.1f}% locations have coordinates"
                 )
+
+                # Step 5: URL Verification (if available)
+                if self.url_verifier is not None and enrichment_result.get(
+                    "enriched_locations"
+                ):
+                    print("\n🔗 STEP 5: URL Verification")
+                    try:
+                        verified_locations = self.verify_urls(
+                            enrichment_result["enriched_locations"]
+                        )
+                        verification_stats = (
+                            self.url_verifier.get_verification_statistics(
+                                verified_locations
+                            )
+                        )
+                        print(
+                            f"✅ URL verification complete: {verification_stats['reachable_urls']}/{verification_stats['total_urls']} URLs reachable"
+                        )
+                        print(
+                            f"📊 Enrichment rate: {verification_stats['enrichment_rate']}%"
+                        )
+
+                        # Update enrichment result with verified locations
+                        enrichment_result["enriched_locations"] = verified_locations
+                        enrichment_result["verification_stats"] = verification_stats
+                    except Exception as e:
+                        self.trace_manager.trace_error("url_verification", str(e))
+                        print(f"❌ URL verification error: {e}")
+                else:
+                    print(
+                        "\n⏭️  STEP 5: URL verification skipped (no verifier or no enriched locations)"
+                    )
+
+                # Step 6: Geocoding (if available and coordinates are missing)
+                if self.geocoding_service is not None and enrichment_result.get(
+                    "enriched_locations"
+                ):
+                    print("\n📍 STEP 6: Geocoding")
+                    try:
+                        geocoded_locations = self.geocode_locations(
+                            enrichment_result["enriched_locations"]
+                        )
+                        geocoding_stats = (
+                            self.geocoding_service.get_geocoding_statistics(
+                                geocoded_locations
+                            )
+                        )
+                        print(
+                            f"✅ Geocoding complete: {geocoding_stats['geocoded_count']} locations geocoded"
+                        )
+                        print(
+                            f"📊 Coordinate coverage: {geocoding_stats['coordinate_coverage']}%"
+                        )
+
+                        # Update enrichment result with geocoded locations
+                        enrichment_result["enriched_locations"] = geocoded_locations
+                        enrichment_result["geocoding_stats"] = geocoding_stats
+
+                        # Write geocoded locations to trace
+                        self.trace_manager.trace_operation(
+                            "geocoding_complete",
+                            f"Geocoded {len(geocoded_locations)} locations",
+                            {
+                                "geocoding_stats": geocoding_stats,
+                                "locations_count": len(geocoded_locations),
+                            },
+                        )
+
+                        # Save final geocoded locations to YAML files
+                        print("\n💾 Saving final geocoded locations...")
+                        try:
+                            # Convert to Location model format
+                            location_model_locations = (
+                                self.location_converter.convert_to_location_model(
+                                    geocoded_locations
+                                )
+                            )
+
+                            # Get conversion statistics
+                            conversion_stats = (
+                                self.location_converter.get_conversion_statistics(
+                                    location_model_locations
+                                )
+                            )
+
+                            # Create updated stats for enriched file (combine enrichment and geocoding stats)
+                            stats = enrichment_result.get("stats", {})
+                            updated_stats = stats.copy()
+                            updated_stats.update(geocoding_stats)
+
+                            # Save enriched locations to file (overwrite previous version)
+                            enriched_file = self.file_manager.save_enriched_yaml(
+                                geocoded_locations, updated_stats
+                            )
+
+                            # Save Location-compliant data to separate file (overwrite previous version)
+                            location_file = self.file_manager.save_location_yaml(
+                                location_model_locations, conversion_stats  # type: ignore
+                            )
+
+                            # Update locations in memory with final geocoded versions
+                            self.locations_memory = location_model_locations  # type: ignore
+
+                            print(f"✅ Final locations saved to YAML files")
+                            print(f"   📄 Enriched: {enriched_file}")
+                            print(f"   📄 Location-compliant: {location_file}")
+
+                        except Exception as e:
+                            self.trace_manager.trace_error("final_save", str(e))
+                            print(f"❌ Error saving final locations: {e}")
+                    except Exception as e:
+                        self.trace_manager.trace_error("geocoding", str(e))
+                        print(f"❌ Geocoding error: {e}")
+                else:
+                    print(
+                        "\n⏭️  STEP 6: Geocoding skipped (no service or no enriched locations)"
+                    )
             except Exception as e:
                 self.trace_manager.trace_error("enrichment", str(e))
                 print(f"❌ Enrichment failed: {e}")
 
-        # Step 5: Deduplication (if requested)
+        # Step 7: Deduplication (if requested)
         dedup_result = None
         if options.deduplicate:
-            print(
-                f"\n🔄 STEP {'5' if options.enrichment_enabled else '4'}: Deduplication"
-            )
+            step_number = "7" if options.enrichment_enabled else "6"
+            print(f"\n🔄 STEP {step_number}: Deduplication")
             try:
                 dedup_result = self.deduplicate_locations()
                 print(
@@ -244,8 +438,9 @@ class LocationExtractionPipeline:
                 self.trace_manager.trace_error("deduplication", str(e))
                 print(f"❌ Deduplication failed: {e}")
 
-        # Step 6: Save trace log
-        print(f"\n📊 STEP {'6' if options.enrichment_enabled else '5'}: Save Results")
+        # Step 8: Save trace log
+        step_number = "8" if options.enrichment_enabled else "7"
+        print(f"\n📊 STEP {step_number}: Save Results")
         run_info = self.trace_manager.create_run_summary(
             input_file=input_file,
             total_chunks=len(chunks),
@@ -257,6 +452,8 @@ class LocationExtractionPipeline:
         print(f"  📁 Chunk files: {len(chunk_files)}")
         print(f"  📍 Total locations: {len(self.locations_memory)}")
         print(f"  📋 Trace file: {os.path.basename(trace_file)}")
+        if LLMUsageTracker.get_instance():
+            print(f"  📊 LLM usage tracked in: llm_calls.csv")
 
         return {
             "input_file": input_file,
@@ -285,23 +482,41 @@ class LocationExtractionPipeline:
         total_urls = 0
 
         for chunk_file in chunk_files:
-            if self.url_processor.process_url_entries(Path(chunk_file)):
+            if self.url_processor.process_url_entries(os.path.basename(chunk_file)):
                 processed_count += 1
-                # Count URLs in this chunk
-                with open(chunk_file, "r", encoding="utf-8") as f:
-                    chunk_data = yaml.safe_load(f)
-                    url_entries = [
-                        loc
-                        for loc in chunk_data["locations"]
-                        if loc.get("is_url", False)
-                    ]
-                    total_urls += len(url_entries)
+            # Count URLs in this chunk
+            with open(chunk_file, "r", encoding="utf-8") as f:
+                chunk_data = yaml.safe_load(f)
+                url_entries = [
+                    loc for loc in chunk_data["locations"] if loc.get("is_url", False)
+                ]
+                total_urls += len(url_entries)
 
         return {
             "processed_chunks": processed_count,
             "total_urls": total_urls,
             "processed_urls": total_urls,
         }
+
+    def verify_urls(self, locations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Verify URLs in locations and enrich with content from reachable URLs."""
+        if self.url_verifier is None:
+            print("⚠️ URL verification not available (no verifier)")
+            return locations
+
+        print(f"🔗 Verifying URLs for {len(locations)} locations...")
+        return self.url_verifier.verify_and_enrich_urls(locations)
+
+    def geocode_locations(
+        self, locations: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Geocode locations that are missing coordinates."""
+        if self.geocoding_service is None:
+            print("⚠️ Geocoding not available (no service)")
+            return locations
+
+        print(f"📍 Geocoding {len(locations)} locations...")
+        return self.geocoding_service.geocode_locations(locations)
 
     def enrich_locations(self) -> Dict[str, Any]:
         """Enrich all locations with comprehensive data."""
@@ -337,23 +552,89 @@ class LocationExtractionPipeline:
         # Get enrichment statistics
         stats = self.enrichment_processor.get_enrichment_statistics(enriched_locations)
 
+        # Get retry statistics
+        retry_stats = self.enrichment_processor.get_retry_statistics()
+
+        # Report retry statistics if there were any retries
+        if retry_stats["total_retry_attempts"] > 0:
+            print(f"\n📊 Enrichment Retry Summary:")
+            print(
+                f"   🔄 {retry_stats['locations_with_retries']}/{retry_stats['total_locations_processed']} locations required retries"
+            )
+            print(
+                f"   📈 {retry_stats['successful_retries']}/{retry_stats['total_retry_attempts']} retry attempts succeeded"
+            )
+            if retry_stats["successful_retries"] > 0:
+                success_rate = (
+                    retry_stats["successful_retries"]
+                    / retry_stats["total_retry_attempts"]
+                ) * 100
+                print(f"   📊 Overall retry success rate: {success_rate:.1f}%")
+
+        # Trace enrichment process
+        self.trace_manager.trace_operation(
+            "enrichment_complete",
+            f"Enriched {len(enriched_locations)} locations",
+            {
+                "enrichment_stats": stats,
+                "retry_stats": retry_stats,
+                "locations_count": len(enriched_locations),
+                "coordinate_coverage": stats["coordinate_coverage"],
+                "website_coverage": stats["website_coverage"],
+                "hours_coverage": stats["hours_coverage"],
+            },
+        )
+
+        # Convert to Location model format
+        location_model_locations = self.location_converter.convert_to_location_model(
+            enriched_locations
+        )
+
+        # Get conversion statistics
+        conversion_stats = self.location_converter.get_conversion_statistics(
+            location_model_locations
+        )
+
         # Save enriched locations to file
         enriched_file = self.file_manager.save_enriched_yaml(enriched_locations, stats)
 
-        # Update locations in memory with enriched versions
-        self.locations_memory = enriched_locations
+        # Save Location-compliant data to separate file
+        location_file = self.file_manager.save_location_yaml(
+            location_model_locations, conversion_stats  # type: ignore
+        )
+
+        # Update locations in memory with Location-compliant versions
+        self.locations_memory = location_model_locations  # type: ignore
+
+        # Trace location conversion
+        self.trace_manager.trace_operation(
+            "location_conversion_complete",
+            f"Converted {len(location_model_locations)} locations to Location model",
+            {
+                "conversion_stats": conversion_stats,
+                "location_yaml_path": location_file,
+                "locations_count": len(location_model_locations),
+                "validation_rate": conversion_stats["validation_rate"],
+                "coordinate_coverage": conversion_stats["coordinate_coverage"],
+            },
+        )
 
         # Trace enrichment
         self.trace_manager.trace_enrichment(len(self.locations_memory), stats)
 
         return {
-            "total_locations": len(enriched_locations),
-            "enriched_locations": len(enriched_locations),
+            "total_locations": len(location_model_locations),
+            "enriched_locations": enriched_locations,  # Return the actual list, not the count
+            "location_compliant_locations": location_model_locations,  # Return the actual list, not the count
             "coordinate_coverage": stats["coordinate_coverage"],
             "website_coverage": stats["website_coverage"],
             "hours_coverage": stats["hours_coverage"],
+            "validation_rate": conversion_stats["validation_rate"],
             "output_file": enriched_file,
+            "location_file": location_file,
             "stats": stats,
+            "conversion_stats": conversion_stats,
+            "retry_stats": retry_stats,
         }
 
     def _create_minimal_enrichment_result(self) -> Dict[str, Any]:
@@ -378,7 +659,11 @@ class LocationExtractionPipeline:
 
         # Initialize deduplicator
         dedup_config = self.config_manager.get_deduplication_config()
-        deduplicator = LocationDeduplicator(dedup_config)
+        deduplicator = LocationDeduplicator(
+            config=dedup_config,
+            llm_client=self.client,
+            llm_model=self.config_manager.get_model_for_step("deduplication"),
+        )
 
         # Perform deduplication
         deduplicated_locations = deduplicator.deduplicate_locations(

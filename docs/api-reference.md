@@ -10,6 +10,7 @@ Complete API documentation for the Map Locations package.
 - [Filtering](#filtering)
 - [Visualization](#visualization)
 - [Export Functions](#export-functions)
+- [AI Processing](#ai-processing)
 - [Data Models](#data-models)
 
 ## Core Functions
@@ -384,6 +385,93 @@ files = export_to_all_formats(locations, "exports/my_locations")
 print(f"Exported {len(files)} files")
 ```
 
+## AI Processing
+
+The AI processing functions are available through the `map_locations_ai` module.
+
+### `LocationExtractionPipeline`
+
+Main AI processing pipeline for extracting locations from text.
+
+**Parameters:**
+- `config_path` (str): Path to configuration file
+
+**Methods:**
+- `process_file(input_file: str) -> Dict[str, Any]`: Process a text file
+- `process_file_with_urls(input_file: str) -> Dict[str, Any]`: Process with URL exploration
+- `process_file_with_deduplication(input_file: str) -> Dict[str, Any]`: Process with deduplication
+
+**Example:**
+```python
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+# Initialize pipeline
+pipeline = LocationExtractionPipeline("map_locations_ai/config.yaml")
+
+# Process text file
+result = pipeline.process_file("input.txt")
+print(f"Extracted {result['total_locations']} locations")
+
+# Process with URL exploration
+result = pipeline.process_file_with_urls("input.txt")
+print(f"Processed {result['total_chunks']} chunks")
+
+# Process with deduplication
+result = pipeline.process_file_with_deduplication("input.txt")
+print(f"Final locations after deduplication: {result['total_locations']}")
+```
+
+### `Deduplicator`
+
+Smart deduplication for location data.
+
+**Parameters:**
+- `config_path` (str): Path to configuration file
+
+**Methods:**
+- `deduplicate_locations(locations: List[Location]) -> List[Location]`: Remove duplicates
+- `find_duplicates(locations: List[Location]) -> List[List[int]]`: Find duplicate groups
+- `merge_locations(location1: Location, location2: Location) -> Location`: Merge two locations
+
+**Example:**
+```python
+from map_locations_ai.deduplicator import Deduplicator
+
+# Initialize deduplicator
+deduplicator = Deduplicator("map_locations_ai/config.yaml")
+
+# Deduplicate locations
+unique_locations = deduplicator.deduplicate_locations(locations)
+print(f"Reduced from {len(locations)} to {len(unique_locations)} locations")
+```
+
+### `URLProcessor`
+
+Process URLs to extract location information.
+
+**Parameters:**
+- `config_path` (str): Path to configuration file
+
+**Methods:**
+- `process_urls_in_chunks() -> None`: Process URLs in existing chunks
+- `extract_from_url(url: str) -> Dict[str, Any]`: Extract location info from URL
+- `clean_web_content(content: str) -> str`: Clean web page content
+
+**Example:**
+```python
+from map_locations_ai.url_processor import URLProcessor
+
+# Initialize URL processor
+url_processor = URLProcessor("map_locations_ai/config.yaml")
+
+# Process URLs in chunks
+url_processor.process_urls_in_chunks()
+
+# Extract from specific URL
+info = url_processor.extract_from_url("https://example.com/location")
+print(f"Extracted: {info['name']}")
+```
+
 ## Data Models
 
 ### `Location` (TypedDict)
@@ -399,6 +487,13 @@ Location data structure.
 - `neighborhood` (str): Neighborhood or area name (optional)
 - `date_added` (str): Date when added to collection (optional, YYYY-MM-DD)
 - `date_of_visit` (str): Date of visit (optional, YYYY-MM-DD)
+- `description` (str): AI-generated description (optional)
+- `source_text` (str): Exact text from AI extraction (optional)
+- `confidence` (float): AI confidence score 0.1-0.9 (optional)
+- `is_url` (bool): Whether source is a URL (optional)
+- `url` (str): Source URL if applicable (optional)
+- `address` (str): Full address if available (optional)
+- `extraction_method` (str): How location was extracted (optional)
 
 **Example:**
 ```python
@@ -412,7 +507,14 @@ location: Location = {
     "tags": ["historic", "tourist"],
     "neighborhood": "7th arrondissement",
     "date_added": "2025-01-15",
-    "date_of_visit": "2025-01-20"
+    "date_of_visit": "2025-01-20",
+    "description": "Iconic iron lattice tower",
+    "source_text": "Eiffel Tower - must see landmark",
+    "confidence": 0.9,
+    "is_url": False,
+    "url": "",
+    "address": "Champ de Mars, 5 Avenue Anatole France, 75007 Paris",
+    "extraction_method": "llm"
 }
 ```
 
@@ -528,4 +630,25 @@ def create_report(locations: List[Location]) -> str:
     """Create a human-readable report."""
     summary = get_location_summary(locations)
     return f"Report: {summary['total_count']} locations, {len(summary['types'])} types"
+```
+
+### 5. AI Processing Best Practices
+
+```python
+from map_locations_ai.pipeline import LocationExtractionPipeline
+
+def process_with_ai(input_file: str, config_file: str) -> Dict[str, Any]:
+    """Process text with AI extraction."""
+    try:
+        pipeline = LocationExtractionPipeline(config_file)
+        result = pipeline.process_file_with_urls(input_file)
+
+        print(f"✅ Extracted {result['total_locations']} locations")
+        print(f"📊 Processed {result['total_chunks']} chunks")
+        print(f"📝 Trace file: {result['trace_file']}")
+
+        return result
+    except Exception as e:
+        print(f"❌ AI processing failed: {e}")
+        return {"error": str(e)}
 ```
