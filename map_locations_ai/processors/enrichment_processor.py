@@ -900,9 +900,7 @@ Fixed JSON:"""
 
         try:
             # Use max_completion_tokens for o4 models, max_tokens for others
-            print(f"    🔍 Debug: Using model '{self.model}' for JSON fix")
             if self.model.startswith("o4"):
-                print(f"    🔍 Debug: Using max_completion_tokens for o4 model")
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": fix_prompt}],
@@ -912,7 +910,6 @@ Fixed JSON:"""
                     operation_type="json_fix",
                 )
             else:
-                print(f"    🔍 Debug: Using max_tokens for non-o4 model")
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": fix_prompt}],
