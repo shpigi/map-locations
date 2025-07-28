@@ -177,7 +177,6 @@ If not a specific location, return: {{"name": null}}"""
                 response = self.client.chat.completions.create(
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
-                    temperature=0.1,
                     max_completion_tokens=500,
                     calling_module="URLProcessor",
                     operation_type="url_extraction",

@@ -347,7 +347,7 @@ Note: Official website and information URLs not found in search results.
                         },
                         {"role": "user", "content": prompt},
                     ],
-                    max_completion_tokens=2000,
+                    max_completion_tokens=4000,
                     timeout=self.timeout,
                     calling_module="EnrichmentProcessor",
                     operation_type="enrichment",
@@ -363,7 +363,7 @@ Note: Official website and information URLs not found in search results.
                         {"role": "user", "content": prompt},
                     ],
                     temperature=self.temperature,
-                    max_tokens=2000,
+                    max_tokens=4000,
                     timeout=self.timeout,
                     calling_module="EnrichmentProcessor",
                     operation_type="enrichment",
@@ -379,6 +379,8 @@ Note: Official website and information URLs not found in search results.
         """Get system prompt for information extraction."""
         return """You are a location data extraction specialist. Your task is to extract structured information about locations from web content.
 
+CRITICAL: You must return ONLY valid JSON. Do not include any explanatory text, markdown formatting, or additional content outside the JSON object.
+
 Given web content about a location, extract the following information and return it as a valid JSON object that matches the Location model:
 
 {
@@ -391,17 +393,17 @@ Given web content about a location, extract the following information and return
     "official_website": "https://full-url-here.com",
     "booking_url": "https://full-booking-url.com",
     "reviews_url": "https://full-reviews-url.com",
-    "opening_hours": "Daily 9:00-18:00",
-    "price_range": "$",
-    "duration_recommended": "2-3 hours",
+    "opening_hours": "real opening hours as text",
+    "price_range": "in $",
+    "duration_recommended": "the number of hours as a float)",
     "best_time_to_visit": "Morning or late afternoon",
     "accessibility_info": "Wheelchair accessible",
     "nearby_attractions": ["Attraction 1", "Attraction 2"],
     "neighborhood": "Area name",
     "tags": ["tag1", "tag2"],
     "confidence_score": 0.85,
-    "data_sources": ["web_search_enrichment"],
-    "validation_status": "web_verified"
+    "data_sources": [websites that were accessed to extract the information],
+    "validation_status": "web_verified (only if the information was verified from the web)" or "unverified"
 }
 
 IMPORTANT REQUIREMENTS:
@@ -415,9 +417,11 @@ IMPORTANT REQUIREMENTS:
 - Make opening hours realistic based on content
 - Use appropriate price ranges ($, $$, $$$)
 - Keep descriptions informative but concise
-- Only return valid JSON
+- Only return valid JSON - no markdown, no explanations
 - If information is not available in the content, use reasonable defaults
-- Leave URL fields empty if no real URLs found in content"""
+- Leave URL fields empty if no real URLs found in content
+- Ensure all string values are properly quoted
+- Use empty string "" for missing optional fields"""
 
     def _create_extraction_prompt(
         self, location: Dict[str, Any], web_content: str
@@ -435,38 +439,15 @@ IMPORTANT REQUIREMENTS:
         return f"""Please extract comprehensive information about this location from the provided web content.
 
 ORIGINAL LOCATION DATA:
-- Name: {location.get('name', 'Unknown')}
-- Type: {location.get('type', 'Unknown')}
-- Description: {location.get('description', 'No description')}
+ {location}
 
 WEB CONTENT TO ANALYZE:
 {web_content}
 
 EXTRACTION REQUIREMENTS:
-Extract all available information and return a complete JSON object that matches the Location model:
+Extract all available information and return a complete JSON object that matches the Location model in the system prompt.
 
-{{
-    "name": "Official/correct name of the location",
-    "type": "{location.get('type', 'landmark')}",
-    "latitude": 0.0,
-    "longitude": 0.0,
-    "address": "Full address of the location",
-    "description": "Comprehensive tourist-friendly description based on web content",
-    "official_website": "https://full-url-here.com",
-    "booking_url": "https://full-booking-url.com",
-    "reviews_url": "https://full-reviews-url.com",
-    "opening_hours": "Mon-Sun: 9:00-18:00",
-    "price_range": "$",
-    "duration_recommended": "2-3 hours",
-    "best_time_to_visit": "Morning or late afternoon",
-    "accessibility_info": "Wheelchair accessible",
-    "nearby_attractions": ["Attraction 1", "Attraction 2"],
-    "neighborhood": "Area name",
-    "tags": ["{location.get('type', 'landmark')}"],
-    "confidence_score": 0.85,
-    "data_sources": ["web_search_enrichment"],
-    "validation_status": "web_verified"
-}}
+(includes name, type, description, opening hours, price range, duration recommended, best time to visit, accessibility info, nearby attractions, neighborhood, tags, confidence score, data sources, validation status)
 
 CRITICAL REQUIREMENTS:
 1. **Extract REAL coordinates** from content or use geocoding if location is mentioned
@@ -918,15 +899,26 @@ Example of correct format:
 Fixed JSON:"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": fix_prompt}],
-                temperature=0.1,  # Lower temperature for fixing
-                max_tokens=2000,
-                timeout=self.timeout,
-                calling_module="EnrichmentProcessor",
-                operation_type="json_fix",
-            )
+            # Use max_completion_tokens for o4 models, max_tokens for others
+            if self.model.startswith("o4"):
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    max_completion_tokens=4000,
+                    timeout=self.timeout,
+                    calling_module="EnrichmentProcessor",
+                    operation_type="json_fix",
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    temperature=0.1,  # Lower temperature for fixing
+                    max_tokens=4000,
+                    timeout=self.timeout,
+                    calling_module="EnrichmentProcessor",
+                    operation_type="json_fix",
+                )
 
             fixed_content: Optional[str] = response.choices[0].message.content
             if fixed_content is None:

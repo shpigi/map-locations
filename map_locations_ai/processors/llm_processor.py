@@ -561,7 +561,6 @@ Fixed YAML:"""
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": fix_prompt}],
-                    temperature=0.1,  # Lower temperature for fixing
                     max_completion_tokens=self.max_tokens,
                     timeout=self.timeout,
                     calling_module=self.calling_module,
