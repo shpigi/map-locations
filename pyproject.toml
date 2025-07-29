@@ -55,6 +55,7 @@ dependencies = [
     "smolagents[litellm]>=0.1.0",
     "spacy>=3.5.0",
     "validators>=0.20.0",
+    "openai-agents>=0.1.0",
 ]
 
 [project.optional-dependencies]

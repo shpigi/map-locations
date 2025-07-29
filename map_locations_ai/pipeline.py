@@ -151,11 +151,17 @@ class LocationExtractionPipeline:
                 max_searches_per_location=enrichment_config[
                     "max_searches_per_location"
                 ],
-                temperature=enrichment_config["temperature"],
                 timeout=enrichment_config["timeout"],
                 trace_manager=self.trace_manager,
                 max_retries=enrichment_config.get("max_retries", 2),
             )
+
+            # Configure rate limiting from config
+            rate_limit_config = enrichment_config.get("rate_limiting", {})
+            self.enrichment_processor.configure_rate_limiting_from_config(
+                rate_limit_config
+            )
+
             # Initialize URL verifier
             self.url_verifier = URLVerifier(timeout=10, max_retries=3)
 
@@ -595,7 +601,7 @@ class LocationExtractionPipeline:
             location_model_locations
         )
 
-        # Save enriched locations to file
+        # Save enriched locations to file (intermediate version)
         enriched_file = self.file_manager.save_enriched_yaml(enriched_locations, stats)
 
         # Save Location-compliant data to separate file
@@ -605,6 +611,17 @@ class LocationExtractionPipeline:
 
         # Update locations in memory with Location-compliant versions
         self.locations_memory = location_model_locations  # type: ignore
+
+        # Trace intermediate file saves
+        self.trace_manager.trace_operation(
+            "intermediate_enrichment_save",
+            f"Saved intermediate enriched locations to {enriched_file}",
+            {
+                "enriched_file": enriched_file,
+                "location_file": location_file,
+                "locations_count": len(enriched_locations),
+            },
+        )
 
         # Trace location conversion
         self.trace_manager.trace_operation(
@@ -619,23 +636,30 @@ class LocationExtractionPipeline:
             },
         )
 
-        # Trace enrichment
-        self.trace_manager.trace_enrichment(len(self.locations_memory), stats)
-
         return {
-            "total_locations": len(location_model_locations),
+            "total_locations": len(enriched_locations),
             "enriched_locations": enriched_locations,  # Return the actual list, not the count
-            "location_compliant_locations": location_model_locations,  # Return the actual list, not the count
             "coordinate_coverage": stats["coordinate_coverage"],
             "website_coverage": stats["website_coverage"],
             "hours_coverage": stats["hours_coverage"],
-            "validation_rate": conversion_stats["validation_rate"],
-            "output_file": enriched_file,
-            "location_file": location_file,
             "stats": stats,
-            "conversion_stats": conversion_stats,
-            "retry_stats": retry_stats,
+            "api_statistics": stats.get("api_statistics", {}),
         }
+
+    def configure_enrichment_rate_limiting(self, min_request_interval: float = 1.0):
+        """
+        Configure rate limiting for the enrichment processor.
+
+        Args:
+            min_request_interval: Minimum seconds between API requests (default: 1.0)
+        """
+        if self.enrichment_processor is not None:
+            self.enrichment_processor.configure_rate_limiting(min_request_interval)
+            print(
+                f"⚙️  Enrichment rate limiting configured: {min_request_interval}s between requests"
+            )
+        else:
+            print("⚠️  Enrichment processor not available")
 
     def _create_minimal_enrichment_result(self) -> Dict[str, Any]:
         """Create result when enrichment is not available or disabled."""
@@ -738,6 +762,12 @@ def main() -> int:
     parser.add_argument(
         "--summary", action="store_true", help="Show pipeline configuration summary"
     )
+    parser.add_argument(
+        "--rate-limit-interval",
+        type=float,
+        default=None,
+        help="Minimum seconds between API requests (default: from config)",
+    )
 
     args = parser.parse_args()
 
@@ -779,6 +809,10 @@ def main() -> int:
             trace_enabled=True,
             backup_enabled=True,
         )
+
+        # Configure rate limiting if specified
+        if args.rate_limit_interval is not None:
+            pipeline.configure_enrichment_rate_limiting(args.rate_limit_interval)
 
         # Process the file
         start_time = time.time()

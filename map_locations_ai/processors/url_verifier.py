@@ -91,7 +91,7 @@ class URLVerifier:
             location: Location dictionary
 
         Returns:
-            Location with verified URLs and enriched content
+            Location with verified URLs and enriched content, unverified URLs marked
         """
         url_fields = ["official_website", "booking_url", "reviews_url"]
         verified_location = location.copy()
@@ -110,13 +110,16 @@ class URLVerifier:
                     verified_location = self._enrich_from_url_content(
                         verified_location, field, url, content
                     )
+                    # Keep the original URL as verified
+                    verified_location[field] = url
                 else:
                     print(f"      ❌ URL is not reachable")
-                    # Remove unreachable URL
-                    verified_location[field] = ""
+                    # Mark URL as unverified but keep it
+                    verified_location[field] = f"[UNVERIFIED] {url}"
             elif url:
                 print(f"    ❌ Invalid URL format: {url}")
-                verified_location[field] = ""
+                # Mark invalid URL format as unverified but keep it
+                verified_location[field] = f"[UNVERIFIED] {url}"
 
         return verified_location
 
@@ -309,6 +312,7 @@ class URLVerifier:
         total_locations = len(locations)
         total_urls = 0
         reachable_urls = 0
+        unverified_urls = 0
         enriched_locations = 0
 
         for location in locations:
@@ -321,7 +325,11 @@ class URLVerifier:
                 if url:
                     total_urls += 1
                     location_urls += 1
-                    if "verified_" in location.get("data_sources", []):
+
+                    # Check if URL is verified (doesn't start with [UNVERIFIED])
+                    if url.startswith("[UNVERIFIED] "):
+                        unverified_urls += 1
+                    else:
                         reachable_urls += 1
                         location_reachable += 1
 
@@ -332,6 +340,7 @@ class URLVerifier:
             "total_locations": total_locations,
             "total_urls": total_urls,
             "reachable_urls": reachable_urls,
+            "unverified_urls": unverified_urls,
             "enriched_locations": enriched_locations,
             "url_success_rate": (
                 round(100 * reachable_urls / total_urls, 1) if total_urls > 0 else 0
