@@ -5,7 +5,9 @@ Verifies URLs are reachable and uses their content to enrich location data.
 """
 
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
@@ -18,17 +20,27 @@ from urllib3.util.retry import Retry
 class URLVerifier:
     """Verifies URLs and extracts content for location enrichment."""
 
-    def __init__(self, timeout: int = 10, max_retries: int = 3):
+    def __init__(self, timeout: int = 10, max_retries: int = 3, max_workers: int = 5):
         """
         Initialize the URL verifier.
 
         Args:
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
+            max_workers: Maximum number of worker threads
         """
         self.timeout = timeout
         self.max_retries = max_retries
-        self.session = self._create_session()
+        self.max_workers = max_workers
+        self._local = threading.local()
+        self._lock = threading.Lock()
+        self._progress_counter = 0
+
+    def _get_session(self) -> requests.Session:
+        """Get thread-local session."""
+        if not hasattr(self._local, "session"):
+            self._local.session = self._create_session()
+        return self._local.session  # type: ignore[no-any-return]
 
     def _create_session(self) -> requests.Session:
         """Create a requests session with retry strategy."""
@@ -55,6 +67,17 @@ class URLVerifier:
 
         return session
 
+    def _thread_safe_print(self, message: str) -> None:
+        """Thread-safe print function."""
+        with self._lock:
+            print(message)
+
+    def _update_progress(self, total: int) -> None:
+        """Thread-safe progress update."""
+        with self._lock:
+            self._progress_counter += 1
+            print(f"  Progress: {self._progress_counter}/{total} locations processed")
+
     def verify_and_enrich_urls(
         self, locations: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
@@ -67,21 +90,42 @@ class URLVerifier:
         Returns:
             List of locations with verified URLs and enriched content
         """
-        verified_locations = []
+        if not locations:
+            return []
 
-        for i, location in enumerate(locations, 1):
-            print(
-                f"  Verifying URLs for location {i}/{len(locations)}: {location.get('name', 'Unknown')}"
-            )
+        self._progress_counter = 0
+        total_locations = len(locations)
 
-            verified_location = self._verify_single_location(location)
-            verified_locations.append(verified_location)
+        self._thread_safe_print(
+            f"  Starting URL verification for {total_locations} locations using {self.max_workers} threads"
+        )
 
-            # Rate limiting between requests
-            if i < len(locations):
-                time.sleep(0.5)
+        # Create a list to store results in the same order as input
+        results: List[Optional[Dict[str, Any]]] = [None] * len(locations)
 
-        return verified_locations
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Submit all tasks
+            future_to_index = {
+                executor.submit(self._verify_single_location, location): i
+                for i, location in enumerate(locations)
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_index):
+                index = future_to_index[future]
+                try:
+                    result = future.result()
+                    results[index] = result
+                    self._update_progress(total_locations)
+                except Exception as e:
+                    self._thread_safe_print(f"  Error processing location {index}: {e}")
+                    # Keep original location if processing failed
+                    results[index] = locations[index]
+
+        self._thread_safe_print(
+            f"  ✅ URL verification completed for {total_locations} locations"
+        )
+        return [result for result in results if result is not None]
 
     def _verify_single_location(self, location: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -95,17 +139,22 @@ class URLVerifier:
         """
         url_fields = ["official_website", "booking_url", "reviews_url"]
         verified_location = location.copy()
+        location_name = location.get("name", "Unknown")
 
         for field in url_fields:
             url = location.get(field, "")
             if url and self._is_valid_url_format(url):
-                print(f"    Testing {field}: {url}")
+                self._thread_safe_print(
+                    f"    Testing {field} for {location_name}: {url}"
+                )
 
                 # Test if URL is reachable
                 is_reachable, content = self._test_url(url)
 
                 if is_reachable and content:
-                    print(f"      ✅ URL is reachable")
+                    self._thread_safe_print(
+                        f"      ✅ URL is reachable for {location_name}"
+                    )
                     # Enrich location with content from this URL
                     verified_location = self._enrich_from_url_content(
                         verified_location, field, url, content
@@ -113,11 +162,15 @@ class URLVerifier:
                     # Keep the original URL as verified
                     verified_location[field] = url
                 else:
-                    print(f"      ❌ URL is not reachable")
+                    self._thread_safe_print(
+                        f"      ❌ URL is not reachable for {location_name}"
+                    )
                     # Mark URL as unverified but keep it
                     verified_location[field] = f"[UNVERIFIED] {url}"
             elif url:
-                print(f"    ❌ Invalid URL format: {url}")
+                self._thread_safe_print(
+                    f"    ❌ Invalid URL format for {location_name}: {url}"
+                )
                 # Mark invalid URL format as unverified but keep it
                 verified_location[field] = f"[UNVERIFIED] {url}"
 
@@ -152,7 +205,8 @@ class URLVerifier:
             Tuple of (is_reachable, content)
         """
         try:
-            response = self.session.get(url, timeout=self.timeout)
+            session = self._get_session()
+            response = session.get(url, timeout=self.timeout)
 
             if response.status_code == 200:
                 # Extract text content
@@ -177,7 +231,7 @@ class URLVerifier:
                 return False, None
 
         except Exception as e:
-            print(f"      Error testing URL: {e}")
+            self._thread_safe_print(f"      Error testing URL {url}: {e}")
             return False, None
 
     def _enrich_from_url_content(
