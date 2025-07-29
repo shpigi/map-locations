@@ -170,7 +170,7 @@ class LocationExtractionPipeline:
                 timeout=10,
                 rate_limit_delay=1.0,
                 llm_client=self.client,
-                llm_model=self.config_manager.get_model_for_step("geocoding"),
+                model=self.config_manager.get_model_for_step("geocoding"),
             )
 
         # Initialize location converter
