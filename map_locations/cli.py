@@ -39,6 +39,9 @@ Examples:
   # Create map with advanced filtering controls (dropdown menus for field and value selection)
   map-locations passages.yaml --advanced-filter --output maps/passages/advanced_map.html
 
+  # Create mobile-optimized map with collapsible filtering controls
+  map-locations passages.yaml --mobile --advanced-filter --output maps/passages/mobile_map.html
+
   # Export to JSON format
   map-locations passages.yaml --format json --output maps/passages/locations.json
 
@@ -63,6 +66,12 @@ and can be toggled on/off using the layer controls in the top-right corner of th
 Advanced filtering (--advanced-filter) adds dropdown controls that allow users to select
 a field (type, neighborhood, or date_of_visit) and then filter by specific values within
 that field. This provides more granular control than the standard grouped view.
+
+Mobile mode (--mobile) optimizes the layout for mobile devices with:
+- Collapsible filtering controls (toggle button in top-left corner)
+- Simplified popup content (essential information only)
+- Narrower popup width (300px vs 450px)
+- Clickable phone numbers and website links
 
 KML exports create separate folders for each location type, allowing you to toggle
 groups on/off when imported into Google Maps.
@@ -111,6 +120,12 @@ groups on/off when imported into Google Maps.
         help="Enable advanced filtering with dropdown controls for field selection and "
         "value filtering",
     )
+    parser.add_argument(
+        "--mobile",
+        action="store_true",
+        help="Enable mobile-optimized layout with collapsible filtering controls and "
+        "simplified popup content",
+    )
 
     return parser
 
@@ -150,6 +165,7 @@ def handle_command(args: argparse.Namespace) -> None:
                     locations,
                     map_filename=args.output,
                     tile_provider=args.tile_provider,
+                    mobile=args.mobile,
                 )
             else:
                 show_locations_grouped(
@@ -157,6 +173,7 @@ def handle_command(args: argparse.Namespace) -> None:
                     group_by=args.group_by,
                     map_filename=args.output,
                     tile_provider=args.tile_provider,
+                    mobile=args.mobile,
                 )
             print("✅ Map created successfully!")
 
@@ -173,6 +190,7 @@ def handle_command(args: argparse.Namespace) -> None:
                     locations,
                     map_filename=str(html_path),
                     tile_provider=args.tile_provider,
+                    mobile=args.mobile,
                 )
             else:
                 show_locations_grouped(
@@ -180,6 +198,7 @@ def handle_command(args: argparse.Namespace) -> None:
                     group_by=args.group_by,
                     map_filename=str(html_path),
                     tile_provider=args.tile_provider,
+                    mobile=args.mobile,
                 )
             print("✅ All formats exported successfully!")
 

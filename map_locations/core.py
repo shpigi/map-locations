@@ -204,6 +204,89 @@ def _generate_popup_html(
         return "".join(html_parts)
 
 
+def _generate_mobile_popup_html(location: Union[Dict[str, Any], Location]) -> str:
+    """
+    Generate mobile-friendly HTML popup content for a location.
+
+    Args:
+        location: Location dictionary
+
+    Returns:
+        HTML string for mobile popup content
+    """
+    # Mobile-optimized field order (only essential information)
+    mobile_fields = [
+        "name",
+        "type",
+        "address",
+        "neighborhood",
+        "phone",
+        "website",
+        "url",
+        "official_website",
+        "description",
+        "tags",
+        "google_maps_url",
+    ]
+
+    # Field display names
+    field_names = {
+        "name": "Name",
+        "type": "Type",
+        "address": "Address",
+        "neighborhood": "Neighborhood",
+        "phone": "Phone",
+        "website": "Website",
+        "url": "URL",
+        "official_website": "Official Website",
+        "description": "Description",
+        "tags": "Tags",
+        "google_maps_url": "Directions",
+    }
+
+    html_parts = ["<div>", f'<h4>{location.get("name", "Unnamed Location")}</h4>']
+
+    for field in mobile_fields:
+        if field == "name":  # Skip name as it's already in header
+            continue
+
+        if field == "google_maps_url":
+            value = _generate_google_maps_url(location)
+            formatted_value = _format_field_value(field, value)
+        elif field == "description":
+            # Limit description to first 100 characters
+            desc: str = str(location.get(field, ""))
+            if desc:
+                formatted_value = desc[:100] + ("..." if len(desc) > 100 else "")
+            else:
+                formatted_value = ""
+        elif field == "phone":
+            # Make phone numbers clickable for mobile
+            phone: str = str(location.get(field, ""))
+            if phone:
+                formatted_value = f'<a href="tel:{phone}">{phone}</a>'
+            else:
+                formatted_value = ""
+        elif field == "website" or field == "url" or field == "official_website":
+            # Make website links open in new tab
+            url: str = str(location.get(field, ""))
+            if url:
+                formatted_value = f'<a href="{url}" target="_blank">{url}</a>'
+            else:
+                formatted_value = ""
+        else:
+            formatted_value = _format_field_value(field, location.get(field))
+
+        if formatted_value:  # Only include non-empty fields
+            display_name = field_names.get(field, field.replace("_", " ").title())
+            html_parts.append(
+                f"<p><strong>{display_name}: </strong>{formatted_value}</p>"
+            )
+
+    html_parts.append("</div>")
+    return "".join(html_parts)
+
+
 def export_to_json(locations: LocationList, output_path: str) -> None:
     """
     Export locations to JSON format.
@@ -695,6 +778,7 @@ def show_locations_grouped(
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
     filter_types: Optional[List[str]] = None,
+    mobile: bool = False,
 ) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
@@ -705,6 +789,7 @@ def show_locations_grouped(
         map_filename (str): Path to save the HTML map.
         tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
         filter_types (list, optional): List of location types to include.
+        mobile (bool): Enable mobile-optimized popups and layout.
     """
     if not locations:
         raise ValueError("No locations provided.")
@@ -781,12 +866,17 @@ def show_locations_grouped(
             # Get color based on location type
             color = get_type_color(loc.get("type", ""))
 
-            # Create popup content with better styling
-            popup_html = _generate_popup_html(loc)
+            # Create popup content with mobile optimization
+            if mobile:
+                popup_html = _generate_mobile_popup_html(loc)
+                popup_width = 300  # Narrower for mobile
+            else:
+                popup_html = _generate_popup_html(loc)
+                popup_width = 450  # Standard width for desktop
 
             folium.Marker(
                 location=[loc["latitude"], loc["longitude"]],
-                popup=folium.Popup(popup_html, max_width=450),
+                popup=folium.Popup(popup_html, max_width=popup_width),
                 tooltip=loc["name"],
                 icon=folium.Icon(color=color),
             ).add_to(fg)
@@ -809,6 +899,8 @@ def show_locations_grouped(
 
     m.save(map_filename)
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
+    if mobile:
+        print("📱 Mobile-optimized layout enabled")
     print(
         f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:"
     )
@@ -822,6 +914,7 @@ def show_locations_with_filtering(
     tile_provider: str = "openstreetmap",
     filter_types: Optional[List[str]] = None,
     group_by: str = "type",
+    mobile: bool = False,
 ) -> None:
     """
     Create a folium map with filtering capabilities for location types.
@@ -832,6 +925,7 @@ def show_locations_with_filtering(
         tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
         filter_types (list, optional): List of location types to include.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
+        mobile (bool): Enable mobile-optimized popups and layout.
     """
     show_locations_grouped(
         locations=locations,
@@ -839,6 +933,7 @@ def show_locations_with_filtering(
         map_filename=map_filename,
         tile_provider=tile_provider,
         filter_types=filter_types,
+        mobile=mobile,
     )
 
 
@@ -847,6 +942,7 @@ def show_locations_with_advanced_filtering(
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
     filter_types: Optional[List[str]] = None,
+    mobile: bool = False,
 ) -> None:
     """
     Create a folium map with advanced filtering capabilities using dropdown controls.
@@ -857,6 +953,7 @@ def show_locations_with_advanced_filtering(
         map_filename: Path to save the HTML map
         tile_provider: Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
         filter_types: List of location types to pre-filter (optional)
+        mobile: Enable mobile-optimized popups and collapsible filtering controls
 
     Example:
         >>> locations = load_locations_from_yaml("locations.yaml")
@@ -936,12 +1033,17 @@ def show_locations_with_advanced_filtering(
         # Get color based on location type
         color = get_type_color(loc.get("type", ""))
 
-        # Create popup content
-        popup_html = _generate_popup_html(loc)
+        # Create popup content with mobile optimization
+        if mobile:
+            popup_html = _generate_mobile_popup_html(loc)
+            popup_width = 300  # Narrower for mobile
+        else:
+            popup_html = _generate_popup_html(loc)
+            popup_width = 450  # Standard width for desktop
 
         marker = folium.Marker(
             location=[loc["latitude"], loc["longitude"]],
-            popup=folium.Popup(popup_html, max_width=450),
+            popup=folium.Popup(popup_html, max_width=popup_width),
             tooltip=loc["name"],
             icon=folium.Icon(color=color),
         )
@@ -967,258 +1069,561 @@ def show_locations_with_advanced_filtering(
         control=True,
     ).add_to(m)
 
-    # Create the advanced filtering control HTML with multi-selection checkboxes
-    filter_control_html = f"""
-    <div id="filter-control" style="
-        position: fixed;
-        top: 80px;
-        left: 10px;
-        background: white;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        z-index: 1000;
-        min-width: 320px;
-        max-width: 350px;
-        max-height: 80vh;
-        overflow-y: auto;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
-    ">
-        <div style="margin-bottom: 10px;">
-            <strong>🔍 Advanced Filter</strong>
-        </div>
-
-        <div style="margin-bottom: 10px;">
-            <label for="field-select" style="display: block; margin-bottom: 5px; "
-                "font-weight: bold;">
-                Filter by:
-            </label>
-            <select id="field-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; "
-                "border-radius: 4px;">
-                <option value="">-- Select Field --</option>
-                <option value="type">Type</option>
-                <option value="neighborhood">Neighborhood</option>
-                <option value="date_of_visit">Date of Visit</option>
-                <option value="name">Location Name</option>
-            </select>
-        </div>
-
-        <div id="checkbox-container" style="
-            display: none;
-            margin-bottom: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
+    # Create the advanced filtering control HTML with mobile toggle support
+    if mobile:
+        # Mobile version with collapsible filter panel
+        filter_control_html = f"""
+        <div id="filter-control" style="
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: white;
             padding: 10px;
-            border-radius: 4px;
-            background: #fafafa;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 280px;
+            max-width: 320px;
+            max-height: 70vh;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            display: none;
         ">
-            <div style="margin-bottom: 8px; font-weight: bold;">
-                Select values:
-            </div>
-            <div style="margin-bottom: 8px;">
-                <button id="select-all" style="
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    padding: 4px 8px;
-                    border-radius: 3px;
-                    cursor: pointer;
-                    margin-right: 5px;
-                    font-size: 12px;
-                ">Select All</button>
-                <button id="select-none" style="
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <strong>🔍 Filter</strong>
+                <button id="close-filter" style="
                     background: #f44336;
                     color: white;
                     border: none;
-                    padding: 4px 8px;
+                    padding: 2px 6px;
                     border-radius: 3px;
                     cursor: pointer;
-                    font-size: 12px;
-                ">Clear All</button>
+                    font-size: 11px;
+                ">✕</button>
             </div>
-            <div id="checkbox-list"></div>
+
+            <div style="margin-bottom: 8px;">
+                <label for="field-select" style="display: block; margin-bottom: 3px; font-weight: bold;">
+                    Filter by:
+                </label>
+                <select id="field-select" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;">
+                    <option value="">-- Select Field --</option>
+                    <option value="type">Type</option>
+                    <option value="neighborhood">Neighborhood</option>
+                    <option value="date_of_visit">Date of Visit</option>
+                    <option value="name">Location Name</option>
+                </select>
+            </div>
+
+            <div id="checkbox-container" style="
+                display: none;
+                margin-bottom: 8px;
+                max-height: 200px;
+                overflow-y: auto;
+                border: 1px solid #ddd;
+                padding: 8px;
+                border-radius: 3px;
+                background: #fafafa;
+            ">
+                <div style="margin-bottom: 6px; font-weight: bold; font-size: 12px;">
+                    Select values:
+                </div>
+                <div style="margin-bottom: 6px;">
+                    <button id="select-all" style="
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 3px 6px;
+                        border-radius: 2px;
+                        cursor: pointer;
+                        margin-right: 4px;
+                        font-size: 11px;
+                    ">Select All</button>
+                    <button id="select-none" style="
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        padding: 3px 6px;
+                        border-radius: 2px;
+                        cursor: pointer;
+                        font-size: 11px;
+                    ">Clear All</button>
+                </div>
+                <div id="checkbox-list"></div>
+            </div>
+
+            <div>
+                <button id="apply-filter" style="
+                    background: #2196F3;
+                    color: white;
+                    border: none;
+                    padding: 6px 10px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    margin-right: 4px;
+                    font-size: 12px;
+                ">Apply</button>
+                <button id="clear-filter" style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 6px 10px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    margin-right: 4px;
+                    font-size: 12px;
+                ">Clear</button>
+            </div>
+            <div style="margin-top: 6px;">
+                <span id="result-count" style="color: #666; font-size: 11px;">
+                    Showing all {len(locations)} locations
+                </span>
+            </div>
         </div>
 
-        <div>
-            <button id="apply-filter" style="
-                background: #2196F3;
-                color: white;
-                border: none;
-                padding: 8px 12px;
+        <button id="toggle-filter" style="
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 1001;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        ">🔍 Filter</button>
+        """
+    else:
+        # Desktop version (original)
+        filter_control_html = f"""
+        <div id="filter-control" style="
+            position: fixed;
+            top: 80px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 320px;
+            max-width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        ">
+            <div style="margin-bottom: 10px;">
+                <strong>🔍 Advanced Filter</strong>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label for="field-select" style="display: block; margin-bottom: 5px; "
+                    "font-weight: bold;">
+                    Filter by:
+                </label>
+                <select id="field-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; "
+                    "border-radius: 4px;">
+                    <option value="">-- Select Field --</option>
+                    <option value="type">Type</option>
+                    <option value="neighborhood">Neighborhood</option>
+                    <option value="date_of_visit">Date of Visit</option>
+                    <option value="name">Location Name</option>
+                </select>
+            </div>
+
+            <div id="checkbox-container" style="
+                display: none;
+                margin-bottom: 10px;
+                max-height: 300px;
+                overflow-y: auto;
+                border: 1px solid #ddd;
+                padding: 10px;
                 border-radius: 4px;
-                cursor: pointer;
-                margin-right: 5px;
-            ">Apply Filter</button>
-            <button id="clear-filter" style="
-                background: #f44336;
-                color: white;
-                border: none;
-                padding: 8px 12px;
-                border-radius: 4px;
-                cursor: pointer;
-                margin-right: 5px;
-            ">Clear Filter</button>
+                background: #fafafa;
+            ">
+                <div style="margin-bottom: 8px; font-weight: bold;">
+                    Select values:
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <button id="select-all" style="
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 4px 8px;
+                        border-radius: 3px;
+                        cursor: pointer;
+                        margin-right: 5px;
+                        font-size: 12px;
+                    ">Select All</button>
+                    <button id="select-none" style="
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        padding: 4px 8px;
+                        border-radius: 3px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">Clear All</button>
+                </div>
+                <div id="checkbox-list"></div>
+            </div>
+
+            <div>
+                <button id="apply-filter" style="
+                    background: #2196F3;
+                    color: white;
+                    border: none;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    margin-right: 5px;
+                ">Apply Filter</button>
+                <button id="clear-filter" style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    margin-right: 5px;
+                ">Clear Filter</button>
+            </div>
+            <div style="margin-top: 8px;">
+                <span id="result-count" style="color: #666; font-size: 12px;">
+                    Showing all {len(locations)} locations
+                </span>
+            </div>
         </div>
-        <div style="margin-top: 8px;">
-            <span id="result-count" style="color: #666; font-size: 12px;">
-                Showing all {len(locations)} locations
-            </span>
-        </div>
-    </div>
-    """
+        """
 
     # JavaScript for advanced multi-selection filtering
-    filter_script = f"""
-    <script>
-    // Field values data
-    const fieldValues = {json.dumps(field_values)};
+    if mobile:
+        # Mobile version with toggle functionality
+        filter_script = f"""
+        <script>
+        // Field values data
+        const fieldValues = {json.dumps(field_values)};
 
-    // Markers data with location information
-    const markersData = {json.dumps(markers_data)};
+        // Markers data with location information
+        const markersData = {json.dumps(markers_data)};
 
-    // Get references to all markers (they are added in order)
-    let allMarkers = [];
+        // Get references to all markers (they are added in order)
+        let allMarkers = [];
 
-    // Wait for map to be ready and collect marker references
-    setTimeout(function() {{
-        // Find all markers in the map
-        window[Object.keys(window).find(key => key.startsWith('map_'))].eachLayer(function(layer) {{
-            if (layer instanceof L.Marker) {{
-                allMarkers.push(layer);
+        // Wait for map to be ready and collect marker references
+        setTimeout(function() {{
+            // Find all markers in the map
+            window[Object.keys(window).find(key => key.startsWith('map_'))].eachLayer(function(layer) {{
+                if (layer instanceof L.Marker) {{
+                    allMarkers.push(layer);
+                }}
+            }});
+
+            console.log('Found', allMarkers.length, 'markers');
+        }}, 1000);
+
+        // Get DOM elements
+        const fieldSelect = document.getElementById('field-select');
+        const checkboxContainer = document.getElementById('checkbox-container');
+        const checkboxList = document.getElementById('checkbox-list');
+        const selectAllBtn = document.getElementById('select-all');
+        const selectNoneBtn = document.getElementById('select-none');
+        const applyFilterBtn = document.getElementById('apply-filter');
+        const clearFilterBtn = document.getElementById('clear-filter');
+        const resultCount = document.getElementById('result-count');
+        const toggleFilterBtn = document.getElementById('toggle-filter');
+        const closeFilterBtn = document.getElementById('close-filter');
+
+        // Handle field selection change
+        fieldSelect.addEventListener('change', function() {{
+            const selectedField = this.value;
+
+            if (selectedField && fieldValues[selectedField]) {{
+                checkboxContainer.style.display = 'block';
+                populateCheckboxes(selectedField);
+            }} else {{
+                checkboxContainer.style.display = 'none';
+                showAllMarkers();
             }}
         }});
 
-        console.log('Found', allMarkers.length, 'markers');
-    }}, 1000);
+        // Populate checkboxes for selected field
+        function populateCheckboxes(field) {{
+            checkboxList.innerHTML = '';
+            const values = fieldValues[field];
 
-    // Get DOM elements
-    const fieldSelect = document.getElementById('field-select');
-    const checkboxContainer = document.getElementById('checkbox-container');
-    const checkboxList = document.getElementById('checkbox-list');
-    const selectAllBtn = document.getElementById('select-all');
-    const selectNoneBtn = document.getElementById('select-none');
-    const applyFilterBtn = document.getElementById('apply-filter');
-    const clearFilterBtn = document.getElementById('clear-filter');
-    const resultCount = document.getElementById('result-count');
+            values.forEach(function(value, index) {{
+                const checkboxId = `checkbox_${{field}}_${{index}}`;
+                const displayValue = value || '(empty)';
 
-    // Handle field selection change
-    fieldSelect.addEventListener('change', function() {{
-        const selectedField = this.value;
+                const checkboxHtml = `
+                    <div style="margin-bottom: 4px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="${{checkboxId}}" value="${{value}}"
+                                   style="margin-right: 6px;" checked>
+                            <span style="font-size: 12px;">${{displayValue}}</span>
+                        </label>
+                    </div>
+                `;
+                checkboxList.innerHTML += checkboxHtml;
+            }});
+        }}
 
-        if (selectedField && fieldValues[selectedField]) {{
-            checkboxContainer.style.display = 'block';
-            populateCheckboxes(selectedField);
-        }} else {{
+        // Select all checkboxes
+        selectAllBtn.addEventListener('click', function() {{
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        }});
+
+        // Clear all checkboxes
+        selectNoneBtn.addEventListener('click', function() {{
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }});
+
+        // Apply filter based on selected checkboxes
+        applyFilterBtn.addEventListener('click', function() {{
+            const selectedField = fieldSelect.value;
+            if (!selectedField) {{
+                showAllMarkers();
+                return;
+            }}
+
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
+            const selectedValues = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedValues.length === 0) {{
+                // No values selected - hide all markers
+                hideAllMarkers();
+                resultCount.textContent = `Showing 0 of {len(locations)} locations`;
+                return;
+            }}
+
+            let visibleCount = 0;
+
+            allMarkers.forEach(function(marker, index) {{
+                if (index < markersData.length) {{
+                    const markerData = markersData[index];
+                    const fieldValue = markerData[selectedField] || '';
+
+                    if (selectedValues.includes(fieldValue)) {{
+                        marker.setOpacity(1);
+                        marker._icon.style.display = 'block';
+                        if (marker._shadow) marker._shadow.style.display = 'block';
+                        visibleCount++;
+                    }} else {{
+                        marker.setOpacity(0);
+                        marker._icon.style.display = 'none';
+                        if (marker._shadow) marker._shadow.style.display = 'none';
+                    }}
+                }}
+            }});
+
+            resultCount.textContent = `Showing ${{visibleCount}} of {len(locations)} locations`;
+        }});
+
+        // Clear filter
+        clearFilterBtn.addEventListener('click', function() {{
+            fieldSelect.value = '';
             checkboxContainer.style.display = 'none';
             showAllMarkers();
-        }}
-    }});
-
-    // Populate checkboxes for selected field
-    function populateCheckboxes(field) {{
-        checkboxList.innerHTML = '';
-        const values = fieldValues[field];
-
-        values.forEach(function(value, index) {{
-            const checkboxId = `checkbox_${{field}}_${{index}}`;
-            const displayValue = value || '(empty)';
-
-            const checkboxHtml = `
-                <div style="margin-bottom: 5px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="${{checkboxId}}" value="${{value}}"
-                               style="margin-right: 8px;" checked>
-                        <span style="font-size: 13px;">${{displayValue}}</span>
-                    </label>
-                </div>
-            `;
-            checkboxList.innerHTML += checkboxHtml;
         }});
-    }}
 
-    // Select all checkboxes
-    selectAllBtn.addEventListener('click', function() {{
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => cb.checked = true);
-    }});
+        // Show all markers
+        function showAllMarkers() {{
+            allMarkers.forEach(function(marker) {{
+                marker.setOpacity(1);
+                marker._icon.style.display = 'block';
+                if (marker._shadow) marker._shadow.style.display = 'block';
+            }});
 
-    // Clear all checkboxes
-    selectNoneBtn.addEventListener('click', function() {{
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => cb.checked = false);
-    }});
-
-    // Apply filter based on selected checkboxes
-    applyFilterBtn.addEventListener('click', function() {{
-        const selectedField = fieldSelect.value;
-        if (!selectedField) {{
-            showAllMarkers();
-            return;
+            resultCount.textContent = `Showing all {len(locations)} locations`;
         }}
 
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
-        const selectedValues = Array.from(checkboxes).map(cb => cb.value);
-
-        if (selectedValues.length === 0) {{
-            // No values selected - hide all markers
-            hideAllMarkers();
-            resultCount.textContent = `Showing 0 of {len(locations)} locations`;
-            return;
+        // Hide all markers
+        function hideAllMarkers() {{
+            allMarkers.forEach(function(marker) {{
+                marker.setOpacity(0);
+                marker._icon.style.display = 'none';
+                if (marker._shadow) marker._shadow.style.display = 'none';
+            }});
         }}
 
-        let visibleCount = 0;
-
-        allMarkers.forEach(function(marker, index) {{
-            if (index < markersData.length) {{
-                const markerData = markersData[index];
-                const fieldValue = markerData[selectedField] || '';
-
-                if (selectedValues.includes(fieldValue)) {{
-                    marker.setOpacity(1);
-                    marker._icon.style.display = 'block';
-                    if (marker._shadow) marker._shadow.style.display = 'block';
-                    visibleCount++;
-                }} else {{
-                    marker.setOpacity(0);
-                    marker._icon.style.display = 'none';
-                    if (marker._shadow) marker._shadow.style.display = 'none';
-                }}
+        // Toggle filter panel visibility
+        toggleFilterBtn.addEventListener('click', function() {{
+            const filterControl = document.getElementById('filter-control');
+            if (filterControl.style.display === 'none') {{
+                filterControl.style.display = 'block';
+                toggleFilterBtn.textContent = '🔍 Hide Filter';
+            }} else {{
+                filterControl.style.display = 'none';
+                toggleFilterBtn.textContent = '🔍 Filter';
             }}
         }});
 
-        resultCount.textContent = `Showing ${{visibleCount}} of {len(locations)} locations`;
-    }});
+        // Close filter panel
+        closeFilterBtn.addEventListener('click', function() {{
+            const filterControl = document.getElementById('filter-control');
+            filterControl.style.display = 'none';
+            toggleFilterBtn.textContent = '🔍 Filter';
+        }});
+        </script>
+        """
+    else:
+        # Desktop version (original)
+        filter_script = f"""
+        <script>
+        // Field values data
+        const fieldValues = {json.dumps(field_values)};
 
-    // Clear filter
-    clearFilterBtn.addEventListener('click', function() {{
-        fieldSelect.value = '';
-        checkboxContainer.style.display = 'none';
-        showAllMarkers();
-    }});
+        // Markers data with location information
+        const markersData = {json.dumps(markers_data)};
 
-    // Show all markers
-    function showAllMarkers() {{
-        allMarkers.forEach(function(marker) {{
-            marker.setOpacity(1);
-            marker._icon.style.display = 'block';
-            if (marker._shadow) marker._shadow.style.display = 'block';
+        // Get references to all markers (they are added in order)
+        let allMarkers = [];
+
+        // Wait for map to be ready and collect marker references
+        setTimeout(function() {{
+            // Find all markers in the map
+            window[Object.keys(window).find(key => key.startsWith('map_'))].eachLayer(function(layer) {{
+                if (layer instanceof L.Marker) {{
+                    allMarkers.push(layer);
+                }}
+            }});
+
+            console.log('Found', allMarkers.length, 'markers');
+        }}, 1000);
+
+        // Get DOM elements
+        const fieldSelect = document.getElementById('field-select');
+        const checkboxContainer = document.getElementById('checkbox-container');
+        const checkboxList = document.getElementById('checkbox-list');
+        const selectAllBtn = document.getElementById('select-all');
+        const selectNoneBtn = document.getElementById('select-none');
+        const applyFilterBtn = document.getElementById('apply-filter');
+        const clearFilterBtn = document.getElementById('clear-filter');
+        const resultCount = document.getElementById('result-count');
+
+        // Handle field selection change
+        fieldSelect.addEventListener('change', function() {{
+            const selectedField = this.value;
+
+            if (selectedField && fieldValues[selectedField]) {{
+                checkboxContainer.style.display = 'block';
+                populateCheckboxes(selectedField);
+            }} else {{
+                checkboxContainer.style.display = 'none';
+                showAllMarkers();
+            }}
         }});
 
-        resultCount.textContent = `Showing all {len(locations)} locations`;
-    }}
+        // Populate checkboxes for selected field
+        function populateCheckboxes(field) {{
+            checkboxList.innerHTML = '';
+            const values = fieldValues[field];
 
-    // Hide all markers
-    function hideAllMarkers() {{
-        allMarkers.forEach(function(marker) {{
-            marker.setOpacity(0);
-            marker._icon.style.display = 'none';
-            if (marker._shadow) marker._shadow.style.display = 'none';
+            values.forEach(function(value, index) {{
+                const checkboxId = `checkbox_${{field}}_${{index}}`;
+                const displayValue = value || '(empty)';
+
+                const checkboxHtml = `
+                    <div style="margin-bottom: 5px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="${{checkboxId}}" value="${{value}}"
+                                   style="margin-right: 8px;" checked>
+                            <span style="font-size: 13px;">${{displayValue}}</span>
+                        </label>
+                    </div>
+                `;
+                checkboxList.innerHTML += checkboxHtml;
+            }});
+        }}
+
+        // Select all checkboxes
+        selectAllBtn.addEventListener('click', function() {{
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
         }});
-    }}
-    </script>
-    """
+
+        // Clear all checkboxes
+        selectNoneBtn.addEventListener('click', function() {{
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }});
+
+        // Apply filter based on selected checkboxes
+        applyFilterBtn.addEventListener('click', function() {{
+            const selectedField = fieldSelect.value;
+            if (!selectedField) {{
+                showAllMarkers();
+                return;
+            }}
+
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
+            const selectedValues = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedValues.length === 0) {{
+                // No values selected - hide all markers
+                hideAllMarkers();
+                resultCount.textContent = `Showing 0 of {len(locations)} locations`;
+                return;
+            }}
+
+            let visibleCount = 0;
+
+            allMarkers.forEach(function(marker, index) {{
+                if (index < markersData.length) {{
+                    const markerData = markersData[index];
+                    const fieldValue = markerData[selectedField] || '';
+
+                    if (selectedValues.includes(fieldValue)) {{
+                        marker.setOpacity(1);
+                        marker._icon.style.display = 'block';
+                        if (marker._shadow) marker._shadow.style.display = 'block';
+                        visibleCount++;
+                    }} else {{
+                        marker.setOpacity(0);
+                        marker._icon.style.display = 'none';
+                        if (marker._shadow) marker._shadow.style.display = 'none';
+                    }}
+                }}
+            }});
+
+            resultCount.textContent = `Showing ${{visibleCount}} of {len(locations)} locations`;
+        }});
+
+        // Clear filter
+        clearFilterBtn.addEventListener('click', function() {{
+            fieldSelect.value = '';
+            checkboxContainer.style.display = 'none';
+            showAllMarkers();
+        }});
+
+        // Show all markers
+        function showAllMarkers() {{
+            allMarkers.forEach(function(marker) {{
+                marker.setOpacity(1);
+                marker._icon.style.display = 'block';
+                if (marker._shadow) marker._shadow.style.display = 'block';
+            }});
+
+            resultCount.textContent = `Showing all {len(locations)} locations`;
+        }}
+
+        // Hide all markers
+        function hideAllMarkers() {{
+            allMarkers.forEach(function(marker) {{
+                marker.setOpacity(0);
+                marker._icon.style.display = 'none';
+                if (marker._shadow) marker._shadow.style.display = 'none';
+            }});
+        }}
+        </script>
+        """
 
     # Add the control HTML to the map
     m.get_root().html.add_child(folium.Element(filter_control_html))  # type: ignore[attr-defined]
@@ -1231,7 +1636,13 @@ def show_locations_with_advanced_filtering(
 
     m.save(map_filename)
     print(f"🗺️ Advanced filtering map saved to: {Path(map_filename).resolve()}")
-    print("🔍 Interactive filtering controls:")
+    if mobile:
+        print("📱 Mobile-optimized layout enabled")
+        print("🔍 Collapsible filtering controls:")
+        print("   • Toggle button in top-left corner")
+        print("   • Filter panel can be shown/hidden")
+    else:
+        print("🔍 Interactive filtering controls:")
     print(f"   • Filter by type: {len(field_values['type'])} options")
     print(f"   • Filter by neighborhood: {len(field_values['neighborhood'])} options")
     print(f"   • Filter by date of visit: {len(field_values['date_of_visit'])} options")
@@ -1498,6 +1909,7 @@ def show_locations_with_google_maps(
     group_by: str = "type",
     map_filename: str = "map.html",
     satellite: bool = False,
+    mobile: bool = False,
 ) -> None:
     """
     Create a folium map with Google Maps tiles showing locations grouped by a specified field.
@@ -1510,13 +1922,16 @@ def show_locations_with_google_maps(
         group_by: Field to group markers by (e.g., type, neighborhood, date_added)
         map_filename: Path to save the HTML map
         satellite: Use satellite view instead of street view
+        mobile: Enable mobile-optimized popups and layout
 
     Example:
         >>> locations = load_locations_from_yaml("locations.yaml")
         >>> show_locations_with_google_maps(locations, "map.html")
     """
     tile_provider = "google_satellite" if satellite else "google_maps"
-    show_locations_grouped(locations, group_by, map_filename, tile_provider)
+    show_locations_grouped(
+        locations, group_by, map_filename, tile_provider, mobile=mobile
+    )
 
 
 # ✅ Run this to test

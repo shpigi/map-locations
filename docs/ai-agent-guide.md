@@ -8,6 +8,7 @@ Complete guide for AI agents using the Map Locations package.
 - [Core Data Structure](#core-data-structure)
 - [Quick Start for AI Agents](#quick-start-for-ai-agents)
 - [AI Processing Pipeline](#ai-processing-pipeline)
+- [Enhanced AI Features](#enhanced-ai-features)
 - [Data Validation](#data-validation)
 - [Error Handling](#error-handling)
 - [Best Practices](#best-practices)
@@ -15,6 +16,13 @@ Complete guide for AI agents using the Map Locations package.
 ## Overview
 
 This package provides a comprehensive AI-agent friendly approach with direct OpenAI LLM integration, modular processing components, comprehensive tracing, and YAML-based data processing. The AI functionality is included as a module within the main `map-locations` package.
+
+**Recent AI Enhancements:**
+- **LLM-Assisted Geocoding**: AI-powered coordinate extraction as fallback
+- **Global Location Support**: Worldwide compatibility without city assumptions
+- **Multi-threaded URL Processing**: Improved performance for web scraping
+- **Mobile Optimization**: Mobile-optimized map generation and layout
+- **Enhanced Error Recovery**: Better handling of API failures and malformed responses
 
 ## Core Data Structure
 
@@ -38,6 +46,7 @@ Location = {
     "url": str,            # Optional: Source URL if applicable
     "address": str,        # Optional: Full address if available
     "extraction_method": str, # Optional: How location was extracted
+    "google_maps_url": str, # Optional: Generated Google Maps URL
 }
 ```
 
@@ -73,6 +82,9 @@ if issues['missing_required']:
 # Filter and visualize
 restaurants = filter_locations_by_type(locations, ["restaurant", "cafe"])
 show_locations_grouped(restaurants, "restaurants_map.html")
+
+# Create mobile-optimized map
+show_locations_grouped(restaurants, "mobile_restaurants_map.html", mobile=True)
 
 # Export to multiple formats
 export_to_all_formats(locations, "exports/my_locations")
@@ -118,6 +130,7 @@ print(f"Trace file: {result['trace_file']}")
 - **Prompt Management**: Optimized prompts for location extraction
 - **Error Handling**: Comprehensive error recovery
 - **Rate Limiting**: Configurable API call delays
+- **LLM Geocoding**: AI-assisted coordinate extraction as fallback
 
 #### YAMLProcessor
 - **YAML Generation**: Creates structured location data
@@ -153,8 +166,9 @@ The `LocationExtractionPipeline` provides:
 - **Error Recovery**: Auto-fix malformed YAML responses
 - **Comprehensive Tracing**: Log all LLM calls for debugging
 - **Chunk Management**: Process large files in manageable chunks
-- **URL Processing**: Extract location info from web pages
+- **URL Processing**: Extract location info from web pages with multi-threading
 - **Deduplication**: Smart duplicate detection and merging
+- **LLM Geocoding**: AI-assisted coordinate extraction for missing coordinates
 
 ### Configuration
 ```yaml
@@ -162,7 +176,7 @@ The `LocationExtractionPipeline` provides:
 llm:
   model: "gpt-4o-mini"
   temperature: 0.1
-  max_tokens: 2000
+  max_tokens: 4000  # Increased for larger responses
   timeout: 120
 
 processing:
@@ -179,6 +193,11 @@ deduplication:
   type_weight: 0.2
   description_weight: 0.25
   source_weight: 0.15
+
+geocoding:
+  enable_llm_fallback: true
+  confidence_threshold: 0.7
+  max_retries: 3
 ```
 
 ### Output Structure
@@ -201,8 +220,100 @@ result = pipeline.process_file("input.txt")
     "total_chunks": 5,
     "total_locations": 134,
     "chunk_files": ["temp/chunk_001.yaml", "temp/chunk_002.yaml", ...],
-    "trace_file": "trace/run_20250115_143022.json"
+    "trace_file": "trace/run_20250115_143022.json",
+    "geocoding_stats": {
+        "llm_geocoding_attempts": 12,
+        "llm_geocoding_successes": 8,
+        "average_confidence": 0.75
+    }
 }
+```
+
+## Enhanced AI Features
+
+### LLM-Assisted Geocoding
+
+The AI pipeline now includes LLM-assisted geocoding as a fallback when coordinates are missing:
+
+```python
+from map_locations_ai.processors.geocoding_service import GeocodingService
+
+# Initialize geocoding service
+geocoding = GeocodingService("map_locations_ai/config.yaml")
+
+# Process locations with missing coordinates
+locations_with_coords = geocoding.process_locations(locations)
+
+# Check geocoding results
+for location in locations_with_coords:
+    if location.get("latitude") and location.get("longitude"):
+        confidence = location.get("geocoding_confidence", 0.0)
+        print(f"✅ {location['name']}: {location['latitude']}, {location['longitude']} (confidence: {confidence})")
+    else:
+        print(f"❌ {location['name']}: No coordinates found")
+```
+
+### Multi-threaded URL Processing
+
+Enhanced URL processing with improved performance:
+
+```python
+from map_locations_ai.processors.url_verifier import URLVerifier
+
+# Initialize URL verifier with multi-threading
+url_verifier = URLVerifier("map_locations_ai/config.yaml")
+
+# Process URLs with improved performance
+verified_urls = url_verifier.verify_urls_batch(url_list)
+
+# Check verification results
+for url, status in verified_urls.items():
+    if status["valid"]:
+        print(f"✅ {url}: {status['response_time']}ms")
+    else:
+        print(f"❌ {url}: {status['error']}")
+```
+
+### Mobile Optimization
+
+Create mobile-optimized maps for better mobile device experience:
+
+```python
+from map_locations import show_locations_grouped, show_locations_with_advanced_filtering
+
+# Create mobile-optimized map
+show_locations_grouped(
+    locations,
+    map_filename="mobile_map.html",
+    mobile=True
+)
+
+# Create mobile map with advanced filtering
+show_locations_with_advanced_filtering(
+    locations,
+    map_filename="mobile_advanced_map.html",
+    mobile=True
+)
+```
+
+### Enhanced Error Recovery
+
+Improved error handling and recovery mechanisms:
+
+```python
+from map_locations_ai.processors.enrichment_processor import EnrichmentProcessor
+
+# Initialize enrichment processor with enhanced error recovery
+enrichment = EnrichmentProcessor("map_locations_ai/config.yaml")
+
+# Process with improved error handling
+try:
+    enriched_locations = enrichment.process_locations(locations)
+    print(f"✅ Successfully enriched {len(enriched_locations)} locations")
+except Exception as e:
+    print(f"⚠️ Enrichment failed: {e}")
+    # Fallback to original locations
+    enriched_locations = locations
 ```
 
 ## Available Functions
@@ -224,9 +335,10 @@ result = pipeline.process_file("input.txt")
 - `filter_locations_by_neighborhood(locations: List[Location], neighborhoods: List[str]) -> List[Location]`
 
 ### Visualization
-- `show_locations_grouped(locations: List[Location], group_by: str = "type", map_filename: str = "map.html")`
-- `show_locations_with_filtering(locations: List[Location], map_filename: str = "map.html")`
-- `show_locations_with_google_maps(locations: List[Location], map_filename: str = "map.html")`
+- `show_locations_grouped(locations: List[Location], group_by: str = "type", map_filename: str = "map.html", mobile: bool = False)`
+- `show_locations_with_filtering(locations: List[Location], map_filename: str = "map.html", mobile: bool = False)`
+- `show_locations_with_advanced_filtering(locations: List[Location], map_filename: str = "map.html", mobile: bool = False)`
+- `show_locations_with_google_maps(locations: List[Location], map_filename: str = "map.html", mobile: bool = False)`
 
 ### Export
 - `export_to_json(locations: List[Location], output_path: str)`
@@ -239,6 +351,7 @@ result = pipeline.process_file("input.txt")
 - `LocationExtractionPipeline(config_path: str)` - Main AI processing pipeline
 - `Deduplicator(config_path: str)` - Smart deduplication
 - `URLProcessor(config_path: str)` - URL processing and web scraping
+- `GeocodingService(config_path: str)` - LLM-assisted geocoding
 
 ## Common Workflows
 
@@ -283,6 +396,10 @@ historic_sites = filter_locations_by_tags(locations, ["historic"])
 # Create maps for each category
 show_locations_grouped(food_locations, "food_map.html")
 show_locations_grouped(historic_sites, "historic_map.html")
+
+# Create mobile-optimized versions
+show_locations_grouped(food_locations, "mobile_food_map.html", mobile=True)
+show_locations_grouped(historic_sites, "mobile_historic_map.html", mobile=True)
 ```
 
 ### 4. AI Processing Workflow
@@ -301,9 +418,11 @@ print(f"Extracted {result['total_locations']} locations")
 result = pipeline.process_file_with_deduplication("input.txt")
 print(f"Final locations after deduplication: {result['total_locations']}")
 
-# Complete workflow
+# Complete workflow with geocoding
 result = pipeline.process_file_with_urls_and_deduplication("input.txt")
 print(f"Complete processing: {result['total_locations']} unique locations")
+if 'geocoding_stats' in result:
+    print(f"Geocoding: {result['geocoding_stats']['llm_geocoding_successes']} successful")
 ```
 
 ### 5. Complete Workflow
@@ -337,6 +456,7 @@ print(f"✅ Loaded {summary['total_count']} valid locations")
 # Filter and visualize
 museums = filter_locations_by_type(locations, ["museum", "gallery"])
 show_locations_grouped(museums, "museums_map.html")
+show_locations_grouped(museums, "mobile_museums_map.html", mobile=True)
 
 # Export
 export_to_all_formats(locations, "exports/complete_dataset")
@@ -410,6 +530,10 @@ def safe_ai_processing(input_file: str, config_file: str) -> Dict[str, Any]:
         print(f"✅ Extracted {result['total_locations']} locations")
         print(f"📊 Processed {result['total_chunks']} chunks")
         print(f"📝 Trace file: {result['trace_file']}")
+
+        if 'geocoding_stats' in result:
+            stats = result['geocoding_stats']
+            print(f"🗺️ Geocoding: {stats['llm_geocoding_successes']}/{stats['llm_geocoding_attempts']} successful")
 
         return result
     except Exception as e:
@@ -514,6 +638,10 @@ historic_sites = filter_locations_by_tags(locations, ["historic", "landmark"])
 # Good: Consistent file naming
 show_locations_grouped(restaurant_locations, "restaurants_map.html")
 show_locations_grouped(historic_sites, "historic_sites_map.html")
+
+# Good: Mobile versions
+show_locations_grouped(restaurant_locations, "mobile_restaurants_map.html", mobile=True)
+show_locations_grouped(historic_sites, "mobile_historic_sites_map.html", mobile=True)
 ```
 
 ### 6. AI Processing Best Practices
@@ -538,6 +666,10 @@ def robust_ai_processing(input_file: str, config_file: str) -> Dict[str, Any]:
         result["trace_file"] = result_data["trace_file"]
         result["output_files"].append("map_locations_ai/temp/merged.yaml")
 
+        # Include geocoding stats if available
+        if 'geocoding_stats' in result_data:
+            result["geocoding_stats"] = result_data["geocoding_stats"]
+
         print(f"✅ Successfully extracted {result_data['total_locations']} locations")
 
     except Exception as e:
@@ -545,6 +677,30 @@ def robust_ai_processing(input_file: str, config_file: str) -> Dict[str, Any]:
         print(f"❌ AI processing failed: {e}")
 
     return result
+```
+
+### 7. Mobile Optimization Best Practices
+
+```python
+def create_responsive_maps(locations: List[Location], base_name: str) -> Dict[str, str]:
+    """Create both desktop and mobile versions of maps."""
+    maps = {}
+
+    # Desktop version
+    maps['desktop'] = show_locations_grouped(
+        locations,
+        map_filename=f"{base_name}_desktop.html",
+        mobile=False
+    )
+
+    # Mobile version
+    maps['mobile'] = show_locations_grouped(
+        locations,
+        map_filename=f"{base_name}_mobile.html",
+        mobile=True
+    )
+
+    return maps
 ```
 
 ## Advanced Patterns
@@ -587,6 +743,7 @@ def smart_location_processing(locations: List[Location]) -> str:
         for location_type in top_types:
             filtered = filter_locations_by_type(locations, [location_type])
             show_locations_grouped(filtered, f"{location_type}_map.html")
+            show_locations_grouped(filtered, f"mobile_{location_type}_map.html", mobile=True)
         return "Created filtered maps for top types"
 
     # Default - create comprehensive map
@@ -610,6 +767,10 @@ def robust_location_processing(locations: List[Location]) -> Dict[str, Any]:
         # Create main map
         main_map = show_locations_grouped(locations, "main_map.html")
         result["output_files"].append(main_map)
+
+        # Create mobile map
+        mobile_map = show_locations_grouped(locations, "mobile_main_map.html", mobile=True)
+        result["output_files"].append(mobile_map)
 
         # Export data
         export_to_all_formats(locations, "exports/")
@@ -657,8 +818,9 @@ def complete_ai_workflow(input_file: str, config_file: str) -> Dict[str, Any]:
 
         # Step 3: Create Maps
         map_file = show_locations_grouped(locations, "ai_extracted_map.html")
+        mobile_map_file = show_locations_grouped(locations, "mobile_ai_extracted_map.html", mobile=True)
         workflow_result["mapping_success"] = True
-        workflow_result["output_files"].append(map_file)
+        workflow_result["output_files"].extend([map_file, mobile_map_file])
 
         # Step 4: Export
         export_to_all_formats(locations, "exports/ai_locations")
