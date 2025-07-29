@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import re
+import urllib.parse
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union, cast
@@ -11,6 +12,34 @@ import yaml
 
 # Import common models
 from .common import Location, LocationList, load_locations_from_yaml
+
+
+def _generate_google_maps_url(location: Union[Dict[str, Any], Location]) -> str:
+    """
+    Generate a Google Maps URL for a location using name and address.
+
+    Args:
+        location: Location dictionary
+
+    Returns:
+        Google Maps URL string
+    """
+    name = location.get("name", "")
+    address = location.get("address", "")
+
+    if not name and not address:
+        return ""
+
+    # Create query string from name and address
+    query_parts = []
+    if name:
+        query_parts.append(name)
+    if address:
+        query_parts.append(address)
+
+    query = ", ".join(query_parts)
+    encoded_query = urllib.parse.quote_plus(query)
+    return f"https://www.google.com/maps/search/?api=1&query={encoded_query}"
 
 
 def _is_url(text: str) -> bool:
@@ -31,6 +60,10 @@ def _format_field_value(field_name: str, value: Any) -> str:
     """Format field value for display, handling special cases like URLs and lists."""
     if value is None or value == "":
         return ""
+
+    # Handle google_maps_url field specially
+    if field_name == "google_maps_url" and value:
+        return f'<a href="{value}" target="_blank">Link</a>'
 
     # Handle lists (like tags)
     if isinstance(value, list):
@@ -83,6 +116,7 @@ def _generate_popup_html(
         "phone",
         "address",
         "notes",
+        "google_maps_url",
     ]
 
     # Field display names
@@ -99,6 +133,7 @@ def _generate_popup_html(
         "phone": "Phone",
         "address": "Address",
         "notes": "Notes",
+        "google_maps_url": "Google Maps",
         "latitude": "Latitude",
         "longitude": "Longitude",
     }
@@ -106,7 +141,10 @@ def _generate_popup_html(
     # Get all fields in location, starting with standard ones
     all_fields = []
     for field in standard_fields:
-        if field in location:
+        if field == "google_maps_url":
+            # Always include google_maps_url since it's calculated
+            all_fields.append(field)
+        elif field in location:
             all_fields.append(field)
 
     # Add any additional fields not in standard list (excluding coordinates)
@@ -127,7 +165,12 @@ def _generate_popup_html(
             if field == "name":  # Skip name as it's already in header
                 continue
 
-            formatted_value = _format_field_value(field, location.get(field))
+            if field == "google_maps_url":
+                value = _generate_google_maps_url(location)
+                formatted_value = _format_field_value(field, value)
+            else:
+                formatted_value = _format_field_value(field, location.get(field))
+
             if formatted_value:  # Only include non-empty fields
                 display_name = field_names.get(field, field.replace("_", " ").title())
                 html_parts.append(
@@ -145,7 +188,12 @@ def _generate_popup_html(
             if field == "name":  # Skip name as it's already in header
                 continue
 
-            formatted_value = _format_field_value(field, location.get(field))
+            if field == "google_maps_url":
+                value = _generate_google_maps_url(location)
+                formatted_value = _format_field_value(field, value)
+            else:
+                formatted_value = _format_field_value(field, location.get(field))
+
             if formatted_value:  # Only include non-empty fields
                 display_name = field_names.get(field, field.replace("_", " ").title())
                 html_parts.append(
@@ -173,8 +221,17 @@ def export_to_json(locations: LocationList, output_path: str) -> None:
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
+    # Add Google Maps URL to each location
+    locations_with_google_maps = []
+    for loc in locations:
+        loc_copy = loc.copy()
+        loc_copy["google_maps_url"] = _generate_google_maps_url(loc)
+        locations_with_google_maps.append(loc_copy)
+
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump({"locations": locations}, f, indent=2, ensure_ascii=False)
+        json.dump(
+            {"locations": locations_with_google_maps}, f, indent=2, ensure_ascii=False
+        )
 
     print(f"📄 JSON exported to: {Path(output_path).resolve()}")
 
@@ -199,10 +256,13 @@ def export_to_csv(locations: LocationList, output_path: str) -> None:
     if not locations:
         return
 
-    # Get all possible fields from all locations
+    # Get all possible fields from all locations and add google_maps_url
     all_fields: Set[str] = set()
     for loc in locations:
         all_fields.update(loc.keys())
+
+    # Add google_maps_url field
+    all_fields.add("google_maps_url")
 
     fieldnames = sorted(list(all_fields))
 
@@ -216,6 +276,8 @@ def export_to_csv(locations: LocationList, output_path: str) -> None:
             # Handle tags as comma-separated string
             if "tags" in row and isinstance(row["tags"], list):
                 row["tags"] = ", ".join(row["tags"])
+            # Add Google Maps URL
+            row["google_maps_url"] = _generate_google_maps_url(loc)
             writer.writerow(row)
 
     print(f"📊 CSV exported to: {Path(output_path).resolve()}")
@@ -254,6 +316,7 @@ def export_to_geojson(locations: LocationList, output_path: str) -> None:
                 "neighborhood": loc.get("neighborhood", ""),
                 "date_added": loc.get("date_added", ""),
                 "date_of_visit": loc.get("date_of_visit", ""),
+                "google_maps_url": _generate_google_maps_url(loc),
             },
         }
         geojson["features"].append(feature)
@@ -400,6 +463,7 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
             "tags",
             "type",
             "website",
+            "google_maps_url",
         ]
 
         # Add any additional fields not in standard list
@@ -413,7 +477,10 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
 
         for field in all_fields:
             value = loc.get(field, "")
-            if isinstance(value, list):
+            if field == "google_maps_url":
+                value = _generate_google_maps_url(loc)
+                value_str = str(value) if value else ""
+            elif isinstance(value, list):
                 if value:  # Non-empty list
                     value_str = ", ".join(str(item) for item in value)
                 else:
@@ -430,7 +497,27 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
         extended_data_parts = ["      <ExtendedData>"]
         for field in all_fields:
             value = loc.get(field, "")
-            if isinstance(value, list):
+            if field == "google_maps_url":
+                value = _generate_google_maps_url(loc)
+                value_str = str(value) if value else ""
+                if value_str:
+                    # Handle special characters in value (URLs contain special chars)
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            f"          <value><![CDATA[{value_str}]]></value>",
+                            "        </Data>",
+                        ]
+                    )
+                else:
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            "          <value/>",
+                            "        </Data>",
+                        ]
+                    )
+            elif isinstance(value, list):
                 value_str = str(value) if value else ""
                 if value_str:
                     extended_data_parts.extend(
