@@ -198,7 +198,7 @@ Given web content about a location, extract the following information and return
     "neighborhood": "Area name",
     "tags": ["tag1", "tag2"],
     "confidence_score": 0.85,
-    "data_sources": [websites that were accessed to extract the information],
+    "data_sources": [websites that were accessed to extract the information. stop at 10],
     "validation_status": "web_verified (only if the information was verified from the web)" or "unverified"
 }
 
