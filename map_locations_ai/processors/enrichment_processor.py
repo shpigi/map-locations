@@ -661,13 +661,13 @@ Return ONLY the JSON object, no additional text."""
             "validation_status" not in compliant_location
             or not compliant_location["validation_status"]
         ):
-            compliant_location["validation_status"] = "web_verified"
+            compliant_location["validation_status"] = "unverified"
 
         if (
             "confidence_score" not in compliant_location
             or compliant_location["confidence_score"] == 0.0
         ):
-            compliant_location["confidence_score"] = 0.85
+            compliant_location["confidence_score"] = 0.5
 
         # Remove any non-Location model fields (like chunk_id)
         allowed_fields = list(required_fields.keys()) + list(optional_fields.keys())
