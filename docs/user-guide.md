@@ -8,6 +8,7 @@ Complete guide for using the Map Locations CLI and library.
 - [Quick Start](#quick-start)
 - [Data Format](#data-format)
 - [CLI Usage](#cli-usage)
+- [Mobile Optimization](#mobile-optimization)
 - [Library Usage](#library-usage)
 - [AI Processing](#ai-processing)
 - [Export Formats](#export-formats)
@@ -63,6 +64,9 @@ locations:
 ```bash
 # Using the CLI tool
 map-locations locations.yaml --output map.html
+
+# Create mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
 
 # Or using Python
 python -c "
@@ -125,12 +129,19 @@ python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.y
 - **Content Cleaning**: Removes navigation/footer content for cleaner processing
 - **Rate Limiting**: Respectful web scraping with configurable delays
 - **Backup System**: Automatic backup creation and restoration
+- **Multi-threaded Verification**: Improved URL checking performance
 
 #### Deduplication
 - **Smart Detection**: Multi-level similarity scoring (name, type, description)
 - **Confidence Merging**: Weighted strategies for combining duplicates
 - **Type Compatibility**: Understands related types (museum/gallery, etc.)
 - **Graph Clustering**: Efficient Union-Find algorithm for duplicate grouping
+
+#### Geocoding
+- **LLM-Assisted Geocoding**: AI-powered coordinate extraction as fallback
+- **Global Location Support**: Worldwide compatibility without city assumptions
+- **Confidence Scoring**: Reliability metrics for geocoding results
+- **JSON Response Parsing**: Robust coordinate validation and extraction
 
 ### AI Configuration
 
@@ -289,6 +300,9 @@ The CLI supports multiple formats with a single command structure:
 # Create HTML map (default)
 map-locations locations.yaml --output map.html
 
+# Create mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
+
 # Export to specific format
 map-locations locations.yaml --format json --output locations.json
 map-locations locations.yaml --format kml --output locations.kml
@@ -309,6 +323,9 @@ map-locations locations.yaml --tile-provider google_satellite --output map.html
 # Group by different fields
 map-locations locations.yaml --group-by neighborhood --output map.html
 map-locations locations.yaml --group-by date_added --output map.html
+
+# Advanced filtering with mobile optimization
+map-locations locations.yaml --advanced-filter --mobile --output advanced_mobile_map.html
 ```
 
 ### Grouping Options
@@ -340,6 +357,99 @@ map-locations locations.yaml --tile-provider google_maps
 map-locations locations.yaml --tile-provider google_satellite
 ```
 
+## Mobile Optimization
+
+The Map Locations library includes mobile-optimized features for better usability on smartphones and tablets.
+
+### Mobile Features
+
+#### Mobile-Optimized Layout
+- **Collapsible Controls**: Filter panel can be toggled on/off with a button
+- **Narrower Popups**: 300px width (vs 450px on desktop) for better mobile viewing
+- **Touch-Friendly Interface**: Larger buttons and touch targets
+- **Responsive Design**: Adapts to different screen sizes
+
+#### Mobile-Specific Popup Content
+- **Essential Information Only**: Streamlined popup content for mobile
+- **Clickable Phone Numbers**: Tap to call phone numbers directly
+- **Website Links**: Tap to open websites in new tabs
+- **Truncated Descriptions**: Long descriptions are limited to 100 characters
+- **Mobile Field Ordering**: Optimized field display order for mobile
+
+#### Mobile Filtering Controls
+- **Toggle Button**: Floating filter button in top-left corner
+- **Collapsible Panel**: Filter panel can be shown/hidden
+- **Compact Layout**: Smaller fonts and tighter spacing
+- **Touch-Optimized**: Larger checkboxes and buttons
+
+### Using Mobile Features
+
+#### CLI Usage
+```bash
+# Create mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
+
+# Mobile map with advanced filtering
+map-locations locations.yaml --mobile --advanced-filter --output mobile_advanced_map.html
+
+# Mobile map with Google Maps tiles
+map-locations locations.yaml --mobile --tile-provider google_maps --output mobile_google_map.html
+```
+
+#### Python Library Usage
+```python
+from map_locations import load_locations_from_yaml, show_locations_grouped
+
+# Load locations
+locations = load_locations_from_yaml("locations.yaml")
+
+# Create mobile-optimized map
+show_locations_grouped(
+    locations,
+    map_filename="mobile_map.html",
+    mobile=True
+)
+
+# Mobile map with advanced filtering
+show_locations_with_advanced_filtering(
+    locations,
+    map_filename="mobile_advanced_map.html",
+    mobile=True
+)
+```
+
+### Mobile vs Desktop Comparison
+
+| Feature | Desktop | Mobile |
+|---------|---------|--------|
+| Popup Width | 450px | 300px |
+| Filter Panel | Always visible | Collapsible |
+| Filter Button | None | Toggle button |
+| Phone Numbers | Text only | Clickable links |
+| Website Links | Text only | Clickable links |
+| Description Length | Full | Truncated (100 chars) |
+| Field Order | Standard | Mobile-optimized |
+
+### Mobile Use Cases
+
+#### Travel Planning
+```bash
+# Create mobile map for travel
+map-locations travel_locations.yaml --mobile --output travel_mobile.html
+```
+
+#### Field Research
+```bash
+# Create mobile map for field work
+map-locations research_locations.yaml --mobile --advanced-filter --output research_mobile.html
+```
+
+#### Event Planning
+```bash
+# Create mobile map for events
+map-locations event_locations.yaml --mobile --group-by type --output event_mobile.html
+```
+
 ## Library Usage
 
 ### Basic Map Generation
@@ -352,6 +462,9 @@ locations = load_locations_from_yaml("locations.yaml")
 
 # Generate interactive map with grouping (defaults to type)
 show_locations_grouped(locations, group_by="type", map_filename="map.html")
+
+# Generate mobile-optimized map
+show_locations_grouped(locations, group_by="type", map_filename="mobile_map.html", mobile=True)
 
 # Generate map with Google Maps tiles
 show_locations_grouped(
@@ -385,6 +498,9 @@ show_locations_grouped(locations, group_by="neighborhood", map_filename="neighbo
 
 # Group by date added
 show_locations_grouped(locations, group_by="date_added", map_filename="date_map.html")
+
+# Mobile-optimized grouping
+show_locations_grouped(locations, group_by="type", map_filename="mobile_type_map.html", mobile=True)
 ```
 
 ### Data Loading
@@ -413,6 +529,7 @@ Interactive web maps created with Folium that can be opened in any web browser.
 - Layer controls for grouping
 - Zoom and pan navigation
 - Multiple tile providers
+- Mobile optimization support
 
 ### KML Export
 KML files can be imported into Google My Maps and other mapping applications.
@@ -459,6 +576,7 @@ Spreadsheet-compatible format for data analysis.
 - **Pan Navigation**: Click and drag to move around the map
 - **Fullscreen Mode**: Toggle fullscreen view
 - **Layer Control**: Toggle visibility of different groups with the layer control panel
+- **Mobile Optimization**: Collapsible controls and touch-friendly interface on mobile
 
 ### Color Coding
 
@@ -477,6 +595,7 @@ Different groups are automatically assigned colors from a predefined color palet
   - Tags
   - Date added
   - date of visit
+- **Mobile Popups**: Streamlined content with clickable phone numbers and website links
 - **Tooltips**: Hover over markers to see location names
 - **Layer Control**: Toggle visibility of different groups using the layer control panel
 
@@ -535,6 +654,9 @@ The included example shows historic passages in Paris:
 ```bash
 # Generate the Paris passages map grouped by type (default)
 map-locations passages.yaml --group-by type --output passages_map.html
+
+# Create mobile-optimized version
+map-locations passages.yaml --group-by type --mobile --output passages_mobile.html
 ```
 
 This creates an interactive map of Paris's historic covered passages with:
@@ -542,12 +664,16 @@ This creates an interactive map of Paris's historic covered passages with:
 - Color-coded groups with layer controls
 - Detailed popups showing name, type, tags, and dates
 - Interactive layer panel to toggle group visibility
+- Mobile optimization for smartphones and tablets
 
 ### Custom Map with Google Satellite
 
 ```bash
 # Create a satellite view map
 map-locations locations.yaml --tile-provider google_satellite --output satellite_map.html
+
+# Create mobile satellite view map
+map-locations locations.yaml --tile-provider google_satellite --mobile --output mobile_satellite_map.html
 ```
 
 ### Export for Different Use Cases
@@ -564,4 +690,7 @@ map-locations locations.yaml --format csv --output analysis.csv
 
 # For all purposes
 map-locations locations.yaml --format all --output complete_export/
+
+# For mobile applications
+map-locations locations.yaml --mobile --output mobile_app.html
 ```

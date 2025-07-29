@@ -11,6 +11,12 @@ This project uses a **unified package architecture** with the AI functionality i
 
 The AI module is now part of the main `map-locations` package, providing a unified installation and development experience.
 
+**Recent Major Features:**
+- **Mobile Optimization**: Mobile-optimized map layouts, popups, and controls (collapsible filter panel, touch-friendly UI, clickable phone/website links, 300px popup width)
+- **LLM-Assisted Geocoding**: AI-powered coordinate extraction as fallback, with confidence scoring and global support
+- **Multi-threaded URL Verification**: Improved performance for web scraping and URL validation
+- **Google Maps URL Generation**: Automatic `google_maps_url` field for each location
+
 ## 🚀 Quick Start
 
 ### 1. Full Development Setup (Recommended)

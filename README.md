@@ -29,6 +29,9 @@ EOF
 
 # Generate an interactive map
 map-locations locations.yaml --output my_map.html
+
+# Create mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
 ```
 
 ### AI-Powered Location Extraction
@@ -56,6 +59,7 @@ python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.y
 - 📊 **Multiple Export Formats**: Export to KML, GeoJSON, HTML, JSON, CSV
 - 📁 **YAML Configuration**: Simple YAML format for location data
 - 🖥️ **CLI Interface**: Command-line tool for easy map generation
+- 📱 **Mobile Optimization**: Mobile-optimized layouts with collapsible controls
 
 ### AI-Powered Features
 - 🤖 **AI Location Extraction**: Extract locations from text using OpenAI LLM
@@ -64,6 +68,8 @@ python map_locations_ai/pipeline.py input.txt --config map_locations_ai/config.y
 - 📈 **Confidence Scoring**: AI-generated confidence scores for extracted locations
 - 🔍 **Source Tracking**: Exact text spans and URLs preserved for debugging
 - 📝 **Comprehensive Tracing**: Complete logging of all AI operations
+- 🗺️ **LLM Geocoding**: AI-assisted geocoding as fallback for location coordinates
+- 🌍 **Global Location Support**: Worldwide compatibility with improved geocoding
 
 ## 📖 Documentation
 
@@ -95,6 +101,9 @@ pip install -e .
 # Create interactive HTML map
 map-locations locations.yaml --output map.html
 
+# Create mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
+
 # Export to different formats
 map-locations locations.yaml --format kml --output locations.kml
 map-locations locations.yaml --format all --output exports/
@@ -102,6 +111,9 @@ map-locations locations.yaml --format all --output exports/
 # Use different tile providers
 map-locations locations.yaml --tile-provider google_maps --output map.html
 map-locations locations.yaml --tile-provider google_satellite --output map.html
+
+# Advanced filtering with mobile optimization
+map-locations locations.yaml --advanced-filter --mobile --output advanced_mobile_map.html
 ```
 
 ### AI Processing
@@ -128,6 +140,9 @@ locations = load_locations_from_yaml("locations.yaml")
 
 # Create interactive map
 show_locations_grouped(locations, map_filename="map.html")
+
+# Create mobile-optimized map
+show_locations_grouped(locations, map_filename="mobile_map.html", mobile=True)
 ```
 
 ## 🗺️ Map Features
@@ -137,6 +152,7 @@ show_locations_grouped(locations, map_filename="map.html")
 - **Color Coding**: Automatic color assignment for different location types
 - **Detailed Popups**: Click markers to see comprehensive information
 - **Multiple Tile Providers**: OpenStreetMap, Google Maps, Google Satellite
+- **Mobile Optimization**: Collapsible controls, clickable phone numbers, optimized layout
 
 ## 📊 Export Formats
 
@@ -159,6 +175,7 @@ show_locations_grouped(locations, map_filename="map.html")
 - **Content Cleaning**: Remove navigation/footer content for cleaner processing
 - **Rate Limiting**: Respectful web scraping with configurable delays
 - **Backup System**: Automatic backup creation and restoration
+- **Multi-threaded Verification**: Improved URL checking performance
 
 ### Deduplication
 - **Smart Detection**: Multi-level similarity scoring (name, type, description)
@@ -166,11 +183,18 @@ show_locations_grouped(locations, map_filename="map.html")
 - **Type Compatibility**: Understands related types (museum/gallery, etc.)
 - **Graph Clustering**: Efficient Union-Find algorithm for duplicate grouping
 
+### Geocoding
+- **LLM-Assisted Geocoding**: AI-powered coordinate extraction as fallback
+- **Global Location Support**: Worldwide compatibility without city assumptions
+- **Confidence Scoring**: Reliability metrics for geocoding results
+- **JSON Response Parsing**: Robust coordinate validation and extraction
+
 ### Quality Assurance
 - **Confidence Scoring**: 0.1-0.9 range with source tie-back
 - **Comprehensive Tracing**: Complete logging of all operations
 - **Validation**: Required field checking and format validation
 - **Performance Monitoring**: Timing and memory usage tracking
+- **Honest Defaults**: Real validation status and confidence scores only
 
 ## 🏗️ Project Structure
 
@@ -193,6 +217,7 @@ map_locations_ai/                 # AI processing package
 │   │   ├── llm_processor.py     # OpenAI integration
 │   │   ├── yaml_processor.py    # YAML handling
 │   │   ├── enrichment_processor.py # Location enrichment
+│   │   ├── geocoding_service.py # Geocoding with LLM fallback
 │   │   └── ...                  # Other processors
 │   ├── config.yaml              # AI configuration
 │   └── agent_prompt.txt         # LLM prompts

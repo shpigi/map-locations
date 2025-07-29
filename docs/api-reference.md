@@ -223,7 +223,7 @@ print(f"Found {len(downtown_locations)} downtown locations")
 
 ## Visualization
 
-### `show_locations_grouped(locations: List[Location], group_by: str = "type", map_filename: str = "map.html", tile_provider: str = "openstreetmap") -> str`
+### `show_locations_grouped(locations: List[Location], group_by: str = "type", map_filename: str = "map.html", tile_provider: str = "openstreetmap", filter_types: Optional[List[str]] = None, mobile: bool = False) -> str`
 
 Create an interactive map with grouped locations.
 
@@ -232,6 +232,8 @@ Create an interactive map with grouped locations.
 - `group_by` (str): Field to group by ("type", "neighborhood", "date_added", "date_of_visit")
 - `map_filename` (str): Output filename for the HTML map
 - `tile_provider` (str): Tile provider ("openstreetmap", "google_maps", "google_satellite")
+- `filter_types` (Optional[List[str]]): List of location types to include
+- `mobile` (bool): Enable mobile-optimized popups and layout
 
 **Returns:**
 - `str`: Path to the generated HTML file
@@ -243,6 +245,9 @@ from map_locations import show_locations_grouped
 # Create map grouped by type
 map_file = show_locations_grouped(locations, group_by="type", map_filename="type_map.html")
 
+# Create mobile-optimized map
+map_file = show_locations_grouped(locations, group_by="type", map_filename="mobile_map.html", mobile=True)
+
 # Create map with Google Maps tiles
 map_file = show_locations_grouped(
     locations,
@@ -250,15 +255,28 @@ map_file = show_locations_grouped(
     map_filename="neighborhood_map.html",
     tile_provider="google_maps"
 )
+
+# Create mobile map with filtering
+map_file = show_locations_grouped(
+    locations,
+    group_by="type",
+    map_filename="mobile_filtered_map.html",
+    filter_types=["restaurant", "cafe"],
+    mobile=True
+)
 ```
 
-### `show_locations_with_filtering(locations: List[Location], map_filename: str = "map.html") -> str`
+### `show_locations_with_filtering(locations: List[Location], map_filename: str = "map.html", tile_provider: str = "openstreetmap", filter_types: Optional[List[str]] = None, group_by: str = "type", mobile: bool = False) -> str`
 
-Create an interactive map with filtering controls.
+Create an interactive map with filtering capabilities.
 
 **Parameters:**
 - `locations` (List[Location]): List of location dictionaries
 - `map_filename` (str): Output filename for the HTML map
+- `tile_provider` (str): Tile provider ("openstreetmap", "google_maps", "google_satellite")
+- `filter_types` (Optional[List[str]]): List of location types to include
+- `group_by` (str): Field to group markers by
+- `mobile` (bool): Enable mobile-optimized popups and layout
 
 **Returns:**
 - `str`: Path to the generated HTML file
@@ -267,16 +285,48 @@ Create an interactive map with filtering controls.
 ```python
 from map_locations import show_locations_with_filtering
 
+# Create filtered map
 map_file = show_locations_with_filtering(locations, "filtered_map.html")
+
+# Create mobile filtered map
+map_file = show_locations_with_filtering(locations, "mobile_filtered_map.html", mobile=True)
 ```
 
-### `show_locations_with_google_maps(locations: List[Location], map_filename: str = "map.html") -> str`
+### `show_locations_with_advanced_filtering(locations: List[Location], map_filename: str = "map.html", tile_provider: str = "openstreetmap", filter_types: Optional[List[str]] = None, mobile: bool = False) -> str`
+
+Create an interactive map with advanced filtering capabilities using dropdown controls.
+
+**Parameters:**
+- `locations` (List[Location]): List of location dictionaries
+- `map_filename` (str): Output filename for the HTML map
+- `tile_provider` (str): Tile provider ("openstreetmap", "google_maps", "google_satellite")
+- `filter_types` (Optional[List[str]]): List of location types to pre-filter
+- `mobile` (bool): Enable mobile-optimized popups and collapsible filtering controls
+
+**Returns:**
+- `str`: Path to the generated HTML file
+
+**Example:**
+```python
+from map_locations import show_locations_with_advanced_filtering
+
+# Create advanced filtering map
+map_file = show_locations_with_advanced_filtering(locations, "advanced_map.html")
+
+# Create mobile advanced filtering map
+map_file = show_locations_with_advanced_filtering(locations, "mobile_advanced_map.html", mobile=True)
+```
+
+### `show_locations_with_google_maps(locations: List[Location], group_by: str = "type", map_filename: str = "map.html", satellite: bool = False, mobile: bool = False) -> str`
 
 Create an interactive map using Google Maps tiles.
 
 **Parameters:**
 - `locations` (List[Location]): List of location dictionaries
+- `group_by` (str): Field to group markers by
 - `map_filename` (str): Output filename for the HTML map
+- `satellite` (bool): Use satellite view instead of street view
+- `mobile` (bool): Enable mobile-optimized popups and layout
 
 **Returns:**
 - `str`: Path to the generated HTML file
@@ -285,7 +335,14 @@ Create an interactive map using Google Maps tiles.
 ```python
 from map_locations import show_locations_with_google_maps
 
+# Create Google Maps map
 map_file = show_locations_with_google_maps(locations, "google_maps.html")
+
+# Create mobile Google Maps map
+map_file = show_locations_with_google_maps(locations, "mobile_google_maps.html", mobile=True)
+
+# Create satellite view
+map_file = show_locations_with_google_maps(locations, "satellite_map.html", satellite=True)
 ```
 
 ## Export Functions
@@ -526,6 +583,68 @@ Type alias for a list of locations.
 LocationList = List[Location]
 ```
 
+## Mobile Optimization
+
+The library includes mobile-optimized features for better usability on smartphones and tablets.
+
+### Mobile Features
+
+#### Popup Optimization
+- **Narrower Width**: 300px popup width (vs 450px on desktop)
+- **Essential Content**: Streamlined information display
+- **Clickable Elements**: Phone numbers and website links are clickable
+- **Truncated Descriptions**: Long descriptions limited to 100 characters
+
+#### Filtering Controls
+- **Collapsible Panel**: Filter panel can be toggled on/off
+- **Toggle Button**: Floating filter button in top-left corner
+- **Touch-Friendly**: Larger buttons and touch targets
+- **Compact Layout**: Smaller fonts and tighter spacing
+
+#### Field Ordering
+- **Mobile-Optimized**: Essential fields displayed first
+- **Reduced Content**: Less verbose field descriptions
+- **Touch Targets**: Larger clickable areas
+
+### Mobile Usage Examples
+
+```python
+from map_locations import show_locations_grouped, show_locations_with_advanced_filtering
+
+# Create mobile-optimized map
+show_locations_grouped(
+    locations,
+    map_filename="mobile_map.html",
+    mobile=True
+)
+
+# Create mobile map with advanced filtering
+show_locations_with_advanced_filtering(
+    locations,
+    map_filename="mobile_advanced_map.html",
+    mobile=True
+)
+
+# Create mobile map with Google Maps tiles
+show_locations_with_google_maps(
+    locations,
+    map_filename="mobile_google_map.html",
+    mobile=True
+)
+```
+
+### Mobile vs Desktop Comparison
+
+| Feature | Desktop | Mobile |
+|---------|---------|--------|
+| Popup Width | 450px | 300px |
+| Filter Panel | Always visible | Collapsible |
+| Filter Button | None | Toggle button |
+| Phone Numbers | Text only | Clickable links |
+| Website Links | Text only | Clickable links |
+| Description Length | Full | Truncated (100 chars) |
+| Field Order | Standard | Mobile-optimized |
+
 ## Error Handling
 
 ### Common Exceptions
@@ -651,4 +770,45 @@ def process_with_ai(input_file: str, config_file: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"❌ AI processing failed: {e}")
         return {"error": str(e)}
+```
+
+### 6. Mobile Optimization Best Practices
+
+```python
+def create_mobile_map(locations: List[Location], filename: str) -> str:
+    """Create a mobile-optimized map."""
+    try:
+        return show_locations_grouped(
+            locations,
+            map_filename=filename,
+            mobile=True,
+            group_by="type"
+        )
+    except Exception as e:
+        print(f"❌ Mobile map creation failed: {e}")
+        return ""
+```
+
+### 7. Responsive Design Considerations
+
+```python
+def create_responsive_maps(locations: List[Location], base_name: str) -> Dict[str, str]:
+    """Create both desktop and mobile versions."""
+    maps = {}
+
+    # Desktop version
+    maps['desktop'] = show_locations_grouped(
+        locations,
+        map_filename=f"{base_name}_desktop.html",
+        mobile=False
+    )
+
+    # Mobile version
+    maps['mobile'] = show_locations_grouped(
+        locations,
+        map_filename=f"{base_name}_mobile.html",
+        mobile=True
+    )
+
+    return maps
 ```
