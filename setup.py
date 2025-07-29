@@ -33,6 +33,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "openai>=1.0.0",
+        "openai-agents>=0.1.0",
         "pyyaml>=6.0",
         "folium>=0.14.0",
         "requests>=2.28.0",

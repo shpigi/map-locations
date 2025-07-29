@@ -103,10 +103,10 @@ class LocationConverter:
             converted["data_sources"] = ["web_search_enrichment"]
 
         if not converted["validation_status"]:
-            converted["validation_status"] = "web_verified"
+            converted["validation_status"] = "unverified"
 
         if converted["confidence_score"] == 0.0:
-            converted["confidence_score"] = 0.85
+            converted["confidence_score"] = 0.5
 
         # Clean up URLs - remove placeholder URLs
         converted = self._clean_urls(converted)

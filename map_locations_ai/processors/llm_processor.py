@@ -238,8 +238,8 @@ class TrackedCompletions:
                 processing_time_ms=processing_time_ms,
                 success=True,
                 error_message=None,
-                input_text=str(messages)[:1000],  # Truncate for logging
-                output_text=output_text[:1000],  # Truncate for logging
+                input_text=str(messages),
+                output_text=output_text,
                 retry_count=retry_count,
                 operation_type=operation_type,
             )
@@ -262,7 +262,94 @@ class TrackedCompletions:
                 processing_time_ms=processing_time_ms,
                 success=False,
                 error_message=str(e),
-                input_text=str(messages)[:1000],  # Truncate for logging
+                input_text=str(messages),
+                output_text="",
+                retry_count=retry_count,
+                operation_type=operation_type,
+            )
+            raise
+
+
+class TrackedResponses:
+    """Wrapper for OpenAI responses with usage tracking."""
+
+    def __init__(self, client: "TrackedOpenAI", usage_tracker: LLMUsageTracker):
+        self.client = client
+        self.usage_tracker = usage_tracker
+        self._original_responses = client._original_responses
+
+    def create(self, model: str, **kwargs):
+        """
+        Create a response with usage tracking.
+
+        Args:
+            model: The model to use
+            **kwargs: Additional arguments for the OpenAI API
+
+        Returns:
+            The OpenAI response
+
+        Raises:
+            Exception: If the API call fails
+        """
+        start_time = time.time()
+
+        # Extract tracking parameters from kwargs
+        calling_module = kwargs.pop("calling_module", "EnrichmentProcessor")
+        operation_type = kwargs.pop("operation_type", "enrichment")
+        retry_count = kwargs.pop("retry_count", 0)
+
+        # Extract standard parameters
+        timeout = kwargs.get("timeout", 120)
+        input_text = kwargs.get("input", "")
+
+        try:
+            # Make the actual API call (tracking parameters already removed)
+            response = self._original_responses.create(model=model, **kwargs)
+
+            processing_time_ms = (time.time() - start_time) * 1000
+
+            # Extract response content
+            output_text = getattr(response, "output_text", "")
+
+            # Log successful call
+            self.usage_tracker.log_llm_call(
+                calling_module=calling_module,
+                model=model,
+                temperature=0.1,  # Default for responses API
+                max_tokens=2000,  # Default for responses API
+                timeout=timeout,
+                input_tokens=None,  # Not available in responses API
+                output_tokens=None,  # Not available in responses API
+                total_tokens=None,  # Not available in responses API
+                processing_time_ms=processing_time_ms,
+                success=True,
+                error_message=None,
+                input_text=str(input_text),
+                output_text=str(output_text),
+                retry_count=retry_count,
+                operation_type=operation_type,
+            )
+
+            return response
+
+        except Exception as e:
+            processing_time_ms = (time.time() - start_time) * 1000
+
+            # Log failed call
+            self.usage_tracker.log_llm_call(
+                calling_module=calling_module,
+                model=model,
+                temperature=0.1,  # Default for responses API
+                max_tokens=2000,  # Default for responses API
+                timeout=timeout,
+                input_tokens=None,
+                output_tokens=None,
+                total_tokens=None,
+                processing_time_ms=processing_time_ms,
+                success=False,
+                error_message=str(e),
+                input_text=str(input_text),
                 output_text="",
                 retry_count=retry_count,
                 operation_type=operation_type,
@@ -284,11 +371,17 @@ class TrackedOpenAI(OpenAI):
         super().__init__(api_key=api_key, **kwargs)
         self.usage_tracker = LLMUsageTracker.get_instance()
         self._original_chat = super().chat  # Store original chat method
+        self._original_responses = super().responses  # Store original responses method
 
     @property
     def chat(self):
         """Return tracked chat completions wrapper."""
         return TrackedChatCompletions(self, self.usage_tracker)
+
+    @property
+    def responses(self):
+        """Return tracked responses wrapper."""
+        return TrackedResponses(self, self.usage_tracker)
 
 
 class LLMProcessor:
@@ -339,7 +432,7 @@ class LLMProcessor:
 
         # Check if we have a client (for testing environments)
         if self.client is None:
-            return self._create_mock_response()
+            raise ValueError("No OpenAI client available for LLM processing")
 
         # Prepare the prompt
         user_message = self._format_extraction_prompt(chunk_data.text)
@@ -552,7 +645,9 @@ Fixed YAML:"""
         try:
             # Check if we have a client (for testing environments)
             if self.client is None:
-                return self._create_mock_fixed_response()
+                raise ValueError("No OpenAI client available for YAML fixing")
+
+            import time
 
             fix_start_time = time.time()
 
@@ -636,54 +731,3 @@ Fixed YAML:"""
                 processing_time_ms=original_processing_time,
                 error=f"Failed to fix YAML: {e}",
             )
-
-    def _create_mock_response(self) -> LLMResult:
-        """Create mock response for testing."""
-        return LLMResult(
-            success=True,
-            raw_response=(
-                'locations:\n  - name: "Test Location"\n    type: "landmark"\n'
-                '    description: "Mock location for testing"\n    source_text: "Test text"\n'
-                '    confidence: 0.8\n    is_url: false\n    url: ""'
-            ),
-            parsed_locations=[
-                {
-                    "name": "Test Location",
-                    "type": "landmark",
-                    "description": "Mock location for testing",
-                    "source_text": "Test text",
-                    "confidence": 0.8,
-                    "is_url": False,
-                    "url": "",
-                }
-            ],
-            processing_time=0.0,
-            processing_time_ms=0.0,
-            error=None,
-        )
-
-    def _create_mock_fixed_response(self) -> LLMResult:
-        """Create mock fixed response for testing."""
-        return LLMResult(
-            success=True,
-            raw_response=(
-                'locations:\n  - name: "Fixed Test Location"\n    type: "landmark"\n'
-                '    description: "Mock fixed location for testing"\n'
-                '    source_text: "Test text"\n'
-                '    confidence: 0.8\n    is_url: false\n    url: ""'
-            ),
-            parsed_locations=[
-                {
-                    "name": "Fixed Test Location",
-                    "type": "landmark",
-                    "description": "Mock fixed location for testing",
-                    "source_text": "Test text",
-                    "confidence": 0.8,
-                    "is_url": False,
-                    "url": "",
-                }
-            ],
-            processing_time=0.0,
-            processing_time_ms=0.0,
-            error=None,
-        )

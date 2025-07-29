@@ -23,6 +23,7 @@ class Location(TypedDict, total=False):
         neighborhood: Neighborhood or area name
         date_added: Date when location was added (YYYY-MM-DD format)
         date_of_visit: Date when location was visited (YYYY-MM-DD format)
+        google_maps_url: str  # Calculated Google Maps search URL
 
     AI-Enhanced Fields (optional, added by AI agent):
         description: Tourist-friendly description of the location
@@ -55,6 +56,7 @@ class Location(TypedDict, total=False):
     neighborhood: str
     date_added: str
     date_of_visit: str
+    google_maps_url: str  # Calculated Google Maps search URL
 
     # AI-enhanced fields
     description: str

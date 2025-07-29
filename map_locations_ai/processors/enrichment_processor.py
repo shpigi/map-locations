@@ -1,36 +1,29 @@
 """
-Location Enrichment Processor for the Map Locations AI pipeline.
+Simplified Location Enrichment Processor for the Map Locations AI pipeline.
 
-Enriches basic extracted locations with comprehensive data using LLM with web search capabilities.
+Enriches basic extracted locations with comprehensive data using OpenAI responses API with web search.
 """
 
 import json
-import re
 import time
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote_plus
 
-import requests
 from openai import OpenAI
-
-from map_locations.common.formats import validate_location, validate_locations
-
-from .models import ChunkData, LLMResult
 
 
 class EnrichmentProcessor:
-    """Enriches location data with comprehensive information using LLM with web search tools."""
+    """Simplified enrichment processor using OpenAI responses API with web search."""
 
     def __init__(
         self,
         client: Optional[OpenAI],
         model: str = "gpt-4o-mini",
         max_searches_per_location: int = 3,
-        temperature: float = 0.1,
         timeout: int = 120,
         trace_manager=None,
         max_retries: int = 2,
+        max_concurrent_calls: int = 5,
     ):
         """
         Initialize the enrichment processor.
@@ -39,34 +32,44 @@ class EnrichmentProcessor:
             client: OpenAI client instance (None for testing)
             model: OpenAI model to use
             max_searches_per_location: Maximum search operations per location
-            temperature: Temperature setting for generation
             timeout: Request timeout in seconds
             trace_manager: Optional trace manager for logging
             max_retries: Maximum number of retries for JSON parsing failures
+            max_concurrent_calls: Maximum number of concurrent API calls
         """
-        self.client = client
+        # Handle client tracking - the client might already be tracked by the pipeline
+        if client is None:
+            self.client = None
+        elif hasattr(client, "usage_tracker"):
+            # Client is already tracked (from pipeline)
+            self.client = client
+        else:
+            # Client needs tracking - wrap it
+            from .llm_processor import TrackedOpenAI
+
+            tracked_client = TrackedOpenAI(api_key=client.api_key)
+            tracked_client._original_responses = client.responses
+            self.client = tracked_client
+
         self.model = model
         self.max_searches_per_location = max_searches_per_location
-        self.temperature = temperature
         self.timeout = timeout
         self.trace_manager = trace_manager
         self.max_retries = max_retries
+        self.max_concurrent_calls = max_concurrent_calls
 
-        # Retry statistics tracking
-        self.retry_stats: Dict[str, Any] = {
+        # Statistics tracking
+        self.stats = {
             "total_locations_processed": 0,
-            "locations_with_retries": 0,
+            "successful_enrichments": 0,
+            "failed_enrichments": 0,
+            "total_api_calls": 0,
             "total_retry_attempts": 0,
-            "successful_retries": 0,
-            "failed_retries": 0,
-            "retry_types": {
-                "extraction": {"attempts": 0, "successes": 0, "failures": 0},
-            },
         }
 
     def enrich_locations(self, locations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Enrich all locations with comprehensive data.
+        Enrich all locations with comprehensive data using concurrent processing.
 
         Args:
             locations: List of basic location dictionaries
@@ -74,63 +77,55 @@ class EnrichmentProcessor:
         Returns:
             List of enriched location dictionaries
         """
-        if not locations:
-            return []
+        if not locations or not self.client:
+            return locations
 
-        # Reset retry statistics for this batch
-        self.retry_stats = {
+        print(
+            f"🔍 Enriching {len(locations)} locations with max {self.max_concurrent_calls} concurrent calls..."
+        )
+
+        # Reset statistics
+        self.stats = {
             "total_locations_processed": len(locations),
-            "locations_with_retries": 0,
+            "successful_enrichments": 0,
+            "failed_enrichments": 0,
+            "total_api_calls": 0,
             "total_retry_attempts": 0,
-            "successful_retries": 0,
-            "failed_retries": 0,
-            "retry_types": {
-                "extraction": {"attempts": 0, "successes": 0, "failures": 0},
-            },
         }
 
         enriched_locations = []
 
-        for i, location in enumerate(locations, 1):
-            location_name = location.get("name", "Unknown")
-            print(f"  Processing location {i}/{len(locations)}: {location_name}")
+        # Process locations with concurrent calls
+        with ThreadPoolExecutor(max_workers=self.max_concurrent_calls) as executor:
+            # Submit all enrichment tasks
+            future_to_location = {
+                executor.submit(self._enrich_single_location, location): location
+                for location in locations
+            }
 
-            try:
-                enriched_location = self._enrich_single_location(location)
-                compliant_enriched = self._ensure_location_compliance(enriched_location)
-                enriched_locations.append(compliant_enriched)
-                print(f"    ✅ Enriched successfully")
-
-            except Exception as e:
-                print(f"    ❌ Enrichment failed: {e}")
-                # Add the original location with minimal enrichment
-                minimal_enriched = self._add_minimal_enrichment(location)
-                compliant_minimal = self._ensure_location_compliance(minimal_enriched)
-                enriched_locations.append(compliant_minimal)
-
-                # Trace failed enrichment
-                if self.trace_manager:
-                    self.trace_manager.trace_operation(
-                        "location_enrichment_failed",
-                        f"Failed to enrich location: {location_name}",
-                        {
-                            "location_name": location_name,
-                            "location_type": location.get("type", "unknown"),
-                            "error": str(e),
-                            "processing_index": i,
-                            "total_locations": len(locations),
-                        },
+            # Collect results as they complete
+            for future in as_completed(future_to_location):
+                location = future_to_location[future]
+                try:
+                    enriched_location = future.result()
+                    enriched_locations.append(enriched_location)
+                    self.stats["successful_enrichments"] += 1
+                except Exception as e:
+                    print(
+                        f"❌ Failed to enrich location '{location.get('name', 'Unknown')}': {e}"
                     )
+                    # Keep original location if enrichment fails
+                    enriched_locations.append(location)
+                    self.stats["failed_enrichments"] += 1
 
-        # Report retry statistics
-        self._report_retry_statistics()
-
-        print(f"✅ Enrichment complete: {len(enriched_locations)} locations processed")
+        print(
+            f"✅ Enrichment complete: {self.stats['successful_enrichments']}/{len(locations)} successful"
+        )
         return enriched_locations
 
     def _enrich_single_location(self, location: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Enrich a single location using LLM with web search capabilities.
+        Enrich a single location using the OpenAI responses API.
 
         Args:
             location: Basic location dictionary
@@ -138,245 +133,46 @@ class EnrichmentProcessor:
         Returns:
             Enriched location dictionary
         """
-        # Check if we have a client (for testing environments)
-        if self.client is None:
-            return self._create_mock_enriched_location(location)
-
-        # Use web search + OpenAI approach
-        return self._enrich_with_web_search(location)
-
-    def _enrich_with_web_search(self, location: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Enrich location using web search and OpenAI.
-
-        Args:
-            location: Basic location dictionary
-
-        Returns:
-            Enriched location dictionary
-        """
-        location_name = location.get("name", "Unknown")
-        location_type = location.get("type", "landmark")
-
-        # Step 1: Gather web content from multiple sources
-        web_content = self._gather_web_content(location_name, location_type)
-
-        # Step 2: Use OpenAI to extract structured information
-        return self._extract_with_openai(location, web_content)
-
-    def _gather_web_content(self, location_name: str, location_type: str) -> str:
-        """
-        Gather web content from multiple sources for a location.
-
-        Args:
-            location_name: Name of the location
-            location_type: Type of location
-
-        Returns:
-            Combined web content as string
-        """
-        content_parts = []
-
-        # Source 1: Wikipedia
-        wiki_content = self._fetch_wikipedia_content(location_name)
-        if wiki_content:
-            content_parts.append(f"WIKIPEDIA:\n{wiki_content}")
-
-        # Source 2: Wikivoyage (travel guide)
-        wikivoyage_content = self._fetch_wikivoyage_content(location_name)
-        if wikivoyage_content:
-            content_parts.append(f"WIKIVOYAGE:\n{wikivoyage_content}")
-
-        # Source 3: Basic web search (simulated)
-        web_search_content = self._fetch_web_search_content(
-            location_name, location_type
-        )
-        if web_search_content:
-            content_parts.append(f"WEB SEARCH:\n{web_search_content}")
-
-        return "\n\n".join(content_parts)
-
-    def _fetch_wikipedia_content(self, location_name: str) -> Optional[str]:
-        """Fetch content from Wikipedia API."""
-        try:
-            # Clean the location name for search
-            search_query = location_name.replace(" ", "_")
-
-            # Try to get Wikipedia page
-            url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote_plus(search_query)}"
-            response = requests.get(url, timeout=10)
-
-            if response.status_code == 200:
-                data = response.json()
-                extract = data.get("extract", "")
-                if extract:
-                    return str(extract[:1000])  # Limit to first 1000 chars
-
-        except Exception as e:
-            print(f"    ⚠️ Wikipedia fetch failed: {e}")
-
-        return None
-
-    def _fetch_wikivoyage_content(self, location_name: str) -> Optional[str]:
-        """Fetch content from Wikivoyage API."""
-        try:
-            # Try Wikivoyage (travel guide)
-            search_query = location_name.replace(" ", "_")
-            url = f"https://en.wikivoyage.org/api/rest_v1/page/summary/{quote_plus(search_query)}"
-            response = requests.get(url, timeout=10)
-
-            if response.status_code == 200:
-                data = response.json()
-                extract = data.get("extract", "")
-                if extract:
-                    return str(extract[:1000])  # Limit to first 1000 chars
-
-        except Exception as e:
-            print(f"    ⚠️ Wikivoyage fetch failed: {e}")
-
-        return None
-
-    def _fetch_web_search_content(
-        self, location_name: str, location_type: str
-    ) -> Optional[str]:
-        """Fetch real web search content using DuckDuckGo or similar."""
-        try:
-            # Use DuckDuckGo Instant Answer API for real search results
-            search_query = f"{location_name} {location_type} London tourist information"
-            url = f"https://api.duckduckgo.com/?q={quote_plus(search_query)}&format=json&no_html=1&skip_disambig=1"
-
-            response = requests.get(url, timeout=10)
-
-            if response.status_code == 200:
-                data = response.json()
-
-                # Extract relevant information
-                content_parts = []
-
-                if data.get("Abstract"):
-                    content_parts.append(f"ABSTRACT: {data['Abstract']}")
-
-                if data.get("Answer"):
-                    content_parts.append(f"ANSWER: {data['Answer']}")
-
-                if data.get("RelatedTopics"):
-                    # Add first few related topics
-                    for topic in data["RelatedTopics"][:3]:
-                        if isinstance(topic, dict) and topic.get("Text"):
-                            content_parts.append(f"RELATED: {topic['Text']}")
-
-                if content_parts:
-                    return "\n\n".join(content_parts)
-
-            # Fallback: Try a simple web search simulation with more realistic data
-            return self._simulate_realistic_web_search(location_name, location_type)
-
-        except Exception as e:
-            print(f"    ⚠️ Web search failed: {e}")
-            return self._simulate_realistic_web_search(location_name, location_type)
-
-    def _simulate_realistic_web_search(
-        self, location_name: str, location_type: str
-    ) -> str:
-        """Provide realistic web search results WITHOUT fake URLs."""
-        # Provide realistic information but NO fake URLs
-        if "hotel" in location_type.lower():
-            return f"""
-WEB SEARCH RESULTS for {location_name}:
-{location_name} is a well-known hotel in London's {location_name.split()[0]} district.
-Opening hours: Check-in 3:00 PM, Check-out 11:00 AM
-Price range: £150-300 per night
-Duration: Overnight stay recommended
-Best time: Book 2-3 months in advance
-Accessibility: Wheelchair accessible rooms available
-Nearby: {location_name.split()[0]} Underground Station, local restaurants, shops
-Note: Official website and booking URLs not found in search results.
-"""
-        elif "museum" in location_type.lower():
-            return f"""
-WEB SEARCH RESULTS for {location_name}:
-{location_name} is a prominent museum in London featuring {location_name.split()[0]} exhibits.
-Opening hours: Tuesday-Sunday 10:00-18:00, Closed Mondays
-Price range: £15-25 admission
-Duration: 2-3 hours recommended
-Best time: Weekday mornings, avoid weekends
-Accessibility: Wheelchair accessible, audio guides available
-Nearby: {location_name.split()[0]} Station, cafes, gift shops
-Note: Official website and ticket URLs not found in search results.
-"""
-        else:
-            return f"""
-WEB SEARCH RESULTS for {location_name}:
-{location_name} is a popular {location_type} in London, known for its historical significance and tourist appeal.
-Opening hours: Daily 9:00-17:00
-Price range: Free to £10
-Duration: 1-2 hours
-Best time: Morning or late afternoon
-Accessibility: Wheelchair accessible
-Nearby: Public transport, restaurants, shops
-Note: Official website and information URLs not found in search results.
-"""
-
-    def _extract_with_openai(
-        self, location: Dict[str, Any], web_content: str
-    ) -> Dict[str, Any]:
-        """
-        Use OpenAI to extract structured information from web content.
-
-        Args:
-            location: Original location data
-            web_content: Web content to analyze
-
-        Returns:
-            Enriched location dictionary
-        """
-        prompt = self._create_extraction_prompt(location, web_content)
+        if not self.client:
+            print(
+                f"⚠️ No OpenAI client available for location '{location.get('name', 'Unknown')}'"
+            )
+            return self._add_minimal_enrichment(location)
 
         try:
-            if self.client is None:
-                return self._create_mock_enriched_location(location)
+            # Create the system prompt
+            system_prompt = self._get_system_prompt()
 
-            # Use max_completion_tokens for o4 models, max_tokens for others
-            if self.model.startswith("o4"):
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": self._get_extraction_system_prompt(),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    max_completion_tokens=4000,
-                    timeout=self.timeout,
-                    calling_module="EnrichmentProcessor",
-                    operation_type="enrichment",
-                )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": self._get_extraction_system_prompt(),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=self.temperature,
-                    max_tokens=4000,
-                    timeout=self.timeout,
-                    calling_module="EnrichmentProcessor",
-                    operation_type="enrichment",
-                )
+            # Create the input prompt
+            input_prompt = self._create_input_prompt(location)
 
-            return self._process_extraction_response(response, location)
+            # Make the API call with tracking parameters
+            response = self.client.responses.create(
+                model=self.model,
+                tools=[{"type": "web_search_preview"}],
+                instructions=system_prompt,
+                input=input_prompt,
+                timeout=self.timeout,
+                calling_module="EnrichmentProcessor",
+                operation_type="enrichment",
+                retry_count=0,
+            )
+
+            self.stats["total_api_calls"] += 1
+
+            # Parse the response
+            enriched_location = self._parse_response(response, location)
+            return enriched_location
 
         except Exception as e:
-            print(f"    ⚠️ OpenAI extraction failed: {e}")
-            return self._create_mock_enriched_location(location)
+            print(
+                f"❌ Error enriching location '{location.get('name', 'Unknown')}': {e}"
+            )
+            # Return original location with minimal enrichment
+            return self._add_minimal_enrichment(location)
 
-    def _get_extraction_system_prompt(self) -> str:
-        """Get system prompt for information extraction."""
+    def _get_system_prompt(self) -> str:
+        """Get the system prompt for location enrichment."""
         return """You are a location data extraction specialist. Your task is to extract structured information about locations from web content.
 
 CRITICAL: You must return ONLY valid JSON. Do not include any explanatory text, markdown formatting, or additional content outside the JSON object.
@@ -423,26 +219,28 @@ IMPORTANT REQUIREMENTS:
 - Ensure all string values are properly quoted
 - Use empty string "" for missing optional fields"""
 
-    def _create_extraction_prompt(
-        self, location: Dict[str, Any], web_content: str
-    ) -> str:
-        """
-        Create extraction prompt for OpenAI.
+    def _create_input_prompt(self, location: Dict[str, Any]) -> str:
+        """Create the input prompt for location enrichment."""
+        return f"""Use the following information to provide an enriched json object with full information using your memory and assisted by the websearch tool.
+Prefer found information over remembered information as things may have changed.
 
-        Args:
-            location: Original location data
-            web_content: Web content to analyze
+name:
+    {location.get('name', '')}
 
-        Returns:
-            Formatted prompt string
-        """
-        return f"""Please extract comprehensive information about this location from the provided web content.
+description:
+    {location.get('description', '')}
 
-ORIGINAL LOCATION DATA:
- {location}
+is_url:
+    {location.get('is_url', False)}
 
-WEB CONTENT TO ANALYZE:
-{web_content}
+source_text:
+    {location.get('source_text', '')}
+
+likely-type:
+    {location.get('type', '')}
+
+url:
+    {location.get('url', '')}
 
 EXTRACTION REQUIREMENTS:
 Extract all available information and return a complete JSON object that matches the Location model in the system prompt.
@@ -463,11 +261,11 @@ CRITICAL REQUIREMENTS:
 
 Return ONLY the JSON object, no additional text."""
 
-    def _process_extraction_response(
+    def _parse_response(
         self, response: Any, original_location: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Process the OpenAI extraction response.
+        Parse the OpenAI response and merge with original location data.
 
         Args:
             response: OpenAI response object
@@ -476,504 +274,162 @@ Return ONLY the JSON object, no additional text."""
         Returns:
             Enriched location dictionary
         """
-        return self._process_json_response_with_retry(
-            response,
-            original_location,
-            "extraction",
-            "web_search_enrichment",
-            "web_verified",
-        )
+        try:
+            # Extract JSON from response
+            response_text = response.output_text.strip()
 
-    def _add_minimal_enrichment(self, location: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Add minimal enrichment to a location when full enrichment fails.
+            # Handle markdown code blocks (```json ... ```)
+            if response_text.startswith("```json"):
+                # Extract content between ```json and ```
+                start_marker = "```json"
+                end_marker = "```"
+                start_idx = response_text.find(start_marker) + len(start_marker)
+                end_idx = response_text.rfind(end_marker)
+                if start_idx > 0 and end_idx > start_idx:
+                    response_text = response_text[start_idx:end_idx].strip()
+            elif response_text.startswith("```"):
+                # Extract content between ``` and ```
+                start_marker = "```"
+                end_marker = "```"
+                start_idx = response_text.find(start_marker) + len(start_marker)
+                end_idx = response_text.rfind(end_marker)
+                if start_idx > 0 and end_idx > start_idx:
+                    response_text = response_text[start_idx:end_idx].strip()
 
-        Args:
-            location: Original location dictionary
+            # Try to parse as JSON
+            if response_text.startswith("{") and response_text.endswith("}"):
+                enriched_data = json.loads(response_text)
 
-        Returns:
-            Location with minimal enrichment
-        """
-        enriched = location.copy()
+                # Merge with original location data
+                merged_location = original_location.copy()
+                merged_location.update(enriched_data)
 
-        # Add required fields with defaults if missing
-        enriched.update(
-            {
-                # Core fields (use original or defaults)
-                "name": location.get("name", "Unknown Location"),
-                "type": location.get("type", "landmark"),
-                "latitude": location.get(
-                    "latitude", 0.0
-                ),  # Should be filled by enrichment
-                "longitude": location.get(
-                    "longitude", 0.0
-                ),  # Should be filled by enrichment
-                # Standard fields
-                "address": location.get("address", ""),
-                "tags": location.get("tags", [location.get("type", "landmark")]),
-                "neighborhood": location.get("neighborhood", ""),
-                "date_added": location.get("date_added", ""),
-                "date_of_visit": location.get("date_of_visit", ""),
-                # AI-enhanced fields (minimal)
-                "description": location.get("description", "No description available"),
-                "official_website": "",
-                "booking_url": "",
-                "reviews_url": "",
-                "opening_hours": "",
-                "price_range": "",
-                "duration_recommended": "",
-                "best_time_to_visit": "",
-                "accessibility_info": "",
-                "nearby_attractions": [],
-                # Metadata fields
-                "data_sources": ["basic_extraction"],
-                "confidence_score": location.get("confidence", 0.5),
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-                "validation_status": "needs_enrichment",
-                "chunk_id": location.get("chunk_id", "unknown"),
-            }
-        )
+                # Ensure required fields are present
+                merged_location = self._ensure_required_fields(merged_location)
 
-        return enriched
+                return merged_location
+            else:
+                print(
+                    f"⚠️ Invalid JSON response for location '{original_location.get('name', 'Unknown')}'"
+                )
+                print(f"Response: {response_text}")
+                return self._add_minimal_enrichment(original_location)
 
-    def _create_mock_enriched_location(
-        self, location: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Create mock enriched location for testing."""
-        return {
-            # Core fields
-            "name": f"Enriched {location.get('name', 'Test Location')}",
-            "type": location.get("type", "landmark"),
-            "latitude": 48.8566,  # Mock coordinates (Louvre)
-            "longitude": 2.3522,
-            # Standard fields
+        except json.JSONDecodeError as e:
+            print(
+                f"⚠️ JSON parsing error for location '{original_location.get('name', 'Unknown')}': {e}"
+            )
+            print(f"Response: {response_text}")
+            return self._add_minimal_enrichment(original_location)
+        except Exception as e:
+            print(
+                f"⚠️ Response parsing error for location '{original_location.get('name', 'Unknown')}': {e}"
+            )
+            print(f"Response: {response_text}")
+            return self._add_minimal_enrichment(original_location)
+
+    def _ensure_required_fields(self, location: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure all required fields are present in the location data."""
+        required_fields = {
+            "name": "",
+            "type": "",
+            "latitude": 0.0,
+            "longitude": 0.0,
             "address": "",
-            "tags": [location.get("type", "landmark"), "tourist-attraction"],
-            "neighborhood": "Central District",
-            "date_added": "",
-            "date_of_visit": "",
-            # AI-enhanced fields
-            "description": f"Mock enriched description for {location.get('name', 'test location')} - a popular tourist destination with historical significance.",
-            "official_website": "",  # No fake URLs
-            "booking_url": "",  # No fake URLs
-            "reviews_url": "",  # No fake URLs
-            "opening_hours": "Daily 9:00-18:00",
-            "price_range": "$$",
-            "duration_recommended": "2-3 hours",
-            "best_time_to_visit": "Morning or late afternoon",
-            "accessibility_info": "Wheelchair accessible main areas",
-            "nearby_attractions": ["Mock Attraction 1", "Mock Attraction 2"],
-            # Metadata fields
-            "data_sources": ["mock_enrichment"],
-            "confidence_score": 0.8,
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-            "validation_status": "mock_data",
-            "chunk_id": location.get("chunk_id", "test_chunk"),
+            "description": "",
+            "official_website": "",
+            "booking_url": "",
+            "reviews_url": "",
+            "opening_hours": "",
+            "price_range": "",
+            "duration_recommended": 0.0,
+            "best_time_to_visit": "",
+            "accessibility_info": "",
+            "nearby_attractions": [],
+            "neighborhood": "",
+            "tags": [],
+            "confidence_score": 0.0,
+            "data_sources": [],
+            "validation_status": "unverified",
         }
 
-    def get_retry_statistics(self) -> Dict[str, Any]:
-        """
-        Get retry statistics for reporting.
+        # Ensure all required fields exist
+        for field, default_value in required_fields.items():
+            if field not in location:
+                location[field] = default_value
 
-        Returns:
-            Dictionary with retry statistics
-        """
-        return self.retry_stats.copy()
+        return location
+
+    def _add_minimal_enrichment(self, location: Dict[str, Any]) -> Dict[str, Any]:
+        """Add minimal enrichment to a location when full enrichment fails."""
+        enriched = location.copy()
+
+        # Add basic fields if missing
+        if "confidence_score" not in enriched:
+            enriched["confidence_score"] = 0.5
+        if "validation_status" not in enriched:
+            enriched["validation_status"] = "unverified"
+        if "data_sources" not in enriched:
+            enriched["data_sources"] = []
+        if "tags" not in enriched:
+            enriched["tags"] = []
+        if "nearby_attractions" not in enriched:
+            enriched["nearby_attractions"] = []
+
+        return enriched
 
     def get_enrichment_statistics(
         self, enriched_locations: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """
-        Get statistics about the enrichment process.
+        """Get enrichment statistics."""
+        if not enriched_locations:
+            return {
+                "coordinate_coverage": 0.0,
+                "website_coverage": 0.0,
+                "hours_coverage": 0.0,
+                "total_locations": 0,
+            }
 
-        Args:
-            enriched_locations: List of enriched locations
-
-        Returns:
-            Dictionary with enrichment statistics
-        """
-        total_locations = len(enriched_locations)
-
-        # Count locations with coordinates
-        with_coordinates = len(
-            [
-                loc
-                for loc in enriched_locations
-                if loc.get("latitude", 0) != 0 or loc.get("longitude", 0) != 0
-            ]
+        total = len(enriched_locations)
+        coordinates_count = sum(
+            1
+            for loc in enriched_locations
+            if loc.get("latitude", 0) != 0 or loc.get("longitude", 0) != 0
         )
-
-        # Count locations with websites
-        with_websites = len(
-            [loc for loc in enriched_locations if loc.get("official_website", "")]
+        website_count = sum(
+            1 for loc in enriched_locations if loc.get("official_website")
         )
-
-        # Count locations with hours
-        with_hours = len(
-            [loc for loc in enriched_locations if loc.get("opening_hours", "")]
-        )
-
-        # Count validation statuses
-        validation_statuses: Dict[str, int] = {}
-        for loc in enriched_locations:
-            status = loc.get("validation_status", "unknown")
-            validation_statuses[status] = validation_statuses.get(status, 0) + 1
+        hours_count = sum(1 for loc in enriched_locations if loc.get("opening_hours"))
 
         return {
-            "total_locations": total_locations,
-            "with_coordinates": with_coordinates,
-            "with_websites": with_websites,
-            "with_hours": with_hours,
             "coordinate_coverage": (
-                round(100 * with_coordinates / total_locations, 1)
-                if total_locations > 0
-                else 0
+                (coordinates_count / total) * 100 if total > 0 else 0.0
             ),
-            "website_coverage": (
-                round(100 * with_websites / total_locations, 1)
-                if total_locations > 0
-                else 0
-            ),
-            "hours_coverage": (
-                round(100 * with_hours / total_locations, 1)
-                if total_locations > 0
-                else 0
-            ),
-            "validation_statuses": validation_statuses,
+            "website_coverage": (website_count / total) * 100 if total > 0 else 0.0,
+            "hours_coverage": (hours_count / total) * 100 if total > 0 else 0.0,
+            "total_locations": total,
+            "validation_statuses": {},  # Add empty validation_statuses to match file manager expectations
+            "api_statistics": self.stats,
         }
 
-    def _ensure_location_compliance(self, location: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Ensure enriched location data matches the Location model exactly.
-
-        Args:
-            location: Enriched location data
-
-        Returns:
-            Location-compliant dictionary
-        """
-        # Define required fields from Location model
-        required_fields = {
-            "name": str,
-            "type": str,
-            "latitude": float,
-            "longitude": float,
+    def get_retry_statistics(self) -> Dict[str, Any]:
+        """Get retry statistics."""
+        return {
+            "total_locations_processed": self.stats["total_locations_processed"],
+            "locations_with_retries": 0,  # Simplified version doesn't track retries
+            "total_retry_attempts": self.stats["total_retry_attempts"],
+            "successful_retries": 0,
+            "failed_retries": 0,
         }
 
-        # Define optional fields from Location model
-        optional_fields = {
-            "address": str,
-            "tags": list,
-            "neighborhood": str,
-            "date_added": str,
-            "date_of_visit": str,
-            "description": str,
-            "official_website": str,
-            "booking_url": str,
-            "reviews_url": str,
-            "opening_hours": str,
-            "price_range": str,
-            "duration_recommended": str,
-            "best_time_to_visit": str,
-            "accessibility_info": str,
-            "nearby_attractions": list,
-            "data_sources": list,
-            "confidence_score": float,
-            "last_updated": str,
-            "validation_status": str,
-        }
+    def configure_rate_limiting(self, min_request_interval: float = 1.0):
+        """Configure rate limiting (simplified - uses concurrent processing instead)."""
+        print(
+            f"⚙️ Rate limiting configured via concurrent processing (max {self.max_concurrent_calls} calls)"
+        )
 
-        # Create compliant location
-        compliant_location = {}
-
-        # Ensure required fields exist
-        for field, field_type in required_fields.items():
-            if field in location:
-                compliant_location[field] = location[field]
-            else:
-                # Provide defaults for missing required fields
-                if field in ["latitude", "longitude"]:
-                    compliant_location[field] = 0.0
-                else:
-                    compliant_location[field] = ""
-
-        # Add optional fields with defaults if missing
-        for field, field_type in optional_fields.items():
-            if field in location:
-                compliant_location[field] = location[field]
-            else:
-                # Provide sensible defaults
-                if field_type == list:
-                    compliant_location[field] = []
-                elif field_type == float:
-                    compliant_location[field] = 0.0
-                else:
-                    compliant_location[field] = ""
-
-        # Set metadata fields
-        if (
-            "last_updated" not in compliant_location
-            or not compliant_location["last_updated"]
-        ):
-            compliant_location["last_updated"] = datetime.now(timezone.utc).isoformat()
-
-        if (
-            "data_sources" not in compliant_location
-            or not compliant_location["data_sources"]
-        ):
-            compliant_location["data_sources"] = ["web_search_enrichment"]
-
-        if (
-            "validation_status" not in compliant_location
-            or not compliant_location["validation_status"]
-        ):
-            compliant_location["validation_status"] = "web_verified"
-
-        if (
-            "confidence_score" not in compliant_location
-            or compliant_location["confidence_score"] == 0.0
-        ):
-            compliant_location["confidence_score"] = 0.85
-
-        # Remove any non-Location model fields (like chunk_id)
-        allowed_fields = list(required_fields.keys()) + list(optional_fields.keys())
-        compliant_location = {
-            k: v for k, v in compliant_location.items() if k in allowed_fields
-        }
-
-        return compliant_location
-
-    def _process_json_response_with_retry(
-        self,
-        response: Any,
-        original_location: Dict[str, Any],
-        response_type: str,
-        data_source: str,
-        validation_status: str,
-    ) -> Dict[str, Any]:
-        """
-        Process JSON response with retry logic for malformed JSON.
-
-        Args:
-            response: OpenAI response object
-            original_location: Original location data
-            response_type: Type of response for error reporting
-            data_source: Data source identifier
-            validation_status: Validation status for the enriched data
-
-        Returns:
-            Enriched location dictionary
-        """
-        content = response.choices[0].message.content or ""
-        location_has_retries = False
-
-        for attempt in range(self.max_retries + 1):
-            try:
-                # Try to find JSON in the response
-                start_idx = content.find("{")
-                end_idx = content.rfind("}") + 1
-
-                if start_idx >= 0 and end_idx > start_idx:
-                    json_str = content[start_idx:end_idx]
-                    enriched_data: Dict[str, Any] = json.loads(json_str)
-
-                    # Add metadata
-                    enriched_data.update(
-                        {
-                            "data_sources": [data_source],
-                            "last_updated": datetime.now(timezone.utc).isoformat(),
-                            "validation_status": validation_status,
-                            "chunk_id": original_location.get("chunk_id", "unknown"),
-                        }
-                    )
-
-                    if attempt > 0:
-                        print(f"    ✅ JSON parsing succeeded on retry {attempt}")
-                        self.retry_stats["successful_retries"] += 1
-                        self.retry_stats["retry_types"][response_type]["successes"] += 1
-
-                    # Update retry statistics
-                    if location_has_retries:
-                        self.retry_stats["locations_with_retries"] += 1
-
-                    return enriched_data
-                else:
-                    raise ValueError("No JSON found in response")
-
-            except (json.JSONDecodeError, ValueError) as e:
-                if attempt < self.max_retries:
-                    location_has_retries = True
-                    self.retry_stats["total_retry_attempts"] += 1
-                    self.retry_stats["retry_types"][response_type]["attempts"] += 1
-
-                    print(
-                        f"    ⚠️ Failed to parse {response_type} data (attempt {attempt + 1}/{self.max_retries + 1}): {e}"
-                    )
-                    print(f"    🔄 Attempting to fix JSON...")
-
-                    # Try to fix the JSON using LLM
-                    fixed_content = self._fix_json_response(
-                        content, original_location, response_type
-                    )
-                    if fixed_content:
-                        content = fixed_content
-                        continue
-                    else:
-                        print(f"    ❌ JSON fix attempt failed")
-                        self.retry_stats["retry_types"][response_type]["failures"] += 1
-                else:
-                    self.retry_stats["failed_retries"] += 1
-                    self.retry_stats["retry_types"][response_type]["failures"] += 1
-                    print(
-                        f"    ❌ Failed to parse {response_type} data after {self.max_retries + 1} attempts: {e}"
-                    )
-
-                    # Return fallback enrichment
-                    if self.client is None:
-                        return self._create_mock_enriched_location(original_location)
-                    else:
-                        return self._add_minimal_enrichment(original_location)
-
-        # Fallback return in case the loop doesn't handle all cases
-        if self.client is None:
-            return self._create_mock_enriched_location(original_location)
-        else:
-            return self._add_minimal_enrichment(original_location)
-
-    def _fix_json_response(
-        self,
-        malformed_content: str,
-        original_location: Dict[str, Any],
-        response_type: str,
-    ) -> Optional[str]:
-        """
-        Attempt to fix malformed JSON using LLM.
-
-        Args:
-            malformed_content: The malformed JSON content
-            original_location: Original location data for context
-            response_type: Type of response for better prompting
-
-        Returns:
-            Fixed JSON content or None if fixing failed
-        """
-        if self.client is None:
-            return None
-
-        location_name = original_location.get("name", "Unknown")
-
-        fix_prompt = f"""The following JSON response for location "{location_name}" is malformed and cannot be parsed.
-Please fix the JSON format without losing any information. Return ONLY valid JSON.
-
-Malformed JSON:
-{malformed_content}
-
-Requirements:
-1. Fix any JSON syntax errors (missing quotes, brackets, commas, etc.)
-2. Ensure all string values are properly quoted
-3. Fix any unescaped characters in strings
-4. Maintain all location information
-5. Return valid JSON object with proper structure
-6. Do not add any explanatory text - return only the fixed JSON
-
-Example of correct format:
-{{
-    "name": "Location Name",
-    "type": "landmark",
-    "latitude": 0.0,
-    "longitude": 0.0,
-    "description": "Description here",
-    "official_website": "https://example.com",
-    "booking_url": "",
-    "reviews_url": "",
-    "opening_hours": "Daily 9:00-18:00",
-    "price_range": "$$",
-    "duration_recommended": "2-3 hours",
-    "best_time_to_visit": "Morning",
-    "accessibility_info": "Wheelchair accessible",
-    "nearby_attractions": ["Attraction 1", "Attraction 2"],
-    "neighborhood": "Area name",
-    "tags": ["landmark", "tourist"]
-}}
-
-Fixed JSON:"""
-
-        try:
-            # Use max_completion_tokens for o4 models, max_tokens for others
-            if self.model.startswith("o4"):
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": fix_prompt}],
-                    max_completion_tokens=4000,
-                    timeout=self.timeout,
-                    calling_module="EnrichmentProcessor",
-                    operation_type="json_fix",
-                )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": fix_prompt}],
-                    temperature=0.1,  # Lower temperature for fixing
-                    max_tokens=4000,
-                    timeout=self.timeout,
-                    calling_module="EnrichmentProcessor",
-                    operation_type="json_fix",
-                )
-
-            fixed_content: Optional[str] = response.choices[0].message.content
-            if fixed_content is None:
-                return None
-
-            fixed_content = fixed_content.strip()
-
-            # Clean the fixed response if it's wrapped in markdown
-            if fixed_content.startswith("```json"):
-                fixed_content = fixed_content[7:]
-            elif fixed_content.startswith("```"):
-                fixed_content = fixed_content[3:]
-            if fixed_content.endswith("```"):
-                fixed_content = fixed_content[:-3]
-            fixed_content = fixed_content.strip()
-
-            # Validate that the fixed content is valid JSON
-            try:
-                json.loads(fixed_content)
-                return fixed_content
-            except json.JSONDecodeError:
-                print(f"    ❌ Fixed JSON is still invalid")
-                return None
-
-        except Exception as e:
-            print(f"    ❌ JSON fix request failed: {e}")
-            return None
-
-    def _report_retry_statistics(self):
-        """Report retry statistics to stdout."""
-        stats = self.retry_stats
-
-        if stats["total_retry_attempts"] > 0:
-            print(f"\n📊 Retry Statistics:")
-            print(
-                f"   📍 Total locations processed: {stats['total_locations_processed']}"
-            )
-            print(f"   🔄 Locations with retries: {stats['locations_with_retries']}")
-            print(f"   📈 Total retry attempts: {stats['total_retry_attempts']}")
-            print(f"   ✅ Successful retries: {stats['successful_retries']}")
-            print(f"   ❌ Failed retries: {stats['failed_retries']}")
-
-            if stats["successful_retries"] > 0:
-                success_rate = (
-                    stats["successful_retries"] / stats["total_retry_attempts"]
-                ) * 100
-                print(f"   📊 Retry success rate: {success_rate:.1f}%")
-
-            # Report by type
-            for retry_type, type_stats in stats["retry_types"].items():
-                if type_stats["attempts"] > 0:
-                    print(
-                        f"   📋 {retry_type.title()}: {type_stats['attempts']} attempts, {type_stats['successes']} successes"
-                    )
-        else:
-            print(
-                f"\n📊 Retry Statistics: No retries needed - all JSON parsing succeeded on first attempt"
-            )
+    def configure_rate_limiting_from_config(self, rate_limit_config: Dict[str, Any]):
+        """Configure rate limiting from config (simplified)."""
+        max_concurrent = rate_limit_config.get("max_concurrent_calls", 5)
+        self.max_concurrent_calls = max_concurrent
+        print(f"⚙️ Configured max concurrent calls: {self.max_concurrent_calls}")
