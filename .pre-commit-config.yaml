@@ -59,14 +59,16 @@ repos:
       - id: pyright
         name: pyright
         entry: pyright
-        language: system
+        language: python
+        additional_dependencies: [pyright, folium, pyyaml, simplekml]
         args: [--level=error]
         files: ^(map_locations/.*\.py)$
       # Separate lenient pyright for AI package
       - id: pyright-ai
         name: pyright-ai
         entry: bash -c 'pyright --level=warning --skipunannotated "$@" || exit 0'
-        language: system
+        language: python
+        additional_dependencies: [pyright, folium, pyyaml, simplekml, openai, requests, beautifulsoup4, urllib3]
         files: ^(map_locations_ai/.*\.py)$
         pass_filenames: true
 
