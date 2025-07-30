@@ -13,6 +13,262 @@ import yaml
 # Import common models
 from .common import Location, LocationList, load_locations_from_yaml
 
+# Color category mapping for filtering
+COLOR_CATEGORIES = {
+    "Food / Drink": {
+        "color": "red",
+        "hex_color": "#ff0000",
+        "types": ["restaurant", "cafe", "bar", "pub"],
+        "emoji": "🍽️",
+    },
+    "Culture + Arts": {
+        "color": "lightblue",
+        "hex_color": "#87ceeb",
+        "types": [
+            "museum",
+            "gallery",
+            "art gallery",
+            "theater",
+            "cinema",
+            "exhibition",
+            "studio tour",
+        ],
+        "emoji": "🎭",
+    },
+    "Nature + Outdoors": {
+        "color": "green",
+        "hex_color": "#00ff00",
+        "types": ["park", "garden", "botanical garden", "cemetery"],
+        "emoji": "🌳",
+    },
+    "Covered Passages + Arcades": {
+        "color": "cadetblue",
+        "hex_color": "#5f9ea0",
+        "types": ["passage", "covered passage", "passage couvert", "arcade", "gallery"],
+        "emoji": "🏛️",
+    },
+    "Shopping + Commerce": {
+        "color": "blue",
+        "hex_color": "#0000ff",
+        "types": ["shopping", "store", "market", "shopping center", "shopping street"],
+        "emoji": "🛍️",
+    },
+    "Accommodation": {
+        "color": "lightgray",
+        "hex_color": "#d3d3d3",
+        "types": ["hotel", "accommodation", "apartment"],
+        "emoji": "🏨",
+    },
+    "Transport": {
+        "color": "gray",
+        "hex_color": "#808080",
+        "types": ["transport", "station", "metro station"],
+        "emoji": "🚇",
+    },
+    "Landmarks / Monuments": {
+        "color": "orange",
+        "hex_color": "#ffa500",
+        "types": [
+            "landmark",
+            "monument",
+            "church",
+            "temple",
+            "basilica",
+            "palace",
+            "bridge",
+        ],
+        "emoji": "🏛️",
+    },
+    "Entertainment / Experiences": {
+        "color": "purple",
+        "hex_color": "#800080",
+        "types": ["entertainment", "theme park", "amusement park", "experience"],
+        "emoji": "🎢",
+    },
+    "Neighborhoods / Areas": {
+        "color": "darkred",
+        "hex_color": "#8b0000",
+        "types": ["neighborhood", "district", "theater district"],
+        "emoji": "🏘️",
+    },
+    "Streets / Urban": {
+        "color": "darkgray",
+        "hex_color": "#404040",
+        "types": ["street"],
+        "emoji": "🛣️",
+    },
+}
+
+# Derive FOLIUM_TO_HEX_COLORS from COLOR_CATEGORIES to eliminate duplication
+FOLIUM_TO_HEX_COLORS = {
+    category_info["color"]: category_info["hex_color"]
+    for category_info in COLOR_CATEGORIES.values()
+}
+
+
+def get_color_square_html(color: str, size: int = 12) -> str:
+    """
+    Generate HTML for a colored square.
+
+    Args:
+        color (str): Color name or hex value
+        size (int): Size of the square in pixels
+
+    Returns:
+        str: HTML for the colored square
+    """
+    # Use the centralized color mapping
+    hex_color = FOLIUM_TO_HEX_COLORS.get(color, color)
+    return f'<div style="display: inline-block; width: {size}px; height: {size}px; background-color: {hex_color}; border: 1px solid #ccc; border-radius: 2px; margin-right: 6px;"></div>'
+
+
+def get_location_category(loc_type: str) -> str:
+    """
+    Get the color category for a location type.
+
+    Args:
+        loc_type (str): The location type
+
+    Returns:
+        str: The category name or "Other" if not found
+    """
+    loc_type_lower = loc_type.lower()
+    for category, info in COLOR_CATEGORIES.items():
+        if loc_type_lower in [t.lower() for t in info["types"]]:
+            return category
+    return "Other"
+
+
+def get_category_types(category: str) -> List[str]:
+    """
+    Get all types that belong to a specific category.
+
+    Args:
+        category (str): The category name
+
+    Returns:
+        List[str]: List of types in the category
+    """
+    types = COLOR_CATEGORIES.get(category, {}).get("types", [])
+    return list(types)  # Ensure we return a list, not a sequence
+
+
+def get_type_color(loc_type: str, format: str = "folium") -> str:
+    """
+    Get the appropriate color for a location type.
+
+    Args:
+        loc_type (str): The location type
+        format (str): Color format - "folium" for folium maps, "kml" for KML export
+
+    Returns:
+        str: The color value in the specified format
+    """
+    # Get category for the location type
+    category = get_location_category(loc_type)
+
+    if category in COLOR_CATEGORIES:
+        if format == "kml":
+            kml_color: str = str(get_kml_color(loc_type))
+            return kml_color
+        else:  # folium format
+            folium_color: str = str(COLOR_CATEGORIES[category]["color"])
+            return folium_color
+
+    # Default colors for unknown types
+    if format == "kml":
+        return "ff808080"  # Gray in KML format
+    else:
+        return "gray"  # Gray in folium format
+
+
+def get_available_categories(locations: LocationList) -> List[str]:
+    """
+    Get a list of all available categories from the locations data.
+
+    Args:
+        locations: List of location dictionaries
+
+    Returns:
+        List of unique categories that have locations
+    """
+    categories = set()
+    for loc in locations:
+        category = get_location_category(loc.get("type", ""))
+        if category != "Other":
+            categories.add(category)
+    return sorted(list(categories))
+
+
+def filter_locations_by_category(
+    locations: LocationList, categories: List[str]
+) -> LocationList:
+    """
+    Filter locations by their color category.
+
+    Args:
+        locations: List of location dictionaries
+        categories: List of categories to include
+
+    Returns:
+        Filtered list of locations
+    """
+    filtered_locations = []
+    for loc in locations:
+        loc_category = get_location_category(loc.get("type", ""))
+        if loc_category in categories:
+            filtered_locations.append(loc)
+    return filtered_locations
+
+
+def _truncate_description_mobile(description: str, max_chars: int = 200) -> str:
+    """
+    Truncate description for mobile display to first two sentences or max_chars, whichever is shorter.
+
+    Args:
+        description (str): The description text to truncate
+        max_chars (int): Maximum number of characters allowed
+
+    Returns:
+        str: Truncated description
+    """
+    if not description:
+        return ""
+
+    desc = str(description).strip()
+
+    # Find the end of the second sentence
+    sentences = []
+    current_sentence = ""
+
+    for char in desc:
+        current_sentence += char
+        if char in ".!?":
+            sentences.append(current_sentence.strip())
+            current_sentence = ""
+            if len(sentences) >= 2:
+                break
+
+    # If we have a partial sentence, add it
+    if current_sentence.strip():
+        sentences.append(current_sentence.strip())
+
+    # Get the first two sentences
+    two_sentences = " ".join(sentences[:2])
+
+    # Truncate to max_chars if needed
+    if len(two_sentences) > max_chars:
+        truncated = two_sentences[:max_chars]
+        # Try to end at a word boundary
+        last_space = truncated.rfind(" ")
+        if (
+            last_space > max_chars * 0.8
+        ):  # Only use word boundary if it's not too far back
+            truncated = truncated[:last_space]
+        return truncated + "..."
+
+    return two_sentences
+
 
 def _generate_google_maps_url(location: Union[Dict[str, Any], Location]) -> str:
     """
@@ -257,7 +513,7 @@ def _generate_mobile_popup_html(location: Union[Dict[str, Any], Location]) -> st
             # Limit description to first 100 characters
             desc: str = str(location.get(field, ""))
             if desc:
-                formatted_value = desc[:100] + ("..." if len(desc) > 100 else "")
+                formatted_value = _truncate_description_mobile(desc)
             else:
                 formatted_value = ""
         elif field == "phone":
@@ -410,60 +666,26 @@ def export_to_geojson(locations: LocationList, output_path: str) -> None:
     print(f"🗺️ GeoJSON exported to: {Path(output_path).resolve()}")
 
 
-def export_to_kml(locations: LocationList, output_path: str) -> None:
+def export_to_kml(
+    locations: LocationList, output_path: str, mobile: bool = False
+) -> None:
     """
     Export locations to KML format matching Google My Maps style with proper coloring by type.
 
     Args:
         locations: List of location dictionaries
         output_path: Path to save the KML file
+        mobile: Enable mobile-optimized content with simplified descriptions
 
     Example:
         >>> locations = load_locations_from_yaml("locations.yaml")
         >>> export_to_kml(locations, "output.kml")
+        >>> export_to_kml(locations, "mobile_output.kml", mobile=True)
     """
     # Create directory if needed
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-
-    # Define type to color mapping (AABBGGRR format - note reversed byte order)
-    type_colors = {
-        # Food & Drink (Red variants)
-        "restaurant": "ff0000ff",  # Red
-        "cafe": "ff0000ff",
-        "bar": "ff0000ff",
-        # Museums (Blue variants)
-        "museum": "ffd18802",  # Blue
-        "gallery": "ffd18802",
-        # Parks (Green)
-        "park": "ff42b37c",  # Green
-        "garden": "ff42b37c",
-        # Landmarks (Orange/Yellow variants)
-        "landmark": "ff25a8f9",  # Yellow
-        "monument": "ff25a8f9",
-        "church": "ff25a8f9",
-        "temple": "ff25a8f9",
-        # Hotels (Orange/Red)
-        "hotel": "ff0051e6",  # Orange-red
-        "accommodation": "ff0051e6",
-        # Shopping (Purple variants)
-        "shopping": "ffb73a67",  # Purple
-        "store": "ffb73a67",
-        "market": "ffb73a67",
-        # Entertainment (Purple)
-        "cinema": "ffb0279c",  # Purple
-        "entertainment": "ffb0279c",
-        "theme_park": "ffb0279c",
-        "experience": "ffb0279c",
-        # Neighborhoods (Yellow)
-        "neighborhood": "ff00eaff",  # Yellow
-        # Transport (Gray)
-        "transport": "ff646000",  # Gray
-        "station": "ff646000",
-        # Default
-        "bridge": "ff646000",  # Gray
-    }
 
     # Default color for unknown types
     default_color = "ff808080"  # Gray
@@ -485,7 +707,7 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
     # Create styles for each type
     for loc_type in all_types:
         if loc_type:  # Skip empty types
-            color = type_colors.get(loc_type, default_color)
+            color = get_type_color(loc_type, format="kml")
             style_id = f"icon-1899-{color[2:].upper()}-labelson"
 
             style = [
@@ -519,15 +741,23 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
     ]
     kml_content.extend(default_style)
 
-    # Add placemarks
-    for loc in locations:
-        loc_type = loc.get("type", "").lower()
-        color = type_colors.get(loc_type, default_color)
-        style_id = f"#icon-1899-{color[2:].upper()}-labelson"
-
-        # Create simple description (field: value<br> format)
-        description_parts = ["<![CDATA["]
-
+    # Define field order based on mobile optimization
+    if mobile:
+        # Mobile-optimized field order (essential information only)
+        all_fields = [
+            "type",
+            "type_group",
+            "address",
+            "neighborhood",
+            "phone",
+            "website",
+            "url",
+            "official_website",
+            "description",
+            "tags",
+            "google_maps_url",
+        ]
+    else:
         # Standard field order for consistent display
         all_fields = [
             "accessibility",
@@ -545,11 +775,13 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
             "rating",
             "tags",
             "type",
+            "type_group",
             "website",
             "google_maps_url",
         ]
 
-        # Add any additional fields not in standard list
+    # Add any additional fields not in standard list (for non-mobile)
+    if not mobile:
         for field in sorted(loc.keys()):
             if field not in all_fields and field not in [
                 "name",
@@ -558,33 +790,181 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
             ]:
                 all_fields.append(field)
 
-        for field in all_fields:
-            value = loc.get(field, "")
-            if field == "google_maps_url":
-                value = _generate_google_maps_url(loc)
-                value_str = str(value) if value else ""
-            elif isinstance(value, list):
-                if value:  # Non-empty list
-                    value_str = ", ".join(str(item) for item in value)
-                else:
-                    value_str = ""
-            else:
-                value_str = str(value) if value else ""
+    # Add placemarks
+    for loc in locations:
+        loc_type = loc.get("type", "").lower()
+        color = get_type_color(loc_type, format="kml")
+        style_id = f"#icon-1899-{color[2:].upper()}-labelson"
 
-            description_parts.append(f"{field}: {value_str}<br>")
+        # Get the type group (color category) for this location
+        type_group = get_location_category(loc.get("type", ""))
+
+        # Create description based on mobile optimization
+        description_parts = ["<![CDATA["]
+
+        if mobile:
+            # Mobile-optimized description with simplified content
+            description_parts.append(
+                f'<div style="font-family: Arial, sans-serif; max-width: 300px;">'
+            )
+            description_parts.append(
+                f'<h3 style="color: #333; margin: 0 0 8px 0;">'
+                f'{loc.get("name", "Unnamed Location")}</h3>'
+            )
+
+            for field in all_fields:
+                value = loc.get(field, "")
+                if field == "type_group":
+                    # Add type group with color information
+                    if type_group and type_group != "Other":
+                        category_info = COLOR_CATEGORIES.get(type_group, {})
+                        emoji = category_info.get("emoji", "📍")
+                        color_hex = category_info.get("hex_color", "#808080")
+                        description_parts.append(
+                            f'<p style="margin: 4px 0;"><strong>Category:</strong> '
+                            f'<span style="color: {color_hex}; font-weight: bold;">'
+                            f"{emoji} {type_group}</span></p>"
+                        )
+                elif field == "google_maps_url":
+                    value = _generate_google_maps_url(loc)
+                    value_str = str(value) if value else ""
+                    if value_str:
+                        description_parts.append(
+                            f'<p style="margin: 4px 0;"><strong>Directions:</strong> '
+                            f'<a href="{value_str}" target="_blank">Open in Maps</a></p>'
+                        )
+                    else:
+                        description_parts.append("google_maps_url: <br>")
+                    continue
+                elif field == "description":
+                    # Limit description to first 100 characters for mobile
+                    desc = str(value) if value else ""
+                    if desc:
+                        formatted_value = _truncate_description_mobile(desc)
+                        description_parts.append(
+                            f'<p style="margin: 4px 0;"><strong>Description:</strong> '
+                            f"{formatted_value}</p>"
+                        )
+                elif field == "phone" and value:
+                    # Make phone numbers clickable for mobile
+                    description_parts.append(
+                        f'<p style="margin: 4px 0;"><strong>Phone:</strong> '
+                        f'<a href="tel:{value}">{value}</a></p>'
+                    )
+                elif field in ["website", "url", "official_website"] and value:
+                    # Make website links open in new tab
+                    description_parts.append(
+                        f'<p style="margin: 4px 0;"><strong>Website:</strong> '
+                        f'<a href="{value}" target="_blank">{value}</a></p>'
+                    )
+                elif value:  # Only include non-empty fields
+                    display_name = field.replace("_", " ").title()
+                    if isinstance(value, list):
+                        value_str = ", ".join(str(item) for item in value)
+                    else:
+                        value_str = str(value)
+                    description_parts.append(
+                        f'<p style="margin: 4px 0;"><strong>{display_name}:</strong> '
+                        f"{value_str}</p>"
+                    )
+
+            description_parts.append("</div>")
+        else:
+            # Standard description format
+            for field in all_fields:
+                value = loc.get(field, "")
+                if field == "type_group":
+                    # Add type group with color information
+                    if type_group and type_group != "Other":
+                        category_info = COLOR_CATEGORIES.get(type_group, {})
+                        emoji = category_info.get("emoji", "📍")
+                        color_hex = category_info.get("hex_color", "#808080")
+                        description_parts.append(
+                            f"type_group: {emoji} {type_group} (color: {color_hex})<br>"
+                        )
+                elif field == "google_maps_url":
+                    value = _generate_google_maps_url(loc)
+                    value_str = str(value) if value else ""
+                    if value_str:
+                        description_parts.append(
+                            f'google_maps_url: <a href="{value_str}" target="_blank">Link</a><br>'
+                        )
+                    else:
+                        description_parts.append("google_maps_url: <br>")
+                    continue
+                elif isinstance(value, list):
+                    if value:  # Non-empty list
+                        value_str = ", ".join(str(item) for item in value)
+                    else:
+                        value_str = ""
+                else:
+                    value_str = str(value) if value else ""
+
+                description_parts.append(f"{field}: {value_str}<br>")
 
         description_parts.append("]]>")
         description = "".join(description_parts)
 
-        # Create ExtendedData
+        # Create ExtendedData (same for both mobile and desktop)
         extended_data_parts = ["      <ExtendedData>"]
         for field in all_fields:
             value = loc.get(field, "")
-            if field == "google_maps_url":
+            if field == "type_group":
+                # Add type group information
+                if type_group and type_group != "Other":
+                    category_info = COLOR_CATEGORIES.get(type_group, {})
+                    emoji = category_info.get("emoji", "📍")
+                    color_hex = category_info.get("hex_color", "#808080")
+                    value_str = f"{emoji} {type_group} (color: {color_hex})"
+                else:
+                    value_str = "Other"
+
+                if value_str:
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            f"          <value><![CDATA[{value_str}]]></value>",
+                            "        </Data>",
+                        ]
+                    )
+                else:
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            "          <value/>",
+                            "        </Data>",
+                        ]
+                    )
+            elif field == "google_maps_url":
                 value = _generate_google_maps_url(loc)
                 value_str = str(value) if value else ""
                 if value_str:
+                    # Always store the actual URL in ExtendedData for Google Maps to use
                     # Handle special characters in value (URLs contain special chars)
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            f"          <value><![CDATA[{value_str}]]></value>",
+                            "        </Data>",
+                        ]
+                    )
+                else:
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            "          <value/>",
+                            "        </Data>",
+                        ]
+                    )
+            elif field == "description" and mobile:
+                # For mobile, truncate description in ExtendedData too
+                desc = str(value) if value else ""
+                if desc:
+                    value_str = _truncate_description_mobile(desc)
+                else:
+                    value_str = ""
+
+                if value_str:
                     extended_data_parts.extend(
                         [
                             f'        <Data name="{field}">',
@@ -679,6 +1059,8 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
         f.write("\n".join(kml_content))
 
     print(f"🗺️ KML exported to: {Path(output_path).resolve()}")
+    if mobile:
+        print("📱 Mobile-optimized content enabled")
 
     # Show type distribution
     type_counts: Dict[str, int] = {}
@@ -688,17 +1070,20 @@ def export_to_kml(locations: LocationList, output_path: str) -> None:
 
     print(f"📋 Created KML with {len(locations)} locations:")
     for loc_type, count in sorted(type_counts.items()):
-        color = type_colors.get(loc_type.lower(), default_color)
+        color = get_type_color(loc_type, format="kml")
         print(f"   • {loc_type.title()}: {count} locations (color: #{color[2:]})")
 
 
-def export_to_all_formats(locations: LocationList, base_path: str) -> None:
+def export_to_all_formats(
+    locations: LocationList, base_path: str, mobile: bool = False
+) -> None:
     """
     Export locations to all supported formats.
 
     Args:
         locations (list): List of location dictionaries
         base_path (str): Base path for output files (without extension)
+        mobile (bool): Enable mobile-optimized content for KML export
     """
     # Create directory if needed
     output_dir = os.path.dirname(base_path)
@@ -709,7 +1094,7 @@ def export_to_all_formats(locations: LocationList, base_path: str) -> None:
     export_to_json(locations, f"{base_path}.json")
     export_to_csv(locations, f"{base_path}.csv")
     export_to_geojson(locations, f"{base_path}.geojson")
-    export_to_kml(locations, f"{base_path}.kml")
+    export_to_kml(locations, f"{base_path}.kml", mobile=mobile)
 
     # Show output location
     if output_dir:
@@ -718,66 +1103,13 @@ def export_to_all_formats(locations: LocationList, base_path: str) -> None:
         print(f"✅ Data formats exported to: {Path.cwd()}")
 
 
-def get_type_color(loc_type: str) -> str:
-    """
-    Get the appropriate color for a location type, matching the KML color scheme.
-
-    Args:
-        loc_type (str): The location type
-
-    Returns:
-        str: The color name for folium
-    """
-    # Type to color mapping matching KML export (using valid folium colors)
-    type_colors = {
-        # Food & Drink (Red) - matches Google Maps red icons
-        "restaurant": "red",
-        "cafe": "red",
-        "bar": "red",
-        # Culture & Arts (Light Blue) - matches Google Maps light blue icons
-        "museum": "lightblue",
-        "gallery": "lightblue",
-        "theater": "lightblue",
-        "theatre": "lightblue",
-        # Nature & Outdoors (Green) - matches Google Maps green icons
-        "park": "green",
-        "garden": "green",
-        # Shopping & Commerce (Blue) - matches Google Maps blue icons
-        "shopping": "blue",
-        "store": "blue",
-        "market": "blue",
-        # Accommodation (Light Gray) - matches Google Maps yellow icons
-        # (using light gray as closest)
-        "hotel": "lightgray",
-        "accommodation": "lightgray",
-        # Transport (Gray) - matches Google Maps white icons
-        "transport": "gray",
-        "station": "gray",
-        # Landmarks & Monuments (Orange) - matches Google Maps orange icons
-        "landmark": "orange",
-        "monument": "orange",
-        "church": "orange",
-        "temple": "orange",
-        # Entertainment & Experiences (Purple) - matches Google Maps purple icons
-        "cinema": "purple",
-        "entertainment": "purple",
-        "theme_park": "purple",
-        "experience": "purple",
-        # Neighborhoods & Areas (Dark Red) - matches Google Maps red icons
-        "neighborhood": "darkred",
-        # Passages (Light Blue) - matches Google Maps light blue icons
-        "passage": "lightblue",
-    }
-
-    return type_colors.get(loc_type.lower(), "gray")
-
-
 def show_locations_grouped(
     locations: LocationList,
     group_by: str = "type",
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
     filter_types: Optional[List[str]] = None,
+    filter_categories: Optional[List[str]] = None,
     mobile: bool = False,
 ) -> None:
     """
@@ -785,10 +1117,11 @@ def show_locations_grouped(
 
     Args:
         locations (list): List of dicts loaded from YAML.
-        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
+        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
         map_filename (str): Path to save the HTML map.
         tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
         filter_types (list, optional): List of location types to include.
+        filter_categories (list, optional): List of color categories to include.
         mobile (bool): Enable mobile-optimized popups and layout.
     """
     if not locations:
@@ -804,6 +1137,14 @@ def show_locations_grouped(
         if not locations:
             raise ValueError(
                 f"No locations found matching the specified types: {filter_types}"
+            )
+
+    # Filter locations by category if filter_categories is provided
+    if filter_categories:
+        locations = filter_locations_by_category(locations, filter_categories)
+        if not locations:
+            raise ValueError(
+                f"No locations found matching the specified categories: {filter_categories}"
             )
 
     # Center the map
@@ -834,7 +1175,10 @@ def show_locations_grouped(
     # Group locations
     groups = defaultdict(list)
     for loc in locations:
-        key = loc.get(group_by, "Unknown")
+        if group_by == "category":
+            key = get_location_category(loc.get("type", ""))
+        else:
+            key = loc.get(group_by, "Unknown")
         groups[key].append(loc)
 
     # Create feature groups with better naming
@@ -842,9 +1186,21 @@ def show_locations_grouped(
     for group_name, group_locs in groups.items():
         # Create a more descriptive group name
         group_name_str = str(group_name)
-        if group_by == "type":
+
+        if group_by == "category":
+            # Use category info for display
+            category_info = COLOR_CATEGORIES.get(group_name_str, {})
+            emoji = category_info.get("emoji", "📍")
             group_display_name = (
-                f"📍 {group_name_str.title()} ({len(group_locs)} locations)"
+                f"{emoji} {group_name_str} ({len(group_locs)} locations)"
+            )
+        elif group_by == "type":
+            # Get category for type-based grouping
+            category = get_location_category(group_name_str)
+            category_info = COLOR_CATEGORIES.get(category, {})
+            emoji = category_info.get("emoji", "📍")
+            group_display_name = (
+                f"{emoji} {group_name_str.title()} ({len(group_locs)} locations)"
             )
         elif group_by == "neighborhood":
             group_display_name = f"🏘️ {group_name_str} ({len(group_locs)} locations)"
@@ -864,7 +1220,7 @@ def show_locations_grouped(
 
         for loc in group_locs:
             # Get color based on location type
-            color = get_type_color(loc.get("type", ""))
+            marker_color: str = str(get_type_color(loc.get("type", "")))  # type: ignore
 
             # Create popup content with mobile optimization
             if mobile:
@@ -878,19 +1234,140 @@ def show_locations_grouped(
                 location=[loc["latitude"], loc["longitude"]],
                 popup=folium.Popup(popup_html, max_width=popup_width),
                 tooltip=loc["name"],
-                icon=folium.Icon(color=color),
+                icon=folium.Icon(color=marker_color),
             ).add_to(fg)
 
         fg.add_to(m)
 
-    # Add layer control with better positioning and styling
-    folium.LayerControl(
-        position="topright",
-        collapsed=False,
-        autoZIndex=True,
-        overlay=True,
-        control=True,
-    ).add_to(m)
+    # Add layer control with mobile optimization
+    if mobile:
+        # For mobile, add a collapsible layer control button
+        layer_control_html = """
+        <div id="layer-control" style="
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 200px;
+            max-width: 250px;
+            max-height: 70vh;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            display: none;
+        ">
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <strong>🗺️ Layers</strong>
+                <button id="close-layer-control" style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 11px;
+                ">✕</button>
+            </div>
+            <div id="layer-control-content">
+                <!-- Layer control content will be moved here by JavaScript -->
+            </div>
+        </div>
+
+        <button id="toggle-layer-control" style="
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 1001;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        ">🗺️ Layers</button>
+        """
+
+        layer_control_script = """
+        <script>
+        // Get DOM elements
+        const toggleLayerControlBtn = document.getElementById('toggle-layer-control');
+        const closeLayerControlBtn = document.getElementById('close-layer-control');
+        const layerControl = document.getElementById('layer-control');
+        const layerControlContent = document.getElementById('layer-control-content');
+
+        // Move the default layer control to our custom container
+        setTimeout(function() {
+            // Find the default layer control
+            const defaultLayerControl = document.querySelector('.leaflet-control-layers');
+            if (defaultLayerControl) {
+                // Hide the default layer control
+                defaultLayerControl.style.display = 'none';
+
+                // Move its content to our custom container
+                layerControlContent.innerHTML = defaultLayerControl.innerHTML;
+
+                // Style the moved content for mobile
+                const checkboxes = layerControlContent.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.style.marginRight = '8px';
+                });
+
+                const labels = layerControlContent.querySelectorAll('label');
+                labels.forEach(function(label) {
+                    label.style.fontSize = '12px';
+                    label.style.marginBottom = '6px';
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                });
+            }
+        }, 1000);
+
+        // Toggle layer control panel visibility
+        toggleLayerControlBtn.addEventListener('click', function() {
+            if (layerControl.style.display === 'none') {
+                layerControl.style.display = 'block';
+                toggleLayerControlBtn.textContent = '🗺️ Hide Layers';
+            } else {
+                layerControl.style.display = 'none';
+                toggleLayerControlBtn.textContent = '🗺️ Layers';
+            }
+        });
+
+        // Close layer control panel
+        closeLayerControlBtn.addEventListener('click', function() {
+            layerControl.style.display = 'none';
+            toggleLayerControlBtn.textContent = '🗺️ Layers';
+        });
+        </script>
+        """
+
+        # Add the custom layer control HTML and script to the map
+        m.get_root().html.add_child(folium.Element(layer_control_html))
+        m.get_root().html.add_child(folium.Element(layer_control_script))
+
+        # Add the default layer control (will be moved by JavaScript)
+        folium.LayerControl(
+            position="topright",
+            collapsed=False,
+            autoZIndex=True,
+            overlay=True,
+            control=True,
+        ).add_to(m)
+    else:
+        # Desktop version - use standard layer control
+        folium.LayerControl(
+            position="topright",
+            collapsed=False,
+            autoZIndex=True,
+            overlay=True,
+            control=True,
+        ).add_to(m)
 
     # Create output directory if needed
     dirname = os.path.dirname(map_filename)
@@ -901,6 +1378,9 @@ def show_locations_grouped(
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
     if mobile:
         print("📱 Mobile-optimized layout enabled")
+        print("🗺️ Collapsible layer controls:")
+        print("   • Toggle button in top-right corner")
+        print("   • Layer panel can be shown/hidden")
     print(
         f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:"
     )
@@ -913,18 +1393,20 @@ def show_locations_with_filtering(
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
     filter_types: Optional[List[str]] = None,
+    filter_categories: Optional[List[str]] = None,
     group_by: str = "type",
     mobile: bool = False,
 ) -> None:
     """
-    Create a folium map with filtering capabilities for location types.
+    Create a folium map with filtering capabilities for location types or categories.
 
     Args:
         locations (list): List of dicts loaded from YAML.
         map_filename (str): Path to save the HTML map.
         tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
         filter_types (list, optional): List of location types to include.
-        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added).
+        filter_categories (list, optional): List of color categories to include.
+        group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
         mobile (bool): Enable mobile-optimized popups and layout.
     """
     show_locations_grouped(
@@ -933,6 +1415,7 @@ def show_locations_with_filtering(
         map_filename=map_filename,
         tile_provider=tile_provider,
         filter_types=filter_types,
+        filter_categories=filter_categories,
         mobile=mobile,
     )
 
@@ -1026,6 +1509,12 @@ def show_locations_with_advanced_filtering(
             [loc.get("name", f"Location {i + 1}") for i, loc in enumerate(locations)]
         ),
     }
+
+    # Create color mapping for types
+    type_colors = {}
+    for loc_type in field_values["type"]:
+        if loc_type:
+            type_colors[loc_type] = get_type_color(loc_type, format="folium")
 
     # Add all markers to the map
     markers_data = []
@@ -1308,6 +1797,12 @@ def show_locations_with_advanced_filtering(
         // Field values data
         const fieldValues = {json.dumps(field_values)};
 
+        // Type colors data
+        const typeColors = {json.dumps(type_colors)};
+
+        // Centralized color mapping
+        const foliumToHexColors = {json.dumps(FOLIUM_TO_HEX_COLORS)};
+
         // Markers data with location information
         const markersData = {json.dumps(markers_data)};
 
@@ -1360,11 +1855,20 @@ def show_locations_with_advanced_filtering(
                 const checkboxId = `checkbox_${{field}}_${{index}}`;
                 const displayValue = value || '(empty)';
 
+                // Generate color square for type field
+                let colorSquare = '';
+                if (field === 'type' && value && typeColors[value]) {{
+                    const color = typeColors[value];
+                    const hexColor = foliumToHexColors[color] || color;
+                    colorSquare = `<div style="display: inline-block; width: 12px; height: 12px; background-color: ${{hexColor}}; border: 1px solid #ccc; border-radius: 2px; margin-right: 6px;"></div>`;
+                }}
+
                 const checkboxHtml = `
                     <div style="margin-bottom: 4px;">
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" id="${{checkboxId}}" value="${{value}}"
                                    style="margin-right: 6px;" checked>
+                            ${{colorSquare}}
                             <span style="font-size: 12px;">${{displayValue}}</span>
                         </label>
                     </div>
@@ -1480,6 +1984,12 @@ def show_locations_with_advanced_filtering(
         // Field values data
         const fieldValues = {json.dumps(field_values)};
 
+        // Type colors data
+        const typeColors = {json.dumps(type_colors)};
+
+        // Centralized color mapping
+        const foliumToHexColors = {json.dumps(FOLIUM_TO_HEX_COLORS)};
+
         // Markers data with location information
         const markersData = {json.dumps(markers_data)};
 
@@ -1530,11 +2040,20 @@ def show_locations_with_advanced_filtering(
                 const checkboxId = `checkbox_${{field}}_${{index}}`;
                 const displayValue = value || '(empty)';
 
+                // Generate color square for type field
+                let colorSquare = '';
+                if (field === 'type' && value && typeColors[value]) {{
+                    const color = typeColors[value];
+                    const hexColor = foliumToHexColors[color] || color;
+                    colorSquare = `<div style="display: inline-block; width: 12px; height: 12px; background-color: ${{hexColor}}; border: 1px solid #ccc; border-radius: 2px; margin-right: 6px;"></div>`;
+                }}
+
                 const checkboxHtml = `
                     <div style="margin-bottom: 5px;">
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" id="${{checkboxId}}" value="${{value}}"
                                    style="margin-right: 8px;" checked>
+                            ${{colorSquare}}
                             <span style="font-size: 13px;">${{displayValue}}</span>
                         </label>
                     </div>
@@ -1802,12 +2321,20 @@ def get_location_summary(locations: LocationList) -> Dict[str, Any]:
         >>> print(f"Total locations: {summary['total_count']}")
         >>> print(f"Types: {summary['types']}")
     """
+    # Get category counts
+    category_counts: Counter[str] = Counter()
+    for loc in locations:
+        category = get_location_category(loc.get("type", ""))
+        category_counts[category] += 1
+
     return {
         "total_count": len(locations),
         "types": get_available_types(locations),
+        "categories": get_available_categories(locations),
         "tags": get_available_tags(locations),
         "neighborhoods": get_available_neighborhoods(locations),
         "type_counts": dict(Counter(loc.get("type", "") for loc in locations)),
+        "category_counts": dict(category_counts),
         "neighborhood_counts": dict(
             Counter(loc.get("neighborhood", "") for loc in locations)
         ),
@@ -1932,6 +2459,82 @@ def show_locations_with_google_maps(
     show_locations_grouped(
         locations, group_by, map_filename, tile_provider, mobile=mobile
     )
+
+
+def show_locations_by_category(
+    locations: LocationList,
+    categories: Optional[List[str]] = None,
+    map_filename: str = "map.html",
+    tile_provider: str = "openstreetmap",
+    mobile: bool = False,
+) -> None:
+    """
+    Create a folium map showing locations grouped by color categories.
+
+    Args:
+        locations: List of location dictionaries
+        categories: List of categories to include (e.g., ["Food & Drink", "Culture & Arts"])
+        map_filename: Path to save the HTML map
+        tile_provider: Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        mobile: Enable mobile-optimized popups and layout
+
+    Example:
+        >>> locations = load_locations_from_yaml("locations.yaml")
+        >>> show_locations_by_category(locations, ["Food & Drink", "Culture & Arts"])
+    """
+    show_locations_grouped(
+        locations=locations,
+        group_by="category",
+        map_filename=map_filename,
+        tile_provider=tile_provider,
+        filter_categories=categories,
+        mobile=mobile,
+    )
+
+
+def hex_to_kml_color(hex_color: str) -> str:
+    """
+    Convert hex color to KML format (AABBGGRR).
+
+    Args:
+        hex_color (str): Hex color in format "#RRGGBB"
+
+    Returns:
+        str: KML color in AABBGGRR format
+    """
+    # Remove # if present
+    hex_color = hex_color.lstrip("#")
+
+    # Parse RGB components
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    # KML format is AABBGGRR (Alpha, Blue, Green, Red)
+    # Alpha = 255 (fully opaque)
+    # Note: KML uses little-endian byte order
+    return f"ff{b:02x}{g:02x}{r:02x}"
+
+
+def get_kml_color(loc_type: str) -> str:
+    """
+    Get KML color for a location type.
+
+    Args:
+        loc_type (str): The location type
+
+    Returns:
+        str: KML color in AABBGGRR format
+    """
+    # Get category for the location type
+    category = get_location_category(loc_type)
+
+    if category in COLOR_CATEGORIES:
+        hex_color = str(COLOR_CATEGORIES[category]["hex_color"])
+        return hex_to_kml_color(hex_color)
+
+    # Default gray for unknown types
+    return "ff808080"
 
 
 # ✅ Run this to test

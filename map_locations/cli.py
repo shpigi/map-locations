@@ -72,9 +72,11 @@ Mobile mode (--mobile) optimizes the layout for mobile devices with:
 - Simplified popup content (essential information only)
 - Narrower popup width (300px vs 450px)
 - Clickable phone numbers and website links
+- Mobile-optimized KML content (simplified descriptions, clickable links)
 
 KML exports create separate folders for each location type, allowing you to toggle
-groups on/off when imported into Google Maps.
+groups on/off when imported into Google Maps. Mobile KML exports include simplified
+descriptions optimized for mobile viewing applications.
         """,
     )
 
@@ -180,7 +182,7 @@ def handle_command(args: argparse.Namespace) -> None:
         elif args.format == "all":
             # Export to all formats including HTML
             print("📤 Exporting to all formats...")
-            export_to_all_formats(locations, str(output_path))
+            export_to_all_formats(locations, str(output_path), mobile=args.mobile)
 
             # Also create HTML map
             html_path = output_path.with_suffix(".html")
@@ -216,7 +218,7 @@ def handle_command(args: argparse.Namespace) -> None:
             elif args.format == "geojson":
                 export_to_geojson(locations, str(output_path))
             elif args.format == "kml":
-                export_to_kml(locations, str(output_path))
+                export_to_kml(locations, str(output_path), mobile=args.mobile)
             else:
                 print(f"❌ Unknown format: {args.format}")
                 sys.exit(1)
