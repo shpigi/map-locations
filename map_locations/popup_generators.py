@@ -61,6 +61,32 @@ def _truncate_description_mobile(description: str, max_chars: int = 200) -> str:
     return two_sentences
 
 
+def _generate_google_search_url(location_name: str, address: str = "") -> str:
+    """
+    Generate a Google search URL for a location.
+
+    Args:
+        location_name: Name of the location
+        address: Optional address to include in search
+
+    Returns:
+        Google search URL string
+    """
+    if not location_name:
+        return ""
+
+    # Create query string from name and address
+    query_parts = []
+    if location_name:
+        query_parts.append(location_name)
+    if address:
+        query_parts.append(address)
+
+    query = ", ".join(query_parts)
+    encoded_query = urllib.parse.quote_plus(query)
+    return f"https://www.google.com/search?q={encoded_query}"
+
+
 def _generate_google_maps_url(location: Union[Dict[str, Any], Location]) -> str:
     """
     Generate a Google Maps URL for a location using name and address.
@@ -111,6 +137,21 @@ def _format_field_value(field_name: str, value: Any) -> str:
     # Handle google_maps_url field specially
     if field_name == "google_maps_url" and value:
         return f'<a href="{value}" target="_blank">Link</a>'
+
+    # Handle nearby_attractions field specially
+    if field_name == "nearby_attractions" and isinstance(value, list):
+        if not value:  # Empty list
+            return ""
+        # Create Google search links for each nearby attraction
+        formatted_items = []
+        for attraction in value:
+            attraction_str = str(attraction)
+            if attraction_str:
+                search_url = _generate_google_search_url(attraction_str)
+                formatted_items.append(
+                    f'<a href="{search_url}" target="_blank">{attraction_str}</a>'
+                )
+        return ", ".join(formatted_items)
 
     # Handle lists (like tags)
     if isinstance(value, list):
@@ -174,6 +215,7 @@ def _generate_popup_html(
         "phone",
         "address",
         "notes",
+        "nearby_attractions",
         "google_maps_url",
     ]
 
@@ -191,6 +233,7 @@ def _generate_popup_html(
         "phone": "Phone",
         "address": "Address",
         "notes": "Notes",
+        "nearby_attractions": "Nearby Attractions",
         "google_maps_url": "Google Maps",
         "latitude": "Latitude",
         "longitude": "Longitude",
@@ -299,6 +342,7 @@ def _generate_mobile_popup_html(
         "official_website",
         "description",
         "tags",
+        "nearby_attractions",
         "google_maps_url",
     ]
 
@@ -314,6 +358,7 @@ def _generate_mobile_popup_html(
         "official_website": "Official Website",
         "description": "Description",
         "tags": "Tags",
+        "nearby_attractions": "Nearby Attractions",
         "google_maps_url": "Directions",
     }
 
