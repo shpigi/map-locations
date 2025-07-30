@@ -145,7 +145,10 @@ def export_to_geojson(locations: LocationList, output_path: str) -> None:
 
 
 def export_to_kml(
-    locations: LocationList, output_path: str, mobile: bool = False
+    locations: LocationList,
+    output_path: str,
+    mobile: bool = False,
+    show_full: bool = False,
 ) -> None:
     """
     Export locations to KML format matching Google My Maps style with proper coloring by type.
@@ -154,6 +157,7 @@ def export_to_kml(
         locations: List of location dictionaries
         output_path: Path to save the KML file
         mobile: Enable mobile-optimized content with simplified descriptions
+        show_full: Show all fields including confidence_score, last_updated, validation_status
 
     Example:
         >>> locations = load_locations_from_yaml("locations.yaml")
@@ -220,6 +224,15 @@ def export_to_kml(
     kml_content.extend(default_style)
 
     # Define field order based on mobile optimization
+    # Fields to hide unless show_full is True
+    hidden_fields = [
+        "confidence_score",
+        "last_updated",
+        "validation_status",
+        "date_added",
+        "deduplication",
+    ]
+
     if mobile:
         # Mobile-optimized field order (essential information only)
         all_fields = [
@@ -267,6 +280,9 @@ def export_to_kml(
                 "latitude",
                 "longitude",
             ]:
+                # Skip hidden fields unless show_full is True
+                if not show_full and field in hidden_fields:
+                    continue
                 all_fields.append(field)
 
     # Add placemarks
@@ -544,7 +560,10 @@ def export_to_kml(
 
 
 def export_to_all_formats(
-    locations: LocationList, base_path: str, mobile: bool = False
+    locations: LocationList,
+    base_path: str,
+    mobile: bool = False,
+    show_full: bool = False,
 ) -> None:
     """
     Export locations to all supported formats.
@@ -553,6 +572,7 @@ def export_to_all_formats(
         locations (list): List of location dictionaries
         base_path (str): Base path for output files (without extension)
         mobile (bool): Enable mobile-optimized content for KML export
+        show_full (bool): Show all fields including confidence_score, last_updated, validation_status
     """
     # Create directory if needed
     output_dir = os.path.dirname(base_path)
@@ -563,7 +583,7 @@ def export_to_all_formats(
     export_to_json(locations, f"{base_path}.json")
     export_to_csv(locations, f"{base_path}.csv")
     export_to_geojson(locations, f"{base_path}.geojson")
-    export_to_kml(locations, f"{base_path}.kml", mobile=mobile)
+    export_to_kml(locations, f"{base_path}.kml", mobile=mobile, show_full=show_full)
 
     # Show output location
     if output_dir:

@@ -137,7 +137,9 @@ def _format_field_value(field_name: str, value: Any) -> str:
 
 
 def _generate_popup_html(
-    location: Union[Dict[str, Any], Location], style: str = "folium"
+    location: Union[Dict[str, Any], Location],
+    style: str = "folium",
+    show_full: bool = False,
 ) -> str:
     """
     Generate comprehensive HTML popup content for a location.
@@ -145,17 +147,26 @@ def _generate_popup_html(
     Args:
         location: Location dictionary
         style: Style format - 'folium' for folium maps, 'kml' for KML export
+        show_full: Whether to show all fields including confidence_score, last_updated, validation_status, date_added
 
     Returns:
         HTML string for popup content
     """
+    # Fields to hide unless show_full is True
+    hidden_fields = [
+        "confidence_score",
+        "last_updated",
+        "validation_status",
+        "date_added",
+        "deduplication",
+    ]
+
     # Standard field order (these will appear first)
     standard_fields = [
         "name",
         "type",
         "tags",
         "neighborhood",
-        "date_added",
         "date_of_visit",
         "description",
         "website",
@@ -197,6 +208,9 @@ def _generate_popup_html(
     # Add any additional fields not in standard list (excluding coordinates)
     for field in sorted(location.keys()):
         if field not in standard_fields and field not in ["latitude", "longitude"]:
+            # Skip hidden fields unless show_full is True
+            if not show_full and field in hidden_fields:
+                continue
             all_fields.append(field)
 
     if style == "kml":
@@ -251,16 +265,28 @@ def _generate_popup_html(
         return "".join(html_parts)
 
 
-def _generate_mobile_popup_html(location: Union[Dict[str, Any], Location]) -> str:
+def _generate_mobile_popup_html(
+    location: Union[Dict[str, Any], Location], show_full: bool = False
+) -> str:
     """
     Generate mobile-friendly HTML popup content for a location.
 
     Args:
         location: Location dictionary
+        show_full: Whether to show all fields including confidence_score, last_updated, validation_status
 
     Returns:
         HTML string for mobile popup content
     """
+    # Fields to hide unless show_full is True
+    hidden_fields = [
+        "confidence_score",
+        "last_updated",
+        "validation_status",
+        "date_added",
+        "deduplication",
+    ]
+
     # Mobile-optimized field order (only essential information)
     mobile_fields = [
         "name",
@@ -329,6 +355,23 @@ def _generate_mobile_popup_html(location: Union[Dict[str, Any], Location]) -> st
             html_parts.append(
                 f"<p><strong>{display_name}: </strong>{formatted_value}</p>"
             )
+
+    # Add any additional fields not in mobile_fields if show_full is True
+    if show_full:
+        for field in sorted(location.keys()):
+            if field not in mobile_fields and field not in ["latitude", "longitude"]:
+                # Skip hidden fields unless show_full is True
+                if field in hidden_fields:
+                    continue
+
+                formatted_value = _format_field_value(field, location.get(field))
+                if formatted_value:  # Only include non-empty fields
+                    display_name = field_names.get(
+                        field, field.replace("_", " ").title()
+                    )
+                    html_parts.append(
+                        f"<p><strong>{display_name}: </strong>{formatted_value}</p>"
+                    )
 
     html_parts.append("</div>")
     return "".join(html_parts)

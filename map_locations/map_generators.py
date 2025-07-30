@@ -32,6 +32,7 @@ def show_locations_grouped(
     filter_types: Optional[List[str]] = None,
     filter_categories: Optional[List[str]] = None,
     mobile: bool = False,
+    show_full: bool = False,
 ) -> None:
     """
     Create a folium map showing locations grouped by a specified field.
@@ -44,6 +45,7 @@ def show_locations_grouped(
         filter_types (list, optional): List of location types to include.
         filter_categories (list, optional): List of color categories to include.
         mobile (bool): Enable mobile-optimized popups and layout.
+        show_full (bool): Show all fields including confidence_score, last_updated, validation_status.
     """
     if not locations:
         raise ValueError("No locations provided.")
@@ -158,11 +160,11 @@ def show_locations_grouped(
 
             # Create popup content with mobile optimization
             if mobile:
-                popup_html = _generate_mobile_popup_html(loc)
+                popup_html = _generate_mobile_popup_html(loc, show_full=show_full)
                 popup_width = 300  # Narrower for mobile
             else:
-                popup_html = _generate_popup_html(loc)
-                popup_width = 450  # Standard width for desktop
+                popup_html = _generate_popup_html(loc, show_full=show_full)
+                popup_width = 350  # Standard width for desktop
 
             folium.Marker(
                 location=[loc.get("latitude", 0.0), loc.get("longitude", 0.0)],
@@ -270,14 +272,100 @@ def show_locations_grouped(
         # Add the mobile script to the map
         m.get_root().html.add_child(folium.Element(mobile_script))  # type: ignore
     else:
-        # Desktop version - use standard layer control
+        # Desktop version - now identical to mobile with collapsible layer control
         folium.LayerControl(
             position="topright",
-            collapsed=False,
+            collapsed=True,
             autoZIndex=True,
             overlay=True,
             control=True,
         ).add_to(m)
+
+        # Add the same mobile-friendly modifications for desktop
+        mobile_script = """
+        <script>
+        function initializeMobileLayerControl() {
+            // Find the original layer control
+            const layerControl = document.querySelector('.leaflet-control-layers');
+            if (layerControl) {
+                // Make it mobile-friendly
+                layerControl.style.maxHeight = '80vh';
+                layerControl.style.overflow = 'visible';
+                layerControl.style.fontSize = '14px';
+                layerControl.style.minWidth = '200px';
+                layerControl.style.maxWidth = '280px';
+
+                // Find the toggle button (the collapsed control)
+                const toggleButton = layerControl.querySelector('.leaflet-control-layers-toggle');
+                if (toggleButton) {
+                    // Style the toggle button for mobile
+                    toggleButton.style.width = '44px';
+                    toggleButton.style.height = '44px';
+                    toggleButton.style.fontSize = '16px';
+                    toggleButton.style.backgroundColor = '#4CAF50';
+                    toggleButton.style.color = 'white';
+                    toggleButton.style.borderRadius = '6px';
+                    toggleButton.style.border = 'none';
+                    toggleButton.innerHTML = '🗺️';
+
+                    // Add custom behavior
+                    let isExpanded = false;
+                    toggleButton.addEventListener('click', function() {
+                        setTimeout(function() {
+                            const expandedContent = layerControl.querySelector('.leaflet-control-layers-list');
+                            if (expandedContent && expandedContent.style.display !== 'none') {
+                                isExpanded = true;
+                                toggleButton.innerHTML = '✕';
+                                toggleButton.style.backgroundColor = '#f44336';
+                            } else {
+                                isExpanded = false;
+                                toggleButton.innerHTML = '🗺️';
+                                toggleButton.style.backgroundColor = '#4CAF50';
+                            }
+                        }, 50);
+                    });
+                }
+
+                // Style the expanded content
+                const expandedContent = layerControl.querySelector('.leaflet-control-layers-list');
+                if (expandedContent) {
+                    expandedContent.style.padding = '10px';
+                    expandedContent.style.fontSize = '13px';
+                    expandedContent.style.maxHeight = '70vh';
+                    expandedContent.style.overflow = 'auto';
+                    expandedContent.style.overflowX = 'hidden';
+
+                    // Style all labels
+                    const labels = expandedContent.querySelectorAll('label');
+                    labels.forEach(function(label) {
+                        label.style.display = 'flex';
+                        label.style.alignItems = 'center';
+                        label.style.marginBottom = '8px';
+                        label.style.cursor = 'pointer';
+                    });
+
+                    // Style all inputs
+                    const inputs = expandedContent.querySelectorAll('input');
+                    inputs.forEach(function(input) {
+                        input.style.marginRight = '8px';
+                        input.style.transform = 'scale(1.2)';
+                    });
+                }
+
+                console.log('Mobile layer control initialized');
+            } else {
+                // Retry if not found
+                setTimeout(initializeMobileLayerControl, 200);
+            }
+        }
+
+        // Initialize after a delay
+        setTimeout(initializeMobileLayerControl, 1000);
+        </script>
+        """
+
+        # Add the mobile script to the map
+        m.get_root().html.add_child(folium.Element(mobile_script))  # type: ignore
 
     # Create output directory if needed
     dirname = os.path.dirname(map_filename)
@@ -288,9 +376,9 @@ def show_locations_grouped(
     print(f"🗺️ Map saved to: {Path(map_filename).resolve()}")
     if mobile:
         print("📱 Mobile-optimized layout enabled")
-        print("🗺️ Collapsible layer controls:")
-        print("   • Toggle button in top-right corner")
-        print("   • Layer panel can be shown/hidden")
+    print("🗺️ Collapsible layer controls:")
+    print("   • Toggle button in top-right corner")
+    print("   • Layer panel can be shown/hidden")
     print(
         f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:"
     )
@@ -306,6 +394,7 @@ def show_locations_with_filtering(
     filter_categories: Optional[List[str]] = None,
     group_by: str = "type",
     mobile: bool = False,
+    show_full: bool = False,
 ) -> None:
     """
     Create a folium map with filtering capabilities for location types or categories.
@@ -318,6 +407,7 @@ def show_locations_with_filtering(
         filter_categories (list, optional): List of color categories to include.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
         mobile (bool): Enable mobile-optimized popups and layout.
+        show_full (bool): Show all fields including confidence_score, last_updated, validation_status.
     """
     show_locations_grouped(
         locations=locations,
@@ -327,6 +417,7 @@ def show_locations_with_filtering(
         filter_types=filter_types,
         filter_categories=filter_categories,
         mobile=mobile,
+        show_full=show_full,
     )
 
 
@@ -336,6 +427,7 @@ def show_locations_with_google_maps(
     map_filename: str = "map.html",
     satellite: bool = False,
     mobile: bool = False,
+    show_full: bool = False,
 ) -> None:
     """
     Create a folium map with Google Maps tiles showing locations grouped by a specified field.
@@ -349,6 +441,7 @@ def show_locations_with_google_maps(
         map_filename: Path to save the HTML map
         satellite: Use satellite view instead of street view
         mobile: Enable mobile-optimized popups and layout
+        show_full: Show all fields including confidence_score, last_updated, validation_status
 
     Example:
         >>> locations = load_locations_from_yaml("locations.yaml")
@@ -356,7 +449,12 @@ def show_locations_with_google_maps(
     """
     tile_provider = "google_satellite" if satellite else "google_maps"
     show_locations_grouped(
-        locations, group_by, map_filename, tile_provider, mobile=mobile
+        locations,
+        group_by,
+        map_filename,
+        tile_provider,
+        mobile=mobile,
+        show_full=show_full,
     )
 
 
@@ -366,6 +464,7 @@ def show_locations_by_category(
     map_filename: str = "map.html",
     tile_provider: str = "openstreetmap",
     mobile: bool = False,
+    show_full: bool = False,
 ) -> None:
     """
     Create a folium map showing locations grouped by color categories.
@@ -376,6 +475,7 @@ def show_locations_by_category(
         map_filename: Path to save the HTML map
         tile_provider: Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
         mobile: Enable mobile-optimized popups and layout
+        show_full: Show all fields including confidence_score, last_updated, validation_status
 
     Example:
         >>> locations = load_locations_from_yaml("locations.yaml")
@@ -388,4 +488,5 @@ def show_locations_by_category(
         tile_provider=tile_provider,
         filter_categories=categories,
         mobile=mobile,
+        show_full=show_full,
     )

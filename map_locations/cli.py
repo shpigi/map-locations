@@ -113,6 +113,12 @@ descriptions optimized for mobile viewing applications.
         help="Enable mobile-optimized layout with collapsible filtering controls and "
         "simplified popup content",
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Show all fields in popups including confidence_score, last_updated, validation_status, date_added, and deduplication. "
+        "By default, these AI-generated metadata fields are hidden for cleaner popups.",
+    )
 
     return parser
 
@@ -153,13 +159,16 @@ def handle_command(args: argparse.Namespace) -> None:
                 map_filename=args.output,
                 tile_provider=args.tile_provider,
                 mobile=args.mobile,
+                show_full=args.full,
             )
             print("✅ Map created successfully!")
 
         elif args.format == "all":
             # Export to all formats including HTML
             print("📤 Exporting to all formats...")
-            export_to_all_formats(locations, str(output_path), mobile=args.mobile)
+            export_to_all_formats(
+                locations, str(output_path), mobile=args.mobile, show_full=args.full
+            )
 
             # Also create HTML map
             html_path = output_path.with_suffix(".html")
@@ -170,6 +179,7 @@ def handle_command(args: argparse.Namespace) -> None:
                 map_filename=str(html_path),
                 tile_provider=args.tile_provider,
                 mobile=args.mobile,
+                show_full=args.full,
             )
             print("✅ All formats exported successfully!")
 
