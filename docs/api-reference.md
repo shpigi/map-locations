@@ -292,31 +292,6 @@ map_file = show_locations_with_filtering(locations, "filtered_map.html")
 map_file = show_locations_with_filtering(locations, "mobile_filtered_map.html", mobile=True)
 ```
 
-### `show_locations_with_advanced_filtering(locations: List[Location], map_filename: str = "map.html", tile_provider: str = "openstreetmap", filter_types: Optional[List[str]] = None, mobile: bool = False) -> str`
-
-Create an interactive map with advanced filtering capabilities using dropdown controls.
-
-**Parameters:**
-- `locations` (List[Location]): List of location dictionaries
-- `map_filename` (str): Output filename for the HTML map
-- `tile_provider` (str): Tile provider ("openstreetmap", "google_maps", "google_satellite")
-- `filter_types` (Optional[List[str]]): List of location types to pre-filter
-- `mobile` (bool): Enable mobile-optimized popups and collapsible filtering controls
-
-**Returns:**
-- `str`: Path to the generated HTML file
-
-**Example:**
-```python
-from map_locations import show_locations_with_advanced_filtering
-
-# Create advanced filtering map
-map_file = show_locations_with_advanced_filtering(locations, "advanced_map.html")
-
-# Create mobile advanced filtering map
-map_file = show_locations_with_advanced_filtering(locations, "mobile_advanced_map.html", mobile=True)
-```
-
 ### `show_locations_with_google_maps(locations: List[Location], group_by: str = "type", map_filename: str = "map.html", satellite: bool = False, mobile: bool = False) -> str`
 
 Create an interactive map using Google Maps tiles.
@@ -609,19 +584,12 @@ The library includes mobile-optimized features for better usability on smartphon
 ### Mobile Usage Examples
 
 ```python
-from map_locations import show_locations_grouped, show_locations_with_advanced_filtering
+from map_locations import show_locations_grouped, show_locations_with_google_maps
 
 # Create mobile-optimized map
 show_locations_grouped(
     locations,
     map_filename="mobile_map.html",
-    mobile=True
-)
-
-# Create mobile map with advanced filtering
-show_locations_with_advanced_filtering(
-    locations,
-    map_filename="mobile_advanced_map.html",
     mobile=True
 )
 

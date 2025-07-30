@@ -279,7 +279,7 @@ for url, status in verified_urls.items():
 Create mobile-optimized maps for better mobile device experience:
 
 ```python
-from map_locations import show_locations_grouped, show_locations_with_advanced_filtering
+from map_locations import show_locations_grouped, show_locations_with_google_maps
 
 # Create mobile-optimized map
 show_locations_grouped(
@@ -288,10 +288,10 @@ show_locations_grouped(
     mobile=True
 )
 
-# Create mobile map with advanced filtering
-show_locations_with_advanced_filtering(
+# Create mobile map with Google Maps tiles
+show_locations_with_google_maps(
     locations,
-    map_filename="mobile_advanced_map.html",
+    map_filename="mobile_google_map.html",
     mobile=True
 )
 ```
@@ -337,7 +337,6 @@ except Exception as e:
 ### Visualization
 - `show_locations_grouped(locations: List[Location], group_by: str = "type", map_filename: str = "map.html", mobile: bool = False)`
 - `show_locations_with_filtering(locations: List[Location], map_filename: str = "map.html", mobile: bool = False)`
-- `show_locations_with_advanced_filtering(locations: List[Location], map_filename: str = "map.html", mobile: bool = False)`
 - `show_locations_with_google_maps(locations: List[Location], map_filename: str = "map.html", mobile: bool = False)`
 
 ### Export
