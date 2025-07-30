@@ -112,8 +112,8 @@ map-locations locations.yaml --format all --output exports/
 map-locations locations.yaml --tile-provider google_maps --output map.html
 map-locations locations.yaml --tile-provider google_satellite --output map.html
 
-# Advanced filtering with mobile optimization
-map-locations locations.yaml --advanced-filter --mobile --output advanced_mobile_map.html
+# Mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
 ```
 
 ### AI Processing
