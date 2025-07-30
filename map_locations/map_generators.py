@@ -28,7 +28,7 @@ def show_locations_grouped(
     locations: LocationList,
     group_by: str = "type",
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap",
+    tile_provider: str = "google_maps",
     filter_types: Optional[List[str]] = None,
     filter_categories: Optional[List[str]] = None,
     mobile: bool = False,
@@ -41,7 +41,9 @@ def show_locations_grouped(
         locations (list): List of dicts loaded from YAML.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
         map_filename (str): Path to save the HTML map.
-        tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        tile_provider (str): Default map tile provider ('openstreetmap', 'google_maps', 'google_satellite').
+                           The HTML filter panel will include all three options for switching.
+                           Default is 'google_maps'.
         filter_types (list, optional): List of location types to include.
         filter_categories (list, optional): List of color categories to include.
         mobile (bool): Enable mobile-optimized popups and layout.
@@ -76,31 +78,44 @@ def show_locations_grouped(
 
     # Center the map
     first = locations[0]
+
+    # Create map with Google Maps as default base layer
     m = folium.Map(
         location=[first.get("latitude", 0.0), first.get("longitude", 0.0)],
         zoom_start=14,
+        zoom_control=False,
+        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        attr="Google Maps",
     )
 
-    # Add additional tile layers based on provider selection
-    # The default OpenStreetMap is already added by folium.Map()
-    if tile_provider == "google_maps":
-        # Add Google Maps as additional base layer option
-        folium.TileLayer(
-            tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-            attr="Google Maps",
-            name="Google Maps",
-            overlay=False,
-            control=True,
-        ).add_to(m)
-    elif tile_provider == "google_satellite":
-        # Add Google Satellite as additional base layer option
-        folium.TileLayer(
-            tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-            attr="Google Satellite",
-            name="Google Satellite",
-            overlay=False,
-            control=True,
-        ).add_to(m)
+    # Add OpenStreetMap as additional base layer option
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        name="OpenStreetMap",
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Add Google Maps as additional base layer option (for consistency)
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        attr="Google Maps",
+        name="Google Maps",
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Add Google Satellite as additional base layer option
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google Satellite",
+        name="Google Satellite",
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Note: Google Maps is now the default layer, but users can switch
+    # to OpenStreetMap or Google Satellite using the layer control panel
 
     # Group locations
     groups = defaultdict(list)
@@ -379,6 +394,7 @@ def show_locations_grouped(
     print("🗺️ Collapsible layer controls:")
     print("   • Toggle button in top-right corner")
     print("   • Layer panel can be shown/hidden")
+    print("   • Switch between OpenStreetMap, Google Maps, and Google Satellite views")
     print(
         f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:"
     )
@@ -389,7 +405,7 @@ def show_locations_grouped(
 def show_locations_with_filtering(
     locations: LocationList,
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap",
+    tile_provider: str = "google_maps",
     filter_types: Optional[List[str]] = None,
     filter_categories: Optional[List[str]] = None,
     group_by: str = "type",
@@ -402,7 +418,9 @@ def show_locations_with_filtering(
     Args:
         locations (list): List of dicts loaded from YAML.
         map_filename (str): Path to save the HTML map.
-        tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        tile_provider (str): Default map tile provider ('openstreetmap', 'google_maps', 'google_satellite').
+                           The HTML filter panel will include all three options for switching.
+                           Default is 'google_maps'.
         filter_types (list, optional): List of location types to include.
         filter_categories (list, optional): List of color categories to include.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
@@ -462,7 +480,7 @@ def show_locations_by_category(
     locations: LocationList,
     categories: Optional[List[str]] = None,
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap",
+    tile_provider: str = "google_maps",
     mobile: bool = False,
     show_full: bool = False,
 ) -> None:
@@ -473,7 +491,9 @@ def show_locations_by_category(
         locations: List of location dictionaries
         categories: List of categories to include (e.g., ["Food & Drink", "Culture & Arts"])
         map_filename: Path to save the HTML map
-        tile_provider: Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        tile_provider: Default map tile provider ('openstreetmap', 'google_maps', 'google_satellite').
+                     The HTML filter panel will include all three options for switching.
+                     Default is 'google_maps'.
         mobile: Enable mobile-optimized popups and layout
         show_full: Show all fields including confidence_score, last_updated, validation_status
 
