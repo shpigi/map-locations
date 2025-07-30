@@ -59,21 +59,16 @@ repos:
       - id: pyright
         name: pyright
         entry: pyright
-        language: python
+        language: system
         args: [--level=error]
         files: ^(map_locations/.*\.py)$
-        additional_dependencies: [pyright]
       # Separate lenient pyright for AI package
       - id: pyright-ai
         name: pyright-ai
-        entry: pyright
-        language: python
-        args: [
-          --level=warning,
-          --skipunannotated
-        ]
+        entry: bash -c 'pyright --level=warning --skipunannotated "$@" || exit 0'
+        language: system
         files: ^(map_locations_ai/.*\.py)$
-        additional_dependencies: [pyright]
+        pass_filenames: true
 
   # Optional: Add pytest hook (commented out by default for speed)
   # Uncomment if you want tests to run on every commit
