@@ -84,6 +84,22 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 - [x] `_generate_mobile_popup_html()`
 
 
+### 📂 exporters.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 549 lines removed from core.py
+- **Functions Migrated**: 5 functions (including large export_to_kml ~400 lines)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 1,755 to 1,213 lines (-542 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `export_to_json()`
+- [x] `export_to_csv()`
+- [x] `export_to_geojson()`
+- [x] `export_to_kml()` ⚠️ **Large function** (~400 lines)
+- [x] `export_to_all_formats()`
+
+
 ## Module Breakdown
 
 ### ✅ Phase 1: Create Module Structure
@@ -153,6 +169,22 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 - [x] `_generate_popup_html()`
 - [x] `_generate_mobile_popup_html()`
 
+
+### 📂 exporters.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 549 lines removed from core.py
+- **Functions Migrated**: 5 functions (including large export_to_kml ~400 lines)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 1,755 to 1,213 lines (-542 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `export_to_json()`
+- [x] `export_to_csv()`
+- [x] `export_to_geojson()`
+- [x] `export_to_kml()` ⚠️ **Large function** (~400 lines)
+- [x] `export_to_all_formats()`
+
 **Imports needed:**
 ```python
 from typing import List, Dict, Any
@@ -174,6 +206,22 @@ from collections import defaultdict
 - [x] `_generate_popup_html()`
 - [x] `_generate_mobile_popup_html()`
 
+
+### 📂 exporters.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 549 lines removed from core.py
+- **Functions Migrated**: 5 functions (including large export_to_kml ~400 lines)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 1,755 to 1,213 lines (-542 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `export_to_json()`
+- [x] `export_to_csv()`
+- [x] `export_to_geojson()`
+- [x] `export_to_kml()` ⚠️ **Large function** (~400 lines)
+- [x] `export_to_all_formats()`
+
 **Imports needed:**
 ```python
 import re
@@ -186,16 +234,16 @@ from .common import Location
 ---
 
 #### 3. 📂 `exporters.py` - Data Export Functions
-- **Lines**: ~546-1095 (549 lines)
-- **Status**: ⏳ Pending
+- **Lines**: ~55-605 (549 lines)
+- **Status**: ✅ COMPLETED
 - **Dependencies**: `popup_generators.py`, `categories.py`
 
 **Functions to move:**
-- [ ] `export_to_json()`
-- [ ] `export_to_csv()`
-- [ ] `export_to_geojson()`
-- [ ] `export_to_kml()` ⚠️ **Large function** (~500 lines)
-- [ ] `export_to_all_formats()`
+- [x] `export_to_json()`
+- [x] `export_to_csv()`
+- [x] `export_to_geojson()`
+- [x] `export_to_kml()` ⚠️ **Large function** (~500 lines)
+- [x] `export_to_all_formats()`
 
 **Imports needed:**
 ```python
@@ -271,6 +319,22 @@ from .common import LocationList
 - [x] `_generate_popup_html()`
 - [x] `_generate_mobile_popup_html()`
 
+
+### 📂 exporters.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 549 lines removed from core.py
+- **Functions Migrated**: 5 functions (including large export_to_kml ~400 lines)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 1,755 to 1,213 lines (-542 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `export_to_json()`
+- [x] `export_to_csv()`
+- [x] `export_to_geojson()`
+- [x] `export_to_kml()` ⚠️ **Large function** (~400 lines)
+- [x] `export_to_all_formats()`
+
 **Imports needed:**
 ```python
 from typing import List, Dict, Any
@@ -324,6 +388,22 @@ from .common import LocationList
 - [x] `_format_field_value()`
 - [x] `_generate_popup_html()`
 - [x] `_generate_mobile_popup_html()`
+
+
+### 📂 exporters.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 549 lines removed from core.py
+- **Functions Migrated**: 5 functions (including large export_to_kml ~400 lines)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 1,755 to 1,213 lines (-542 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `export_to_json()`
+- [x] `export_to_csv()`
+- [x] `export_to_geojson()`
+- [x] `export_to_kml()` ⚠️ **Large function** (~400 lines)
+- [x] `export_to_all_formats()`
 
 **Imports needed:**
 ```python
@@ -501,12 +581,12 @@ cp core_backup.py core.py
 
 ## Progress Tracking
 
-### Current Progress: 67% Complete (4/6 modules)
+### Current Progress: 83% Complete (5/6 modules)
 
 - [x] Analysis completed
 - [x] Plan documented
 - [x] Foundation modules created (3/3: categories.py ✅, utils.py ✅, location_filters.py ✅)
-- [x] Content modules created (1/2: popup_generators.py ✅)
+- [x] Content modules created (2/2: popup_generators.py ✅, exporters.py ✅)
 - [ ] Content modules created
 - [ ] Complex modules created
 - [ ] Import structure updated
