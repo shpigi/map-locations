@@ -16,7 +16,6 @@ from .core import (
     export_to_kml,
     load_locations_from_yaml,
     show_locations_grouped,
-    show_locations_with_advanced_filtering,
 )
 
 
@@ -36,11 +35,8 @@ Examples:
   # Create map with Google Satellite view (locations grouped by type)
   map-locations passages.yaml --tile-provider google_satellite --output maps/passages/map.html
 
-  # Create map with advanced filtering controls (dropdown menus for field and value selection)
-  map-locations passages.yaml --advanced-filter --output maps/passages/advanced_map.html
-
-  # Create mobile-optimized map with collapsible filtering controls
-  map-locations passages.yaml --mobile --advanced-filter --output maps/passages/mobile_map.html
+  # Create mobile-optimized map with collapsible layer controls
+  map-locations passages.yaml --mobile --output maps/passages/mobile_map.html
 
   # Export to JSON format
   map-locations passages.yaml --format json --output maps/passages/locations.json
@@ -63,12 +59,8 @@ Examples:
 Note: When creating HTML maps, locations are automatically grouped by type (or other field)
 and can be toggled on/off using the layer controls in the top-right corner of the map.
 
-Advanced filtering (--advanced-filter) adds dropdown controls that allow users to select
-a field (type, neighborhood, or date_of_visit) and then filter by specific values within
-that field. This provides more granular control than the standard grouped view.
-
 Mobile mode (--mobile) optimizes the layout for mobile devices with:
-- Collapsible filtering controls (toggle button in top-left corner)
+- Collapsible layer controls (toggle button in top-right corner)
 - Simplified popup content (essential information only)
 - Narrower popup width (300px vs 450px)
 - Clickable phone numbers and website links
@@ -110,17 +102,10 @@ descriptions optimized for mobile viewing applications.
     )
     parser.add_argument(
         "--tile-provider",
-        "-t",
         type=str,
         default="openstreetmap",
         choices=["openstreetmap", "google_maps", "google_satellite"],
         help="Map tile provider for HTML maps (default: openstreetmap)",
-    )
-    parser.add_argument(
-        "--advanced-filter",
-        action="store_true",
-        help="Enable advanced filtering with dropdown controls for field selection and "
-        "value filtering",
     )
     parser.add_argument(
         "--mobile",
@@ -162,21 +147,13 @@ def handle_command(args: argparse.Namespace) -> None:
         if args.format == "html":
             # Create HTML map
             print("🗺️ Creating interactive map...")
-            if args.advanced_filter:
-                show_locations_with_advanced_filtering(
-                    locations,
-                    map_filename=args.output,
-                    tile_provider=args.tile_provider,
-                    mobile=args.mobile,
-                )
-            else:
-                show_locations_grouped(
-                    locations,
-                    group_by=args.group_by,
-                    map_filename=args.output,
-                    tile_provider=args.tile_provider,
-                    mobile=args.mobile,
-                )
+            show_locations_grouped(
+                locations,
+                group_by=args.group_by,
+                map_filename=args.output,
+                tile_provider=args.tile_provider,
+                mobile=args.mobile,
+            )
             print("✅ Map created successfully!")
 
         elif args.format == "all":
@@ -187,21 +164,13 @@ def handle_command(args: argparse.Namespace) -> None:
             # Also create HTML map
             html_path = output_path.with_suffix(".html")
             print("🗺️ Creating interactive HTML map...")
-            if args.advanced_filter:
-                show_locations_with_advanced_filtering(
-                    locations,
-                    map_filename=str(html_path),
-                    tile_provider=args.tile_provider,
-                    mobile=args.mobile,
-                )
-            else:
-                show_locations_grouped(
-                    locations,
-                    group_by=args.group_by,
-                    map_filename=str(html_path),
-                    tile_provider=args.tile_provider,
-                    mobile=args.mobile,
-                )
+            show_locations_grouped(
+                locations,
+                group_by=args.group_by,
+                map_filename=str(html_path),
+                tile_provider=args.tile_provider,
+                mobile=args.mobile,
+            )
             print("✅ All formats exported successfully!")
 
         else:
