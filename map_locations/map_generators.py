@@ -164,7 +164,7 @@ def show_locations_grouped(
                 popup_width = 300  # Narrower for mobile
             else:
                 popup_html = _generate_popup_html(loc, show_full=show_full)
-                popup_width = 350  # Standard width for desktop
+                popup_width = 330  # Standard width for desktop
 
             folium.Marker(
                 location=[loc.get("latitude", 0.0), loc.get("longitude", 0.0)],
