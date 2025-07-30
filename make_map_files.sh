@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Map generation script for map_locations package
+# Note: Advanced filtering (--advanced-filter) was removed from the CLI
+# All maps now use the standard grouped view with layer controls
+
 # Exit on any error
 set -e
 
@@ -62,10 +66,6 @@ generate_map "map_locations_ai/temp/user_input_01_paris/deduplicated_locations.y
     "maps/user_input_01_paris.html" \
     "--tile-provider google_maps"
 
-generate_map "map_locations_ai/temp/user_input_01_paris/deduplicated_locations.yaml" \
-    "maps/user_input_01_paris_filter.html" \
-    "--tile-provider google_maps --advanced-filter"
-
 # London maps
 generate_map "map_locations_ai/temp/user_input_01_london/deduplicated_locations.yaml" \
     "maps/user_input_01_london_mobile.html" \
@@ -74,10 +74,6 @@ generate_map "map_locations_ai/temp/user_input_01_london/deduplicated_locations.
 generate_map "map_locations_ai/temp/user_input_01_london/deduplicated_locations.yaml" \
     "maps/user_input_01_london.html" \
     "--tile-provider google_maps"
-
-generate_map "map_locations_ai/temp/user_input_01_london/deduplicated_locations.yaml" \
-    "maps/user_input_01_london_filter.html" \
-    "--tile-provider google_maps --advanced-filter"
 
 # KML exports
 generate_map "map_locations_ai/temp/user_input_01_paris/deduplicated_locations.yaml" \

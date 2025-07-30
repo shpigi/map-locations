@@ -324,8 +324,8 @@ map-locations locations.yaml --tile-provider google_satellite --output map.html
 map-locations locations.yaml --group-by neighborhood --output map.html
 map-locations locations.yaml --group-by date_added --output map.html
 
-# Advanced filtering with mobile optimization
-map-locations locations.yaml --advanced-filter --mobile --output advanced_mobile_map.html
+# Mobile-optimized map
+map-locations locations.yaml --mobile --output mobile_map.html
 ```
 
 ### Grouping Options
@@ -389,9 +389,6 @@ The Map Locations library includes mobile-optimized features for better usabilit
 # Create mobile-optimized map
 map-locations locations.yaml --mobile --output mobile_map.html
 
-# Mobile map with advanced filtering
-map-locations locations.yaml --mobile --advanced-filter --output mobile_advanced_map.html
-
 # Mobile map with Google Maps tiles
 map-locations locations.yaml --mobile --tile-provider google_maps --output mobile_google_map.html
 ```
@@ -407,13 +404,6 @@ locations = load_locations_from_yaml("locations.yaml")
 show_locations_grouped(
     locations,
     map_filename="mobile_map.html",
-    mobile=True
-)
-
-# Mobile map with advanced filtering
-show_locations_with_advanced_filtering(
-    locations,
-    map_filename="mobile_advanced_map.html",
     mobile=True
 )
 ```
@@ -441,7 +431,7 @@ map-locations travel_locations.yaml --mobile --output travel_mobile.html
 #### Field Research
 ```bash
 # Create mobile map for field work
-map-locations research_locations.yaml --mobile --advanced-filter --output research_mobile.html
+map-locations research_locations.yaml --mobile --output research_mobile.html
 ```
 
 #### Event Planning
