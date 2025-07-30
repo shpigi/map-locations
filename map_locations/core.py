@@ -52,7 +52,6 @@ from .location_filters import (
 from .map_generators import (
     show_locations_by_category,
     show_locations_grouped,
-    show_locations_with_advanced_filtering,
     show_locations_with_filtering,
     show_locations_with_google_maps,
 )

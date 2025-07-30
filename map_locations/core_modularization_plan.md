@@ -102,18 +102,20 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 
 ### 📂 map_generators.py - COMPLETED ✅
 - **Completed**: December 2024
-- **Lines Moved**: 1,134 lines removed from core.py
-- **Functions Migrated**: 5 functions (including massive show_locations_with_advanced_filtering ~753 lines)
+- **Lines Moved**: 383 lines removed from core.py (advanced filtering removed)
+- **Functions Migrated**: 4 functions (advanced filtering function removed)
 - **Testing**: ✅ All imports work correctly
 - **Backward Compatibility**: ✅ Maintained via imports
 - **Core.py Size**: Reduced from 1,213 to 72 lines (-1,141 lines net)
+- **map_generators.py Size**: 407 lines (simplified from 1,158 lines)
 
 **Functions Successfully Migrated:**
 - [x] `show_locations_grouped()` (~288 lines)
 - [x] `show_locations_with_filtering()`
-- [x] `show_locations_with_advanced_filtering()` ⚠️ **Massive function** (~753 lines)
 - [x] `show_locations_with_google_maps()`
 - [x] `show_locations_by_category()`
+
+**Note**: `show_locations_with_advanced_filtering()` (~753 lines) was removed as requested - simplified the module significantly
 
 
 ## Module Breakdown
@@ -204,18 +206,20 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 
 ### 📂 map_generators.py - COMPLETED ✅
 - **Completed**: December 2024
-- **Lines Moved**: 1,134 lines removed from core.py
-- **Functions Migrated**: 5 functions (including massive show_locations_with_advanced_filtering ~753 lines)
+- **Lines Moved**: 383 lines removed from core.py (advanced filtering removed)
+- **Functions Migrated**: 4 functions (advanced filtering function removed)
 - **Testing**: ✅ All imports work correctly
 - **Backward Compatibility**: ✅ Maintained via imports
 - **Core.py Size**: Reduced from 1,213 to 72 lines (-1,141 lines net)
+- **map_generators.py Size**: 407 lines (simplified from 1,158 lines)
 
 **Functions Successfully Migrated:**
 - [x] `show_locations_grouped()` (~288 lines)
 - [x] `show_locations_with_filtering()`
-- [x] `show_locations_with_advanced_filtering()` ⚠️ **Massive function** (~753 lines)
 - [x] `show_locations_with_google_maps()`
 - [x] `show_locations_by_category()`
+
+**Note**: `show_locations_with_advanced_filtering()` (~753 lines) was removed as requested - simplified the module significantly
 
 **Imports needed:**
 ```python
@@ -257,18 +261,20 @@ from collections import defaultdict
 
 ### 📂 map_generators.py - COMPLETED ✅
 - **Completed**: December 2024
-- **Lines Moved**: 1,134 lines removed from core.py
-- **Functions Migrated**: 5 functions (including massive show_locations_with_advanced_filtering ~753 lines)
+- **Lines Moved**: 383 lines removed from core.py (advanced filtering removed)
+- **Functions Migrated**: 4 functions (advanced filtering function removed)
 - **Testing**: ✅ All imports work correctly
 - **Backward Compatibility**: ✅ Maintained via imports
 - **Core.py Size**: Reduced from 1,213 to 72 lines (-1,141 lines net)
+- **map_generators.py Size**: 407 lines (simplified from 1,158 lines)
 
 **Functions Successfully Migrated:**
 - [x] `show_locations_grouped()` (~288 lines)
 - [x] `show_locations_with_filtering()`
-- [x] `show_locations_with_advanced_filtering()` ⚠️ **Massive function** (~753 lines)
 - [x] `show_locations_with_google_maps()`
 - [x] `show_locations_by_category()`
+
+**Note**: `show_locations_with_advanced_filtering()` (~753 lines) was removed as requested - simplified the module significantly
 
 **Imports needed:**
 ```python
@@ -296,18 +302,20 @@ from .common import Location
 
 ### 📂 map_generators.py - COMPLETED ✅
 - **Completed**: December 2024
-- **Lines Moved**: 1,134 lines removed from core.py
-- **Functions Migrated**: 5 functions (including massive show_locations_with_advanced_filtering ~753 lines)
+- **Lines Moved**: 383 lines removed from core.py (advanced filtering removed)
+- **Functions Migrated**: 4 functions (advanced filtering function removed)
 - **Testing**: ✅ All imports work correctly
 - **Backward Compatibility**: ✅ Maintained via imports
 - **Core.py Size**: Reduced from 1,213 to 72 lines (-1,141 lines net)
+- **map_generators.py Size**: 407 lines (simplified from 1,158 lines)
 
 **Functions Successfully Migrated:**
 - [x] `show_locations_grouped()` (~288 lines)
 - [x] `show_locations_with_filtering()`
-- [x] `show_locations_with_advanced_filtering()` ⚠️ **Massive function** (~753 lines)
 - [x] `show_locations_with_google_maps()`
 - [x] `show_locations_by_category()`
+
+**Note**: `show_locations_with_advanced_filtering()` (~753 lines) was removed as requested - simplified the module significantly
 
 **Imports needed:**
 ```python
@@ -402,18 +410,20 @@ from .common import LocationList
 
 ### 📂 map_generators.py - COMPLETED ✅
 - **Completed**: December 2024
-- **Lines Moved**: 1,134 lines removed from core.py
-- **Functions Migrated**: 5 functions (including massive show_locations_with_advanced_filtering ~753 lines)
+- **Lines Moved**: 383 lines removed from core.py (advanced filtering removed)
+- **Functions Migrated**: 4 functions (advanced filtering function removed)
 - **Testing**: ✅ All imports work correctly
 - **Backward Compatibility**: ✅ Maintained via imports
 - **Core.py Size**: Reduced from 1,213 to 72 lines (-1,141 lines net)
+- **map_generators.py Size**: 407 lines (simplified from 1,158 lines)
 
 **Functions Successfully Migrated:**
 - [x] `show_locations_grouped()` (~288 lines)
 - [x] `show_locations_with_filtering()`
-- [x] `show_locations_with_advanced_filtering()` ⚠️ **Massive function** (~753 lines)
 - [x] `show_locations_with_google_maps()`
 - [x] `show_locations_by_category()`
+
+**Note**: `show_locations_with_advanced_filtering()` (~753 lines) was removed as requested - simplified the module significantly
 
 **Imports needed:**
 ```python
@@ -488,18 +498,20 @@ from .common import LocationList
 
 ### 📂 map_generators.py - COMPLETED ✅
 - **Completed**: December 2024
-- **Lines Moved**: 1,134 lines removed from core.py
-- **Functions Migrated**: 5 functions (including massive show_locations_with_advanced_filtering ~753 lines)
+- **Lines Moved**: 383 lines removed from core.py (advanced filtering removed)
+- **Functions Migrated**: 4 functions (advanced filtering function removed)
 - **Testing**: ✅ All imports work correctly
 - **Backward Compatibility**: ✅ Maintained via imports
 - **Core.py Size**: Reduced from 1,213 to 72 lines (-1,141 lines net)
+- **map_generators.py Size**: 407 lines (simplified from 1,158 lines)
 
 **Functions Successfully Migrated:**
 - [x] `show_locations_grouped()` (~288 lines)
 - [x] `show_locations_with_filtering()`
-- [x] `show_locations_with_advanced_filtering()` ⚠️ **Massive function** (~753 lines)
 - [x] `show_locations_with_google_maps()`
 - [x] `show_locations_by_category()`
+
+**Note**: `show_locations_with_advanced_filtering()` (~753 lines) was removed as requested - simplified the module significantly
 
 **Imports needed:**
 ```python

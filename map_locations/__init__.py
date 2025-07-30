@@ -28,8 +28,8 @@ from .core import (
     export_to_json,
     export_to_kml,
     load_locations_from_yaml,
+    show_locations_by_category,
     show_locations_grouped,
-    show_locations_with_advanced_filtering,
     show_locations_with_filtering,
     show_locations_with_google_maps,
 )
@@ -52,9 +52,9 @@ from .utils import create_sample_locations
 __all__ = [
     "Location",
     "load_locations_from_yaml",
+    "show_locations_by_category",
     "show_locations_grouped",
     "show_locations_with_filtering",
-    "show_locations_with_advanced_filtering",
     "export_to_json",
     "export_to_csv",
     "export_to_geojson",
