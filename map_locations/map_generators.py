@@ -79,21 +79,22 @@ def show_locations_grouped(
     # Center the map
     first = locations[0]
 
-    # Create map with OpenStreetMap as default base layer
+    # Create map with OpenStreetMap as base (we'll add others as proper layers)
     m = folium.Map(
         location=[first.get("latitude", 0.0), first.get("longitude", 0.0)],
         zoom_start=14,
         zoom_control=False,
     )
 
-    # Add Google Maps as additional base layer option
-    folium.TileLayer(
+    # Add Google Maps as the first tile layer (will be default if selected)
+    google_maps_layer = folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         attr="Google Maps",
         name="Google Maps",
         overlay=False,
         control=True,
-    ).add_to(m)
+    )
+    google_maps_layer.add_to(m)
 
     # Add Google Satellite as additional base layer option
     folium.TileLayer(
@@ -104,9 +105,9 @@ def show_locations_grouped(
         control=True,
     ).add_to(m)
 
-    # Set Google Maps as the default if specified
+    # Set the default layer based on tile_provider
     if tile_provider == "google_maps":
-        # Switch to Google Maps programmatically after map loads
+        # Make Google Maps the default by making it the active layer
         switch_to_google_script = """
         <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -115,19 +116,20 @@ def show_locations_grouped(
                 const radioButtons = document.querySelectorAll('input[type="radio"]');
                 for (let radio of radioButtons) {
                     const label = radio.parentElement;
-                    if (label && label.textContent.includes('Google Maps')) {
+                    if (label && label.textContent.trim() === 'Google Maps') {
                         radio.checked = true;
                         radio.dispatchEvent(new Event('change'));
+                        console.log('Switched to Google Maps');
                         break;
                     }
                 }
-            }, 1500);
+            }, 500);
         });
         </script>
         """
         m.get_root().html.add_child(folium.Element(switch_to_google_script))  # type: ignore
     elif tile_provider == "google_satellite":
-        # Switch to Google Satellite programmatically after map loads
+        # Make Google Satellite the default by making it the active layer
         switch_to_satellite_script = """
         <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -136,13 +138,14 @@ def show_locations_grouped(
                 const radioButtons = document.querySelectorAll('input[type="radio"]');
                 for (let radio of radioButtons) {
                     const label = radio.parentElement;
-                    if (label && label.textContent.includes('Google Satellite')) {
+                    if (label && label.textContent.trim() === 'Google Satellite') {
                         radio.checked = true;
                         radio.dispatchEvent(new Event('change'));
+                        console.log('Switched to Google Satellite');
                         break;
                     }
                 }
-            }, 1500);
+            }, 500);
         });
         </script>
         """
