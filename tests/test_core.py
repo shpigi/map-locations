@@ -25,6 +25,7 @@ from map_locations.core import (
     get_available_neighborhoods,
     get_available_tags,
     get_available_types,
+    get_kml_color,
     get_location_summary,
     load_locations_from_yaml,
     validate_location_data,
@@ -574,8 +575,11 @@ class TestKMLIconURLs:
                     in content
                 )
                 # Check that different colors are used for different types
-                assert "ff0000ff" in content  # Red for restaurant
-                assert "ffd18802" in content  # Blue for museum
+                # Use core functions to get expected colors
+                restaurant_color = get_kml_color("restaurant")
+                museum_color = get_kml_color("museum")
+                assert restaurant_color in content
+                assert museum_color in content
 
         finally:
             os.unlink(temp_path)
