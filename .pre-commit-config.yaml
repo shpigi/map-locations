@@ -54,24 +54,26 @@ repos:
         args: [--extend-ignore=E226]
         files: ^(map_locations_ai/)
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+  - repo: local
     hooks:
-      - id: mypy
-        additional_dependencies: [types-PyYAML, types-requests]
-        args: [--ignore-missing-imports]
-        files: ^(map_locations/)
-      # Separate lenient mypy for AI package
-      - id: mypy
-        alias: mypy-ai
-        additional_dependencies: [types-PyYAML, types-requests]
+      - id: pyright
+        name: pyright
+        entry: pyright
+        language: python
+        args: [--level=error]
+        files: ^(map_locations/.*\.py)$
+        additional_dependencies: [pyright]
+      # Separate lenient pyright for AI package
+      - id: pyright-ai
+        name: pyright-ai
+        entry: pyright
+        language: python
         args: [
-          --ignore-missing-imports,
-          --disable-error-code=no-untyped-def,
-          --disable-error-code=arg-type,
-          --disable-error-code=misc
+          --level=warning,
+          --skipunannotated
         ]
-        files: ^(map_locations_ai/)
+        files: ^(map_locations_ai/.*\.py)$
+        additional_dependencies: [pyright]
 
   # Optional: Add pytest hook (commented out by default for speed)
   # Uncomment if you want tests to run on every commit

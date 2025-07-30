@@ -646,10 +646,10 @@ def export_to_geojson(locations: LocationList, output_path: str) -> None:
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [loc["longitude"], loc["latitude"]],
+                "coordinates": [loc.get("longitude", 0.0), loc.get("latitude", 0.0)],
             },
             "properties": {
-                "name": loc["name"],
+                "name": loc.get("name", ""),
                 "type": loc.get("type", ""),
                 "tags": loc.get("tags", []),
                 "neighborhood": loc.get("neighborhood", ""),
@@ -781,8 +781,9 @@ def export_to_kml(
         ]
 
     # Add any additional fields not in standard list (for non-mobile)
-    if not mobile:
-        for field in sorted(loc.keys()):
+    if not mobile and locations:
+        first_loc = locations[0]
+        for field in sorted(first_loc.keys()):
             if field not in all_fields and field not in [
                 "name",
                 "latitude",
@@ -857,16 +858,15 @@ def export_to_kml(
                         f'<p style="margin: 4px 0;"><strong>Website:</strong> '
                         f'<a href="{value}" target="_blank">{value}</a></p>'
                     )
-                elif value:  # Only include non-empty fields
-                    display_name = field.replace("_", " ").title()
-                    if isinstance(value, list):
+                elif isinstance(value, list):
+                    if value:  # Non-empty list
                         value_str = ", ".join(str(item) for item in value)
                     else:
-                        value_str = str(value)
-                    description_parts.append(
-                        f'<p style="margin: 4px 0;"><strong>{display_name}:</strong> '
-                        f"{value_str}</p>"
-                    )
+                        value_str = ""
+                else:
+                    value_str = str(value) if value else ""
+
+                description_parts.append(f"{field}: {value_str}<br>")  # type: ignore
 
             description_parts.append("</div>")
         else:
@@ -900,7 +900,7 @@ def export_to_kml(
                 else:
                     value_str = str(value) if value else ""
 
-                description_parts.append(f"{field}: {value_str}<br>")
+                description_parts.append(f"{field}: {value_str}<br>")  # type: ignore
 
         description_parts.append("]]>")
         description = "".join(description_parts)
@@ -999,25 +999,16 @@ def export_to_kml(
                         ]
                     )
             else:
+                # Default case for any other field type
                 value_str = str(value) if value else ""
                 if value_str:
-                    # Handle special characters in value
-                    if any(char in value_str for char in ["<", ">", "&", '"']):
-                        extended_data_parts.extend(
-                            [
-                                f'        <Data name="{field}">',
-                                f"          <value><![CDATA[{value_str}]]></value>",
-                                "        </Data>",
-                            ]
-                        )
-                    else:
-                        extended_data_parts.extend(
-                            [
-                                f'        <Data name="{field}">',
-                                f"          <value>{value_str}</value>",
-                                "        </Data>",
-                            ]
-                        )
+                    extended_data_parts.extend(
+                        [
+                            f'        <Data name="{field}">',
+                            f"          <value><![CDATA[{value_str}]]></value>",
+                            "        </Data>",
+                        ]
+                    )
                 else:
                     extended_data_parts.extend(
                         [
@@ -1044,7 +1035,7 @@ def export_to_kml(
             extended_data,
             "      <Point>",
             "        <coordinates>",
-            f'          {loc["longitude"]},{loc["latitude"]},0',
+            f'          {loc.get("longitude", 0.0)},{loc.get("latitude", 0.0)},0',
             "        </coordinates>",
             "      </Point>",
             "    </Placemark>",
@@ -1149,7 +1140,10 @@ def show_locations_grouped(
 
     # Center the map
     first = locations[0]
-    m = folium.Map(location=[first["latitude"], first["longitude"]], zoom_start=14)
+    m = folium.Map(
+        location=[first.get("latitude", 0.0), first.get("longitude", 0.0)],
+        zoom_start=14,
+    )
 
     # Add additional tile layers based on provider selection
     # The default OpenStreetMap is already added by folium.Map()
@@ -1231,9 +1225,9 @@ def show_locations_grouped(
                 popup_width = 450  # Standard width for desktop
 
             folium.Marker(
-                location=[loc["latitude"], loc["longitude"]],
+                location=[loc.get("latitude", 0.0), loc.get("longitude", 0.0)],
                 popup=folium.Popup(popup_html, max_width=popup_width),
-                tooltip=loc["name"],
+                tooltip=loc.get("name", ""),
                 icon=folium.Icon(color=marker_color),
             ).add_to(fg)
 
@@ -1348,8 +1342,8 @@ def show_locations_grouped(
         """
 
         # Add the custom layer control HTML and script to the map
-        m.get_root().html.add_child(folium.Element(layer_control_html))
-        m.get_root().html.add_child(folium.Element(layer_control_script))
+        m.get_root().html.add_child(folium.Element(layer_control_html))  # type: ignore
+        m.get_root().html.add_child(folium.Element(layer_control_script))  # type: ignore
 
         # Add the default layer control (will be moved by JavaScript)
         folium.LayerControl(
@@ -1461,7 +1455,10 @@ def show_locations_with_advanced_filtering(
     first = locations[0]
 
     # Always start with default OpenStreetMap to avoid URL-named layers
-    m = folium.Map(location=[first["latitude"], first["longitude"]], zoom_start=14)
+    m = folium.Map(
+        location=[first.get("latitude", 0.0), first.get("longitude", 0.0)],
+        zoom_start=14,
+    )
 
     # Add additional tile layer options for advanced filtering
     # Add Google Maps
@@ -1531,9 +1528,9 @@ def show_locations_with_advanced_filtering(
             popup_width = 450  # Standard width for desktop
 
         marker = folium.Marker(
-            location=[loc["latitude"], loc["longitude"]],
+            location=[loc.get("latitude", 0.0), loc.get("longitude", 0.0)],
             popup=folium.Popup(popup_html, max_width=popup_width),
-            tooltip=loc["name"],
+            tooltip=loc.get("name", ""),
             icon=folium.Icon(color=color),
         )
         marker.add_to(m)
@@ -2145,8 +2142,8 @@ def show_locations_with_advanced_filtering(
         """
 
     # Add the control HTML to the map
-    m.get_root().html.add_child(folium.Element(filter_control_html))  # type: ignore[attr-defined]
-    m.get_root().html.add_child(folium.Element(filter_script))  # type: ignore[attr-defined]
+    m.get_root().html.add_child(folium.Element(filter_control_html))  # type: ignore
+    m.get_root().html.add_child(folium.Element(filter_script))  # type: ignore
 
     # Create output directory if needed
     dirname = os.path.dirname(map_filename)
@@ -2365,18 +2362,19 @@ def validate_location_data(locations: LocationList) -> Dict[str, List[str]]:
 
     for i, loc in enumerate(locations):
         # Check required fields
-        if "name" not in loc or not loc["name"]:
+        if not loc.get("name"):
             issues["missing_required"].append(f"Location {i + 1}: missing name")
-        if "type" not in loc or not loc["type"]:
+        if not loc.get("type"):
             issues["missing_required"].append(f"Location {i + 1}: missing type")
-        if "latitude" not in loc or not loc["latitude"]:
+        if loc.get("latitude") is None:
             issues["missing_required"].append(f"Location {i + 1}: missing latitude")
-        if "longitude" not in loc or not loc["longitude"]:
+        if loc.get("longitude") is None:
             issues["missing_required"].append(f"Location {i + 1}: missing longitude")
 
         # Check coordinate validity
-        if "latitude" in loc and "longitude" in loc:
-            lat, lon = loc["latitude"], loc["longitude"]
+        lat = loc.get("latitude")
+        lon = loc.get("longitude")
+        if lat is not None and lon is not None:
             if not (-90 <= lat <= 90):
                 issues["invalid_coordinates"].append(
                     f"Location {i + 1}: invalid latitude {lat}"

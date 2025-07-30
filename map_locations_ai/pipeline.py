@@ -7,6 +7,7 @@ Clean orchestration layer using modular processor components.
 import argparse
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -52,7 +53,6 @@ except ImportError:
     except ImportError:
         # Add current directory to path for direct execution
         import sys
-        from pathlib import Path
 
         sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -488,7 +488,7 @@ class LocationExtractionPipeline:
         total_urls = 0
 
         for chunk_file in chunk_files:
-            if self.url_processor.process_url_entries(os.path.basename(chunk_file)):
+            if self.url_processor.process_url_entries(Path(chunk_file)):
                 processed_count += 1
             # Count URLs in this chunk
             with open(chunk_file, "r", encoding="utf-8") as f:
