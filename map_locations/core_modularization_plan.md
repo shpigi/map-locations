@@ -67,6 +67,23 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 - [x] `validate_location_data()`
 
 
+### 📂 popup_generators.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 320 lines removed from core.py
+- **Functions Migrated**: 6 functions
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 2,067 to 1,755 lines (-312 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `_truncate_description_mobile()`
+- [x] `_generate_google_maps_url()`
+- [x] `_is_url()`
+- [x] `_format_field_value()`
+- [x] `_generate_popup_html()`
+- [x] `_generate_mobile_popup_html()`
+
+
 ## Module Breakdown
 
 ### ✅ Phase 1: Create Module Structure
@@ -119,6 +136,23 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 - [x] `get_location_summary()`
 - [x] `validate_location_data()`
 
+
+### 📂 popup_generators.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 320 lines removed from core.py
+- **Functions Migrated**: 6 functions
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 2,067 to 1,755 lines (-312 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `_truncate_description_mobile()`
+- [x] `_generate_google_maps_url()`
+- [x] `_is_url()`
+- [x] `_format_field_value()`
+- [x] `_generate_popup_html()`
+- [x] `_generate_mobile_popup_html()`
+
 **Imports needed:**
 ```python
 from typing import List, Dict, Any
@@ -128,17 +162,17 @@ from collections import defaultdict
 ---
 
 #### 2. 📂 `popup_generators.py` - HTML Popup Generation
-- **Lines**: ~224-544 (320 lines)
-- **Status**: ⏳ Pending
+- **Lines**: ~45-366 (320 lines)
+- **Status**: ✅ COMPLETED
 - **Dependencies**: `categories.py`
 
 **Functions to move:**
-- [ ] `_truncate_description_mobile()`
-- [ ] `_generate_google_maps_url()`
-- [ ] `_is_url()`
-- [ ] `_format_field_value()`
-- [ ] `_generate_popup_html()`
-- [ ] `_generate_mobile_popup_html()`
+- [x] `_truncate_description_mobile()`
+- [x] `_generate_google_maps_url()`
+- [x] `_is_url()`
+- [x] `_format_field_value()`
+- [x] `_generate_popup_html()`
+- [x] `_generate_mobile_popup_html()`
 
 **Imports needed:**
 ```python
@@ -220,6 +254,23 @@ from .common import LocationList
 - [x] `get_location_summary()`
 - [x] `validate_location_data()`
 
+
+### 📂 popup_generators.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 320 lines removed from core.py
+- **Functions Migrated**: 6 functions
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 2,067 to 1,755 lines (-312 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `_truncate_description_mobile()`
+- [x] `_generate_google_maps_url()`
+- [x] `_is_url()`
+- [x] `_format_field_value()`
+- [x] `_generate_popup_html()`
+- [x] `_generate_mobile_popup_html()`
+
 **Imports needed:**
 ```python
 from typing import List, Dict, Any
@@ -256,6 +307,23 @@ from .common import LocationList
 - [x] `filter_locations_by_neighborhood()`
 - [x] `get_location_summary()`
 - [x] `validate_location_data()`
+
+
+### 📂 popup_generators.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 320 lines removed from core.py
+- **Functions Migrated**: 6 functions
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via imports
+- **Core.py Size**: Reduced from 2,067 to 1,755 lines (-312 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `_truncate_description_mobile()`
+- [x] `_generate_google_maps_url()`
+- [x] `_is_url()`
+- [x] `_format_field_value()`
+- [x] `_generate_popup_html()`
+- [x] `_generate_mobile_popup_html()`
 
 **Imports needed:**
 ```python
@@ -433,11 +501,12 @@ cp core_backup.py core.py
 
 ## Progress Tracking
 
-### Current Progress: 50% Complete (3/6 modules)
+### Current Progress: 67% Complete (4/6 modules)
 
 - [x] Analysis completed
 - [x] Plan documented
 - [x] Foundation modules created (3/3: categories.py ✅, utils.py ✅, location_filters.py ✅)
+- [x] Content modules created (1/2: popup_generators.py ✅)
 - [ ] Content modules created
 - [ ] Complex modules created
 - [ ] Import structure updated
