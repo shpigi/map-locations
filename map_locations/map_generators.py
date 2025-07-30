@@ -124,7 +124,7 @@ def show_locations_grouped(
                 '<span style="display: inline-block; width: 12px; height: 12px; background-color: #9E9E9E; border-radius: 2px; margin-left: 4px;"></span>',
             )
             group_display_name = (
-                f"{emoji} {square} {group_name_str} ({len(group_locs)} locations)"
+                f"{emoji} {square} {group_name_str} ({len(group_locs)})"
             )
         elif group_by == "type":
             # Get category for type-based grouping
@@ -135,19 +135,19 @@ def show_locations_grouped(
                 "square",
                 '<span style="display: inline-block; width: 12px; height: 12px; background-color: #9E9E9E; border-radius: 2px; margin-left: 4px;"></span>',
             )
-            group_display_name = f"{emoji} {square} {group_name_str.title()} ({len(group_locs)} locations)"
+            group_display_name = (
+                f"{emoji} {square} {group_name_str.title()} ({len(group_locs)})"
+            )
         elif group_by == "neighborhood":
-            group_display_name = f"🏘️ {group_name_str} ({len(group_locs)} locations)"
+            group_display_name = f"🏘️ {group_name_str} ({len(group_locs)})"
         elif group_by == "date_added":
-            group_display_name = (
-                f"📅 Added: {group_name_str} ({len(group_locs)} locations)"
-            )
+            group_display_name = f"📅 Added: {group_name_str} ({len(group_locs)})"
         elif group_by == "date_of_visit":
-            group_display_name = (
-                f"🎯 Visited: {group_name_str} ({len(group_locs)} locations)"
-            )
+            group_display_name = f"🎯 Visited: {group_name_str} ({len(group_locs)})"
         else:
-            group_display_name = f"{str(group_by).title()}: {group_name_str} ({len(group_locs)} locations)"
+            group_display_name = (
+                f"{str(group_by).title()}: {group_name_str} ({len(group_locs)})"
+            )
 
         fg = folium.FeatureGroup(name=group_display_name)
         feature_groups[group_name] = fg
