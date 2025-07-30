@@ -177,7 +177,21 @@ class EnrichmentProcessor:
 
 CRITICAL: You must return ONLY valid JSON. Do not include any explanatory text, markdown formatting, or additional content outside the JSON object.
 
-Given web content about a location, extract the following information and return it as a valid JSON object that matches the Location model:
+LOCATION TYPE STANDARDIZATION:
+Use these standardized location types (prefer American English spellings):
+
+FOOD & DRINK (Red): restaurant, cafe, bar, pub
+CULTURE & ARTS (Light Blue): museum, gallery, art gallery, theater, cinema, exhibition, studio tour
+NATURE & OUTDOORS (Green): park, garden, botanical garden, cemetery
+SHOPPING & COMMERCE (Blue): shopping, store, market, shopping center, shopping street, covered passage
+ACCOMMODATION (Light Gray): hotel, accommodation, apartment
+TRANSPORT (Gray): transport, station, metro station
+LANDMARKS & MONUMENTS (Orange): landmark, monument, church, temple, basilica, palace, bridge
+ENTERTAINMENT & EXPERIENCES (Purple): entertainment, theme park, amusement park, experience
+NEIGHBORHOODS & AREAS (Dark Red): neighborhood, district, theater district
+STREETS & URBAN (Dark Gray): street
+
+Given web content about a location, extract the following information and return it as a valid JSON object:
 
 {
     "name": "Official/correct name of the location",
@@ -217,7 +231,8 @@ IMPORTANT REQUIREMENTS:
 - If information is not available in the content, use reasonable defaults
 - Leave URL fields empty if no real URLs found in content
 - Ensure all string values are properly quoted
-- Use empty string "" for missing optional fields"""
+- Use empty string "" for missing optional fields
+- Use standardized location types to reduce synonyms"""
 
     def _create_input_prompt(self, location: Dict[str, Any]) -> str:
         """Create the input prompt for location enrichment."""
@@ -245,7 +260,54 @@ url:
 EXTRACTION REQUIREMENTS:
 Extract all available information and return a complete JSON object that matches the Location model in the system prompt.
 
-(includes name, type, description, opening hours, price range, duration recommended, best time to visit, accessibility info, nearby attractions, neighborhood, tags, confidence score, data sources, validation status)
+TYPE STANDARDIZATION - CONSOLIDATE SYNONYMS:
+FOOD & DRINK:
+- Use "restaurant" for: dining, eatery, food establishment, bistro, restaurant
+- Use "cafe" for: cafe, coffee shop, tea room, coffeehouse
+- Use "bar" for: bar, pub, tavern, cocktail bar, pub
+
+CULTURE & ARTS:
+- Use "museum" for: gallery (when art museum), exhibition space, art museum
+- Use "gallery" for: art gallery, commercial gallery, art space
+- Use "theater" for: theatre, theater, performance venue, playhouse (prefer American spelling)
+- Use "cinema" for: movie theater, film theater, cinema
+- Use "exhibition" for: exhibition space, gallery, art show
+- Use "studio tour" for: studio visit, artist studio, workshop
+
+NATURE & OUTDOORS:
+- Use "park" for: green space, recreation area, public garden, park
+- Use "garden" for: botanical garden, public garden, private garden
+- Use "cemetery" for: graveyard, burial ground, memorial park
+
+SHOPPING & COMMERCE:
+- Use "shopping center" for: mall, shopping mall, plaza, shopping complex
+- Use "market" for: shopping area, bazaar, marketplace, market
+- Use "covered passage" for: passage, covered passage, passage couvert, galleria, arcade, shopping arcade
+- Use "shopping street" for: shopping district, retail street, commercial street
+
+ACCOMMODATION:
+- Use "hotel" for: lodging, accommodation, inn, guesthouse, hotel
+- Use "apartment" for: apartment, flat, rental unit, condo
+
+TRANSPORT:
+- Use "metro station" for: subway, underground, train station, tube station, metro station
+- Use "station" for: train station, bus station, transport hub
+
+LANDMARKS & MONUMENTS:
+- Use "landmark" for: attraction, site, place, venue, point of interest, tourist attraction
+- Use "monument" for: memorial, statue, monument
+- Use "church" for: cathedral, chapel, church, basilica
+- Use "temple" for: temple, shrine, religious site
+- Use "palace" for: palace, castle, royal residence
+- Use "bridge" for: bridge, viaduct, crossing
+
+ENTERTAINMENT & EXPERIENCES:
+- Use "theme park" for: amusement park, theme park, entertainment park
+- Use "entertainment" for: entertainment venue, entertainment center
+
+NEIGHBORHOODS & AREAS:
+- Use "neighborhood" for: area, district, quarter, arrondissement, neighborhood
+- Use "theater district" for: theater district, entertainment district
 
 CRITICAL REQUIREMENTS:
 1. **Extract REAL coordinates** from content or use geocoding if location is mentioned
@@ -258,6 +320,8 @@ CRITICAL REQUIREMENTS:
 8. **Tourist information** like best times to visit, duration, etc.
 9. **Include confidence_score** and validation_status
 10. **Leave URL fields empty if no real URLs found in content**
+11. **Use standardized location types** from the system prompt to reduce synonyms
+12. **Consolidate synonyms** using the rules above - prefer American English spellings
 
 Return ONLY the JSON object, no additional text."""
 

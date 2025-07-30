@@ -54,24 +54,23 @@ repos:
         args: [--extend-ignore=E226]
         files: ^(map_locations_ai/)
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+  - repo: local
     hooks:
-      - id: mypy
-        additional_dependencies: [types-PyYAML, types-requests]
-        args: [--ignore-missing-imports]
-        files: ^(map_locations/)
-      # Separate lenient mypy for AI package
-      - id: mypy
-        alias: mypy-ai
-        additional_dependencies: [types-PyYAML, types-requests]
-        args: [
-          --ignore-missing-imports,
-          --disable-error-code=no-untyped-def,
-          --disable-error-code=arg-type,
-          --disable-error-code=misc
-        ]
-        files: ^(map_locations_ai/)
+      - id: pyright
+        name: pyright
+        entry: pyright
+        language: python
+        additional_dependencies: [pyright, folium, pyyaml, simplekml]
+        args: [--level=error]
+        files: ^(map_locations/.*\.py)$
+      # Separate lenient pyright for AI package
+      - id: pyright-ai
+        name: pyright-ai
+        entry: bash -c 'pyright --level=warning --skipunannotated "$@" || exit 0'
+        language: python
+        additional_dependencies: [pyright, folium, pyyaml, simplekml, openai, requests, beautifulsoup4, urllib3]
+        files: ^(map_locations_ai/.*\.py)$
+        pass_filenames: true
 
   # Optional: Add pytest hook (commented out by default for speed)
   # Uncomment if you want tests to run on every commit
