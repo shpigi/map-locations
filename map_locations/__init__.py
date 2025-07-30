@@ -27,6 +27,15 @@ from .core import (
     export_to_geojson,
     export_to_json,
     export_to_kml,
+    load_locations_from_yaml,
+    show_locations_grouped,
+    show_locations_with_advanced_filtering,
+    show_locations_with_filtering,
+    show_locations_with_google_maps,
+)
+
+# Import from location_filters module
+from .location_filters import (
     filter_locations_by_neighborhood,
     filter_locations_by_tags,
     filter_locations_by_type,
@@ -34,11 +43,6 @@ from .core import (
     get_available_tags,
     get_available_types,
     get_location_summary,
-    load_locations_from_yaml,
-    show_locations_grouped,
-    show_locations_with_advanced_filtering,
-    show_locations_with_filtering,
-    show_locations_with_google_maps,
     validate_location_data,
 )
 
