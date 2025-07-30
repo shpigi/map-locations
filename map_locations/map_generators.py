@@ -68,6 +68,10 @@ def show_locations_grouped(
                 f"No locations found matching the specified categories: {filter_categories}"
             )
 
+    # For mobile, default to category grouping to show group types
+    if mobile and group_by == "type":
+        group_by = "category"
+
     # Center the map
     first = locations[0]
     m = folium.Map(
@@ -115,17 +119,23 @@ def show_locations_grouped(
             # Use category info for display
             category_info = COLOR_CATEGORIES.get(group_name_str, {})
             emoji = category_info.get("emoji", "📍")
+            square = category_info.get(
+                "square",
+                '<span style="display: inline-block; width: 12px; height: 12px; background-color: #9E9E9E; border-radius: 2px; margin-left: 4px;"></span>',
+            )
             group_display_name = (
-                f"{emoji} {group_name_str} ({len(group_locs)} locations)"
+                f"{emoji} {square} {group_name_str} ({len(group_locs)} locations)"
             )
         elif group_by == "type":
             # Get category for type-based grouping
             category = get_location_category(group_name_str)
             category_info = COLOR_CATEGORIES.get(category, {})
             emoji = category_info.get("emoji", "📍")
-            group_display_name = (
-                f"{emoji} {group_name_str.title()} ({len(group_locs)} locations)"
+            square = category_info.get(
+                "square",
+                '<span style="display: inline-block; width: 12px; height: 12px; background-color: #9E9E9E; border-radius: 2px; margin-left: 4px;"></span>',
             )
+            group_display_name = f"{emoji} {square} {group_name_str.title()} ({len(group_locs)} locations)"
         elif group_by == "neighborhood":
             group_display_name = f"🏘️ {group_name_str} ({len(group_locs)} locations)"
         elif group_by == "date_added":
@@ -165,124 +175,100 @@ def show_locations_grouped(
 
     # Add layer control with mobile optimization
     if mobile:
-        # For mobile, add a collapsible layer control button
-        layer_control_html = """
-        <div id="layer-control" style="
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-            min-width: 200px;
-            max-width: 250px;
-            max-height: 70vh;
-            overflow-y: auto;
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-            display: none;
-        ">
-            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <strong>🗺️ Layers</strong>
-                <button id="close-layer-control" style="
-                    background: #f44336;
-                    color: white;
-                    border: none;
-                    padding: 2px 6px;
-                    border-radius: 3px;
-                    cursor: pointer;
-                    font-size: 11px;
-                ">✕</button>
-            </div>
-            <div id="layer-control-content">
-                <!-- Layer control content will be moved here by JavaScript -->
-            </div>
-        </div>
-
-        <button id="toggle-layer-control" style="
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            z-index: 1001;
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        ">🗺️ Layers</button>
-        """
-
-        layer_control_script = """
-        <script>
-        // Get DOM elements
-        const toggleLayerControlBtn = document.getElementById('toggle-layer-control');
-        const closeLayerControlBtn = document.getElementById('close-layer-control');
-        const layerControl = document.getElementById('layer-control');
-        const layerControlContent = document.getElementById('layer-control-content');
-
-        // Move the default layer control to our custom container
-        setTimeout(function() {
-            // Find the default layer control
-            const defaultLayerControl = document.querySelector('.leaflet-control-layers');
-            if (defaultLayerControl) {
-                // Hide the default layer control
-                defaultLayerControl.style.display = 'none';
-
-                // Move its content to our custom container
-                layerControlContent.innerHTML = defaultLayerControl.innerHTML;
-
-                // Style the moved content for mobile
-                const checkboxes = layerControlContent.querySelectorAll('input[type="checkbox"]');
-                checkboxes.forEach(function(checkbox) {
-                    checkbox.style.marginRight = '8px';
-                });
-
-                const labels = layerControlContent.querySelectorAll('label');
-                labels.forEach(function(label) {
-                    label.style.fontSize = '12px';
-                    label.style.marginBottom = '6px';
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                });
-            }
-        }, 1000);
-
-        // Toggle layer control panel visibility
-        toggleLayerControlBtn.addEventListener('click', function() {
-            if (layerControl.style.display === 'none') {
-                layerControl.style.display = 'block';
-                toggleLayerControlBtn.textContent = '🗺️ Hide Layers';
-            } else {
-                layerControl.style.display = 'none';
-                toggleLayerControlBtn.textContent = '🗺️ Layers';
-            }
-        });
-
-        // Close layer control panel
-        closeLayerControlBtn.addEventListener('click', function() {
-            layerControl.style.display = 'none';
-            toggleLayerControlBtn.textContent = '🗺️ Layers';
-        });
-        </script>
-        """
-
-        # Add the custom layer control HTML and script to the map
-        m.get_root().html.add_child(folium.Element(layer_control_html))  # type: ignore
-        m.get_root().html.add_child(folium.Element(layer_control_script))  # type: ignore
-
-        # Add the default layer control (will be moved by JavaScript)
+        # For mobile, add the standard layer control first
         folium.LayerControl(
             position="topright",
-            collapsed=False,
+            collapsed=True,
             autoZIndex=True,
             overlay=True,
             control=True,
         ).add_to(m)
+
+        # Then add mobile-friendly modifications
+        mobile_script = """
+        <script>
+        function initializeMobileLayerControl() {
+            // Find the original layer control
+            const layerControl = document.querySelector('.leaflet-control-layers');
+            if (layerControl) {
+                // Make it mobile-friendly
+                layerControl.style.maxHeight = '80vh';
+                layerControl.style.overflow = 'visible';
+                layerControl.style.fontSize = '14px';
+                layerControl.style.minWidth = '200px';
+                layerControl.style.maxWidth = '280px';
+
+                // Find the toggle button (the collapsed control)
+                const toggleButton = layerControl.querySelector('.leaflet-control-layers-toggle');
+                if (toggleButton) {
+                    // Style the toggle button for mobile
+                    toggleButton.style.width = '44px';
+                    toggleButton.style.height = '44px';
+                    toggleButton.style.fontSize = '16px';
+                    toggleButton.style.backgroundColor = '#4CAF50';
+                    toggleButton.style.color = 'white';
+                    toggleButton.style.borderRadius = '6px';
+                    toggleButton.style.border = 'none';
+                    toggleButton.innerHTML = '🗺️';
+
+                    // Add custom behavior
+                    let isExpanded = false;
+                    toggleButton.addEventListener('click', function() {
+                        setTimeout(function() {
+                            const expandedContent = layerControl.querySelector('.leaflet-control-layers-list');
+                            if (expandedContent && expandedContent.style.display !== 'none') {
+                                isExpanded = true;
+                                toggleButton.innerHTML = '✕';
+                                toggleButton.style.backgroundColor = '#f44336';
+                            } else {
+                                isExpanded = false;
+                                toggleButton.innerHTML = '🗺️';
+                                toggleButton.style.backgroundColor = '#4CAF50';
+                            }
+                        }, 50);
+                    });
+                }
+
+                // Style the expanded content
+                const expandedContent = layerControl.querySelector('.leaflet-control-layers-list');
+                if (expandedContent) {
+                    expandedContent.style.padding = '10px';
+                    expandedContent.style.fontSize = '13px';
+                    expandedContent.style.maxHeight = '70vh';
+                    expandedContent.style.overflow = 'auto';
+                    expandedContent.style.overflowX = 'hidden';
+
+                    // Style all labels
+                    const labels = expandedContent.querySelectorAll('label');
+                    labels.forEach(function(label) {
+                        label.style.display = 'flex';
+                        label.style.alignItems = 'center';
+                        label.style.marginBottom = '8px';
+                        label.style.cursor = 'pointer';
+                    });
+
+                    // Style all inputs
+                    const inputs = expandedContent.querySelectorAll('input');
+                    inputs.forEach(function(input) {
+                        input.style.marginRight = '8px';
+                        input.style.transform = 'scale(1.2)';
+                    });
+                }
+
+                console.log('Mobile layer control initialized');
+            } else {
+                // Retry if not found
+                setTimeout(initializeMobileLayerControl, 200);
+            }
+        }
+
+        // Initialize after a delay
+        setTimeout(initializeMobileLayerControl, 1000);
+        </script>
+        """
+
+        # Add the mobile script to the map
+        m.get_root().html.add_child(folium.Element(mobile_script))  # type: ignore
     else:
         # Desktop version - use standard layer control
         folium.LayerControl(
