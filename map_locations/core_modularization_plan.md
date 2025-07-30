@@ -36,6 +36,18 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 - [x] `get_kml_color()`
 
 
+### �� utils.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 40 lines removed from core.py
+- **Functions Migrated**: 1 function (create_sample_locations)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via __init__.py
+- **Core.py Size**: Reduced from 2,313 to 2,276 lines (-37 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `create_sample_locations()`
+
+
 ## Module Breakdown
 
 ### ✅ Phase 1: Create Module Structure
@@ -56,6 +68,18 @@ The `core.py` file has grown to 2,552 lines and handles multiple responsibilitie
 - [x] `filter_locations_by_category()`
 - [x] `hex_to_kml_color()`
 - [x] `get_kml_color()`
+
+
+### �� utils.py - COMPLETED ✅
+- **Completed**: December 2024
+- **Lines Moved**: 40 lines removed from core.py
+- **Functions Migrated**: 1 function (create_sample_locations)
+- **Testing**: ✅ All imports work correctly
+- **Backward Compatibility**: ✅ Maintained via __init__.py
+- **Core.py Size**: Reduced from 2,313 to 2,276 lines (-37 lines net)
+
+**Functions Successfully Migrated:**
+- [x] `create_sample_locations()`
 
 **Imports needed:**
 ```python
@@ -169,12 +193,12 @@ from .common import LocationList
 ---
 
 #### 6. 📂 `utils.py` - Utility Functions
-- **Lines**: ~2390-2536 (146 lines)
-- **Status**: ⏳ Pending
+- **Lines**: ~2196-2236 (40 lines)
+- **Status**: ✅ COMPLETED
 - **Dependencies**: None
 
 **Functions to move:**
-- [ ] `create_sample_locations()`
+- [x] `create_sample_locations()`
 
 **Imports needed:**
 ```python
@@ -352,11 +376,11 @@ cp core_backup.py core.py
 
 ## Progress Tracking
 
-### Current Progress: 17% Complete (1/6 modules)
+### Current Progress: 33% Complete (2/6 modules)
 
 - [x] Analysis completed
 - [x] Plan documented
-- [x] Foundation modules created (1/3: categories.py ✅)
+- [x] Foundation modules created (2/3: categories.py ✅, utils.py ✅)
 - [ ] Content modules created
 - [ ] Complex modules created
 - [ ] Import structure updated

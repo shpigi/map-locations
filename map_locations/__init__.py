@@ -22,7 +22,6 @@ from .categories import (
 # Import main functions for easy access
 from .core import (
     Location,
-    create_sample_locations,
     export_to_all_formats,
     export_to_csv,
     export_to_geojson,
@@ -42,6 +41,9 @@ from .core import (
     show_locations_with_google_maps,
     validate_location_data,
 )
+
+# Import from utils module
+from .utils import create_sample_locations
 
 __all__ = [
     "Location",
