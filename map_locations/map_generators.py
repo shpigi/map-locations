@@ -352,14 +352,18 @@ def show_locations_grouped(
                         // Unselect all
                         locationCheckboxes.forEach(function(checkbox) {
                             checkbox.checked = false;
-                            checkbox.dispatchEvent(new Event('change'));
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
                         });
                         allSelected = false;
                     } else {
                         // Select all
                         locationCheckboxes.forEach(function(checkbox) {
                             checkbox.checked = true;
-                            checkbox.dispatchEvent(new Event('change'));
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
                         });
                         allSelected = true;
                     }
@@ -367,7 +371,7 @@ def show_locations_grouped(
                 });
 
                 function updateToggleButtonText() {
-                    toggleAllButton.innerHTML = allSelected ? '🔲 Hide All Locations' : '☑️ Show All Locations';
+                    toggleAllButton.innerHTML = allSelected ? '☑️ Hide All Locations' : '🔲 Show All Locations';
                 }
 
                 // Create a very compact container for the toggle button
@@ -533,14 +537,18 @@ def show_locations_grouped(
                         // Unselect all
                         locationCheckboxes.forEach(function(checkbox) {
                             checkbox.checked = false;
-                            checkbox.dispatchEvent(new Event('change'));
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
                         });
                         allSelected = false;
                     } else {
                         // Select all
                         locationCheckboxes.forEach(function(checkbox) {
                             checkbox.checked = true;
-                            checkbox.dispatchEvent(new Event('change'));
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
                         });
                         allSelected = true;
                     }
@@ -548,7 +556,7 @@ def show_locations_grouped(
                 });
 
                 function updateToggleButtonText() {
-                    toggleAllButton.innerHTML = allSelected ? '🔲 Hide All Locations' : '☑️ Show All Locations';
+                    toggleAllButton.innerHTML = allSelected ? '☑️ Hide All Locations' : '🔲 Show All Locations';
                 }
 
                 // Create a very compact container for the toggle button
