@@ -61,6 +61,91 @@ def _truncate_description_mobile(description: str, max_chars: int = 200) -> str:
     return two_sentences
 
 
+def _generate_google_search_url(location_name: str, address: str = "") -> str:
+    """
+    Generate a Google search URL for a location.
+
+    Args:
+        location_name: Name of the location
+        address: Optional address to include in search
+
+    Returns:
+        Google search URL string
+    """
+    if not location_name:
+        return ""
+
+    # Create query string from name and address
+    query_parts = []
+    if location_name:
+        query_parts.append(location_name)
+    if address:
+        query_parts.append(address)
+
+    query = ", ".join(query_parts)
+    encoded_query = urllib.parse.quote_plus(query)
+    return f"https://www.google.com/search?q={encoded_query}"
+
+
+def _generate_neighborhood_search_url(neighborhood: str) -> str:
+    """
+    Generate a Google search URL for a neighborhood.
+
+    Args:
+        neighborhood: Name of the neighborhood
+
+    Returns:
+        Google search URL string
+    """
+    if not neighborhood:
+        return ""
+
+    query = f"{neighborhood} neighborhood"
+    encoded_query = urllib.parse.quote_plus(query)
+    return f"https://www.google.com/search?q={encoded_query}"
+
+
+def _generate_location_summary_line(location: Union[Dict[str, Any], Location]) -> str:
+    """
+    Generate a summary line combining type, neighborhood, and Google Maps link.
+
+    Format: "{Type} in {Neighborhood} (Google Maps Link)"
+
+    Args:
+        location: Location dictionary
+
+    Returns:
+        HTML string for the summary line
+    """
+    type_val = location.get("type", "")
+    neighborhood = location.get("neighborhood", "")
+    google_maps_url = _generate_google_maps_url(location)
+
+    parts = []
+
+    # Add type (capitalize first letter)
+    if type_val:
+        type_capitalized = type_val[0].upper() + type_val[1:] if type_val else ""
+        parts.append(type_capitalized)
+
+    # Add neighborhood as link if available
+    if neighborhood:
+        neighborhood_url = _generate_neighborhood_search_url(neighborhood)
+        neighborhood_link = (
+            f'<a href="{neighborhood_url}" target="_blank">{neighborhood}</a>'
+        )
+        parts.append(f"in {neighborhood_link}")
+
+    # Add Google Maps link if available
+    if google_maps_url:
+        parts.append(f'(<a href="{google_maps_url}" target="_blank">gmap</a>)')
+
+    if not parts:
+        return ""
+
+    return " ".join(parts)
+
+
 def _generate_google_maps_url(location: Union[Dict[str, Any], Location]) -> str:
     """
     Generate a Google Maps URL for a location using name and address.
@@ -111,6 +196,21 @@ def _format_field_value(field_name: str, value: Any) -> str:
     # Handle google_maps_url field specially
     if field_name == "google_maps_url" and value:
         return f'<a href="{value}" target="_blank">Link</a>'
+
+    # Handle nearby_attractions field specially
+    if field_name == "nearby_attractions" and isinstance(value, list):
+        if not value:  # Empty list
+            return ""
+        # Create Google search links for each nearby attraction
+        formatted_items = []
+        for attraction in value:
+            attraction_str = str(attraction)
+            if attraction_str:
+                search_url = _generate_google_search_url(attraction_str)
+                formatted_items.append(
+                    f'<a href="{search_url}" target="_blank">{attraction_str}</a>'
+                )
+        return ", ".join(formatted_items)
 
     # Handle lists (like tags)
     if isinstance(value, list):
@@ -164,9 +264,7 @@ def _generate_popup_html(
     # Standard field order (these will appear first)
     standard_fields = [
         "name",
-        "type",
         "tags",
-        "neighborhood",
         "date_of_visit",
         "description",
         "website",
@@ -174,7 +272,7 @@ def _generate_popup_html(
         "phone",
         "address",
         "notes",
-        "google_maps_url",
+        "nearby_attractions",
     ]
 
     # Field display names
@@ -191,6 +289,7 @@ def _generate_popup_html(
         "phone": "Phone",
         "address": "Address",
         "notes": "Notes",
+        "nearby_attractions": "Nearby Attractions",
         "google_maps_url": "Google Maps",
         "latitude": "Latitude",
         "longitude": "Longitude",
@@ -199,15 +298,18 @@ def _generate_popup_html(
     # Get all fields in location, starting with standard ones
     all_fields = []
     for field in standard_fields:
-        if field == "google_maps_url":
-            # Always include google_maps_url since it's calculated
-            all_fields.append(field)
-        elif field in location:
+        if field in location:
             all_fields.append(field)
 
-    # Add any additional fields not in standard list (excluding coordinates)
+    # Add any additional fields not in standard list (excluding coordinates and summary fields)
     for field in sorted(location.keys()):
-        if field not in standard_fields and field not in ["latitude", "longitude"]:
+        if field not in standard_fields and field not in [
+            "latitude",
+            "longitude",
+            "type",
+            "neighborhood",
+            "google_maps_url",
+        ]:
             # Skip hidden fields unless show_full is True
             if not show_full and field in hidden_fields:
                 continue
@@ -222,15 +324,18 @@ def _generate_popup_html(
             f'{location.get("name", "Unnamed Location")}</h3>',
         ]
 
+        # Add summary line
+        summary_line = _generate_location_summary_line(location)
+        if summary_line:
+            html_parts.append(
+                f'<p style="margin: 5px 0; color: #666; font-style: italic;">{summary_line}</p>'
+            )
+
         for field in all_fields:
             if field == "name":  # Skip name as it's already in header
                 continue
 
-            if field == "google_maps_url":
-                value = _generate_google_maps_url(location)
-                formatted_value = _format_field_value(field, value)
-            else:
-                formatted_value = _format_field_value(field, location.get(field))
+            formatted_value = _format_field_value(field, location.get(field))
 
             if formatted_value:  # Only include non-empty fields
                 display_name = field_names.get(field, field.replace("_", " ").title())
@@ -245,15 +350,18 @@ def _generate_popup_html(
     else:  # folium style
         html_parts = ["<div>", f'<h4>{location.get("name", "Unnamed Location")}</h4>']
 
+        # Add summary line
+        summary_line = _generate_location_summary_line(location)
+        if summary_line:
+            html_parts.append(
+                f'<p style="color: #666; font-style: italic;">{summary_line}</p>'
+            )
+
         for field in all_fields:
             if field == "name":  # Skip name as it's already in header
                 continue
 
-            if field == "google_maps_url":
-                value = _generate_google_maps_url(location)
-                formatted_value = _format_field_value(field, value)
-            else:
-                formatted_value = _format_field_value(field, location.get(field))
+            formatted_value = _format_field_value(field, location.get(field))
 
             if formatted_value:  # Only include non-empty fields
                 display_name = field_names.get(field, field.replace("_", " ").title())
@@ -290,16 +398,14 @@ def _generate_mobile_popup_html(
     # Mobile-optimized field order (only essential information)
     mobile_fields = [
         "name",
-        "type",
         "address",
-        "neighborhood",
         "phone",
         "website",
         "url",
         "official_website",
         "description",
         "tags",
-        "google_maps_url",
+        "nearby_attractions",
     ]
 
     # Field display names
@@ -314,19 +420,24 @@ def _generate_mobile_popup_html(
         "official_website": "Official Website",
         "description": "Description",
         "tags": "Tags",
+        "nearby_attractions": "Nearby Attractions",
         "google_maps_url": "Directions",
     }
 
     html_parts = ["<div>", f'<h4>{location.get("name", "Unnamed Location")}</h4>']
 
+    # Add summary line
+    summary_line = _generate_location_summary_line(location)
+    if summary_line:
+        html_parts.append(
+            f'<p style="color: #666; font-style: italic;">{summary_line}</p>'
+        )
+
     for field in mobile_fields:
         if field == "name":  # Skip name as it's already in header
             continue
 
-        if field == "google_maps_url":
-            value = _generate_google_maps_url(location)
-            formatted_value = _format_field_value(field, value)
-        elif field == "description":
+        if field == "description":
             # Limit description to first 100 characters
             desc: str = str(location.get(field, ""))
             if desc:
@@ -359,7 +470,13 @@ def _generate_mobile_popup_html(
     # Add any additional fields not in mobile_fields if show_full is True
     if show_full:
         for field in sorted(location.keys()):
-            if field not in mobile_fields and field not in ["latitude", "longitude"]:
+            if field not in mobile_fields and field not in [
+                "latitude",
+                "longitude",
+                "type",
+                "neighborhood",
+                "google_maps_url",
+            ]:
                 # Skip hidden fields unless show_full is True
                 if field in hidden_fields:
                     continue

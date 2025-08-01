@@ -28,7 +28,7 @@ def show_locations_grouped(
     locations: LocationList,
     group_by: str = "type",
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap",
+    tile_provider: str = "google_maps",
     filter_types: Optional[List[str]] = None,
     filter_categories: Optional[List[str]] = None,
     mobile: bool = False,
@@ -41,7 +41,9 @@ def show_locations_grouped(
         locations (list): List of dicts loaded from YAML.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
         map_filename (str): Path to save the HTML map.
-        tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        tile_provider (str): Default map tile provider ('openstreetmap', 'google_maps', 'google_satellite').
+                           The HTML filter panel will include all three options for switching.
+                           Default is 'google_maps'.
         filter_types (list, optional): List of location types to include.
         filter_categories (list, optional): List of color categories to include.
         mobile (bool): Enable mobile-optimized popups and layout.
@@ -76,31 +78,78 @@ def show_locations_grouped(
 
     # Center the map
     first = locations[0]
+
+    # Create map with OpenStreetMap as base (we'll add others as proper layers)
     m = folium.Map(
         location=[first.get("latitude", 0.0), first.get("longitude", 0.0)],
         zoom_start=14,
+        zoom_control=False,
     )
 
-    # Add additional tile layers based on provider selection
-    # The default OpenStreetMap is already added by folium.Map()
+    # Add Google Maps as the first tile layer (will be default if selected)
+    google_maps_layer = folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        attr="Google Maps",
+        name="Google Maps",
+        overlay=False,
+        control=True,
+    )
+    google_maps_layer.add_to(m)
+
+    # Add Google Satellite as additional base layer option
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google Satellite",
+        name="Google Satellite",
+        overlay=False,
+        control=True,
+    ).add_to(m)
+
+    # Set the default layer based on tile_provider
     if tile_provider == "google_maps":
-        # Add Google Maps as additional base layer option
-        folium.TileLayer(
-            tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-            attr="Google Maps",
-            name="Google Maps",
-            overlay=False,
-            control=True,
-        ).add_to(m)
+        # Make Google Maps the default by making it the active layer
+        switch_to_google_script = """
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                // Find and click the Google Maps radio button
+                const radioButtons = document.querySelectorAll('input[type="radio"]');
+                for (let radio of radioButtons) {
+                    const label = radio.parentElement;
+                    if (label && label.textContent.trim() === 'Google Maps') {
+                        radio.checked = true;
+                        radio.dispatchEvent(new Event('change'));
+                        console.log('Switched to Google Maps');
+                        break;
+                    }
+                }
+            }, 500);
+        });
+        </script>
+        """
+        m.get_root().html.add_child(folium.Element(switch_to_google_script))  # type: ignore
     elif tile_provider == "google_satellite":
-        # Add Google Satellite as additional base layer option
-        folium.TileLayer(
-            tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-            attr="Google Satellite",
-            name="Google Satellite",
-            overlay=False,
-            control=True,
-        ).add_to(m)
+        # Make Google Satellite the default by making it the active layer
+        switch_to_satellite_script = """
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                // Find and click the Google Satellite radio button
+                const radioButtons = document.querySelectorAll('input[type="radio"]');
+                for (let radio of radioButtons) {
+                    const label = radio.parentElement;
+                    if (label && label.textContent.trim() === 'Google Satellite') {
+                        radio.checked = true;
+                        radio.dispatchEvent(new Event('change'));
+                        console.log('Switched to Google Satellite');
+                        break;
+                    }
+                }
+            }, 500);
+        });
+        </script>
+        """
+        m.get_root().html.add_child(folium.Element(switch_to_satellite_script))  # type: ignore
 
     # Group locations
     groups = defaultdict(list)
@@ -164,7 +213,7 @@ def show_locations_grouped(
                 popup_width = 300  # Narrower for mobile
             else:
                 popup_html = _generate_popup_html(loc, show_full=show_full)
-                popup_width = 350  # Standard width for desktop
+                popup_width = 330  # Standard width for desktop
 
             folium.Marker(
                 location=[loc.get("latitude", 0.0), loc.get("longitude", 0.0)],
@@ -255,12 +304,102 @@ def show_locations_grouped(
                         input.style.marginRight = '8px';
                         input.style.transform = 'scale(1.2)';
                     });
+
+                    // Add toggle all button for location layers
+                    addToggleAllButton(expandedContent);
                 }
 
                 console.log('Mobile layer control initialized');
             } else {
                 // Retry if not found
                 setTimeout(initializeMobileLayerControl, 200);
+            }
+        }
+
+        function addToggleAllButton(expandedContent) {
+            // Find all location layer checkboxes (excluding base layer radio buttons)
+            const locationCheckboxes = expandedContent.querySelectorAll('input[type="checkbox"]');
+
+            if (locationCheckboxes.length > 0) {
+                // Create toggle all button
+                const toggleAllButton = document.createElement('button');
+                toggleAllButton.innerHTML = '🔲 Toggle All Locations';
+                toggleAllButton.style.width = '100%';
+                toggleAllButton.style.padding = '4px 8px';
+                toggleAllButton.style.margin = '2px 0';
+                toggleAllButton.style.backgroundColor = '#2196F3';
+                toggleAllButton.style.color = 'white';
+                toggleAllButton.style.border = 'none';
+                toggleAllButton.style.borderRadius = '3px';
+                toggleAllButton.style.fontSize = '11px';
+                toggleAllButton.style.cursor = 'pointer';
+                toggleAllButton.style.fontWeight = 'bold';
+                toggleAllButton.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
+
+                let allSelected = true;
+
+                // Check initial state
+                locationCheckboxes.forEach(function(checkbox) {
+                    if (!checkbox.checked) {
+                        allSelected = false;
+                    }
+                });
+
+                updateToggleButtonText();
+
+                toggleAllButton.addEventListener('click', function() {
+                    if (allSelected) {
+                        // Unselect all
+                        locationCheckboxes.forEach(function(checkbox) {
+                            checkbox.checked = false;
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
+                        });
+                        allSelected = false;
+                    } else {
+                        // Select all
+                        locationCheckboxes.forEach(function(checkbox) {
+                            checkbox.checked = true;
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
+                        });
+                        allSelected = true;
+                    }
+                    updateToggleButtonText();
+                });
+
+                function updateToggleButtonText() {
+                    toggleAllButton.innerHTML = allSelected ? '☑️ Hide All Locations' : '🔲 Show All Locations';
+                }
+
+                // Create a very compact container for the toggle button
+                const toggleContainer = document.createElement('div');
+                toggleContainer.style.width = '100%';
+                toggleContainer.style.margin = '2px 0';
+                toggleContainer.style.padding = '1px 0';
+                toggleContainer.style.borderBottom = '1px solid #ddd';
+                toggleContainer.style.backgroundColor = '#f8f8f8';
+                toggleContainer.style.borderRadius = '2px';
+                toggleContainer.appendChild(toggleAllButton);
+
+                // Find the overlays section (location types) and insert before it
+                const overlaysSection = expandedContent.querySelector('.leaflet-control-layers-overlays');
+                if (overlaysSection) {
+                    // Insert the toggle container before the overlays section
+                    overlaysSection.parentElement.insertBefore(toggleContainer, overlaysSection);
+                } else {
+                    // Fallback: find the first checkbox and insert before its container
+                    const firstCheckbox = locationCheckboxes[0];
+                    if (firstCheckbox) {
+                        const checkboxContainer = firstCheckbox.closest('label') || firstCheckbox.parentElement;
+                        checkboxContainer.parentElement.insertBefore(toggleContainer, checkboxContainer);
+                    } else {
+                        // Last resort: insert at the top
+                        expandedContent.insertBefore(toggleContainer, expandedContent.firstChild);
+                    }
+                }
             }
         }
 
@@ -350,12 +489,102 @@ def show_locations_grouped(
                         input.style.marginRight = '8px';
                         input.style.transform = 'scale(1.2)';
                     });
+
+                    // Add toggle all button for location layers
+                    addToggleAllButton(expandedContent);
                 }
 
                 console.log('Mobile layer control initialized');
             } else {
                 // Retry if not found
                 setTimeout(initializeMobileLayerControl, 200);
+            }
+        }
+
+        function addToggleAllButton(expandedContent) {
+            // Find all location layer checkboxes (excluding base layer radio buttons)
+            const locationCheckboxes = expandedContent.querySelectorAll('input[type="checkbox"]');
+
+            if (locationCheckboxes.length > 0) {
+                // Create toggle all button
+                const toggleAllButton = document.createElement('button');
+                toggleAllButton.innerHTML = '🔲 Toggle All Locations';
+                toggleAllButton.style.width = '100%';
+                toggleAllButton.style.padding = '4px 8px';
+                toggleAllButton.style.margin = '2px 0';
+                toggleAllButton.style.backgroundColor = '#2196F3';
+                toggleAllButton.style.color = 'white';
+                toggleAllButton.style.border = 'none';
+                toggleAllButton.style.borderRadius = '3px';
+                toggleAllButton.style.fontSize = '11px';
+                toggleAllButton.style.cursor = 'pointer';
+                toggleAllButton.style.fontWeight = 'bold';
+                toggleAllButton.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
+
+                let allSelected = true;
+
+                // Check initial state
+                locationCheckboxes.forEach(function(checkbox) {
+                    if (!checkbox.checked) {
+                        allSelected = false;
+                    }
+                });
+
+                updateToggleButtonText();
+
+                toggleAllButton.addEventListener('click', function() {
+                    if (allSelected) {
+                        // Unselect all
+                        locationCheckboxes.forEach(function(checkbox) {
+                            checkbox.checked = false;
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
+                        });
+                        allSelected = false;
+                    } else {
+                        // Select all
+                        locationCheckboxes.forEach(function(checkbox) {
+                            checkbox.checked = true;
+                            // Trigger both change and click events for Folium compatibility
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            checkbox.dispatchEvent(new Event('click', { bubbles: true }));
+                        });
+                        allSelected = true;
+                    }
+                    updateToggleButtonText();
+                });
+
+                function updateToggleButtonText() {
+                    toggleAllButton.innerHTML = allSelected ? '☑️ Hide All Locations' : '🔲 Show All Locations';
+                }
+
+                // Create a very compact container for the toggle button
+                const toggleContainer = document.createElement('div');
+                toggleContainer.style.width = '100%';
+                toggleContainer.style.margin = '2px 0';
+                toggleContainer.style.padding = '1px 0';
+                toggleContainer.style.borderBottom = '1px solid #ddd';
+                toggleContainer.style.backgroundColor = '#f8f8f8';
+                toggleContainer.style.borderRadius = '2px';
+                toggleContainer.appendChild(toggleAllButton);
+
+                // Find the overlays section (location types) and insert before it
+                const overlaysSection = expandedContent.querySelector('.leaflet-control-layers-overlays');
+                if (overlaysSection) {
+                    // Insert the toggle container before the overlays section
+                    overlaysSection.parentElement.insertBefore(toggleContainer, overlaysSection);
+                } else {
+                    // Fallback: find the first checkbox and insert before its container
+                    const firstCheckbox = locationCheckboxes[0];
+                    if (firstCheckbox) {
+                        const checkboxContainer = firstCheckbox.closest('label') || firstCheckbox.parentElement;
+                        checkboxContainer.parentElement.insertBefore(toggleContainer, checkboxContainer);
+                    } else {
+                        // Last resort: insert at the top
+                        expandedContent.insertBefore(toggleContainer, expandedContent.firstChild);
+                    }
+                }
             }
         }
 
@@ -379,6 +608,8 @@ def show_locations_grouped(
     print("🗺️ Collapsible layer controls:")
     print("   • Toggle button in top-right corner")
     print("   • Layer panel can be shown/hidden")
+    print("   • Switch between OpenStreetMap, Google Maps, and Google Satellite views")
+    print("   • Toggle all location types on/off with the blue button")
     print(
         f"📋 Created {len(feature_groups)} separate groups that can be toggled on/off:"
     )
@@ -389,7 +620,7 @@ def show_locations_grouped(
 def show_locations_with_filtering(
     locations: LocationList,
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap",
+    tile_provider: str = "google_maps",
     filter_types: Optional[List[str]] = None,
     filter_categories: Optional[List[str]] = None,
     group_by: str = "type",
@@ -402,7 +633,9 @@ def show_locations_with_filtering(
     Args:
         locations (list): List of dicts loaded from YAML.
         map_filename (str): Path to save the HTML map.
-        tile_provider (str): Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        tile_provider (str): Default map tile provider ('openstreetmap', 'google_maps', 'google_satellite').
+                           The HTML filter panel will include all three options for switching.
+                           Default is 'google_maps'.
         filter_types (list, optional): List of location types to include.
         filter_categories (list, optional): List of color categories to include.
         group_by (str): Field to group markers by (e.g., type, neighborhood, date_added, category).
@@ -462,7 +695,7 @@ def show_locations_by_category(
     locations: LocationList,
     categories: Optional[List[str]] = None,
     map_filename: str = "map.html",
-    tile_provider: str = "openstreetmap",
+    tile_provider: str = "google_maps",
     mobile: bool = False,
     show_full: bool = False,
 ) -> None:
@@ -473,7 +706,9 @@ def show_locations_by_category(
         locations: List of location dictionaries
         categories: List of categories to include (e.g., ["Food & Drink", "Culture & Arts"])
         map_filename: Path to save the HTML map
-        tile_provider: Map tile provider ('openstreetmap', 'google_maps', 'google_satellite')
+        tile_provider: Default map tile provider ('openstreetmap', 'google_maps', 'google_satellite').
+                     The HTML filter panel will include all three options for switching.
+                     Default is 'google_maps'.
         mobile: Enable mobile-optimized popups and layout
         show_full: Show all fields including confidence_score, last_updated, validation_status
 

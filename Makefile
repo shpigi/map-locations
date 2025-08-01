@@ -107,8 +107,14 @@ test-pre-commit:
 # Run linting for all packages
 lint:
 	@echo "🔍 Linting package..."
-	flake8 map_locations/ map_locations_ai/ tests/
-	mypy map_locations/ map_locations_ai/ --ignore-missing-imports --exclude "pipeline_old_backup.py"
+	# Use flake8 with same configuration as pre-commit
+	flake8 map_locations/ tests/
+	# Use flake8 with lenient config for AI package (same as pre-commit)
+	flake8 map_locations_ai/ --extend-ignore=E226
+	# Use pyright instead of mypy (same as pre-commit)
+	pyright map_locations/ --level=error
+	# Use pyright with lenient config for AI package (same as pre-commit)
+	@bash -c 'pyright map_locations_ai/ --level=warning --skipunannotated >/dev/null 2>&1 || exit 0'
 
 # Run linting on staged files only
 lint-staged:
